@@ -394,7 +394,7 @@ def lab2_gim(appliance=None):
         result = api.set_user_roles(username='demo', roles='admin,cli,user,vulnerability-assess')  
         print("\n[LAB 2.4] Import Training dashboard for demo user")
         token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
-        result = api.import_definitions('guardium_definitions_file/exp_dashboard_training.sql')
+        result = api.import_definitions('guardium_definition_files/exp_dashboard_training.sql')
     except Exception as e:
         print(f"  ✗ Error: {e}")
         import traceback
