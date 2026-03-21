@@ -4,8 +4,21 @@
 Sync Lab - orkiestracja synchronizacji środowiska laboratoryjnego
 """
 
-from appliance_command import ApplianceCommand, change_password_as_root
+import os
 import re
+from dotenv import load_dotenv
+from appliance_command import ApplianceCommand, change_password_as_root
+
+# Załaduj zmienne środowiskowe z pliku .env
+load_dotenv()
+
+
+def get_env_password(key: str) -> str:
+    """Pobiera hasło ze zmiennych środowiskowych"""
+    password = os.getenv(key)
+    if not password:
+        raise ValueError(f"Hasło dla {key} nie zostało znalezione w pliku .env")
+    return password
 
 
 
@@ -22,22 +35,22 @@ appliances = {
     'collector': {
         'host': '10.10.9.239',
         'prompt_regex': r'coll1\.gdemo\.com>',
-        'password': 'Guardium123!'
+        'password': get_env_password('COLLECTOR_PASSWORD')
     },
     'collector_unconfigured': {
         'host': '10.10.9.239',
         'prompt_regex': r'guard\.yourcompany\.com>',
-        'password': 'Guardium123!'
+        'password': get_env_password('COLLECTOR_PASSWORD')
     },
     'cm': {
         'host': '10.10.9.219',
         'prompt_regex': r'cm\.gdemo\.com>',
-        'password': 'Guardium123!'
+        'password': get_env_password('CM_PASSWORD')
     },
     'toolnode': {
         'host': '10.10.9.229',
         'prompt_regex': r'toolnode\.gdemo\.com>',
-        'password': 'Guardium123!'
+        'password': get_env_password('TOOLNODE_PASSWORD')
     }
 }
 
@@ -45,22 +58,22 @@ managed_machines: dict[str, dict[str, str]] = {
     'raptor': {
         'host': '10.10.9.70',
         'prompt_regex': r'raptor\.gdemo\.com>',
-        'password': 'Guardium123!'
+        'password': get_env_password('RAPTOR_PASSWORD')
     },
     'hana': {
         'host': '10.10.9.60',
         'prompt_regex': r'hana\.gdemo\.com>',
-        'password': 'Guardium123!'
+        'password': get_env_password('HANA_PASSWORD')
     },
     'winsql': {
         'host': '10.10.9.59',
         'prompt_regex': r'winsql\.gdemo\.com>',
-        'password': 'gdptraining'
+        'password': get_env_password('WINSQL_PASSWORD')
     },
     'appnode': {
         'host': '10.10.9.50',
         'prompt_regex': r'appnode\.gdemo\.com>',
-        'password': 'Guardium123!'
+        'password': get_env_password('APPNODE_PASSWORD')
     }
 }
 
@@ -86,15 +99,13 @@ current_appliances = appliances
 del current_appliances['collector']
 for name, cfg in current_appliances.items():
     print(f"Changing password on {name} ({cfg['host']})")
-
-    # ok = change_password_as_root(
-    #     host=cfg["host"],
-    #     root_password="RootPassword123!",
-    #     target_user="cli",
-    #     new_password="NoweHaslo!2026"
-    # )
-
-    # print("  OK" if ok else "  FAILED")
+    ok = change_password_as_root(
+        host=cfg["host"],
+        root_password=get_env_password("ROOT_PASSWORD"),
+        target_user="cli",
+        new_password=get_env_password("COLLECTOR_PASSWORD")
+    )
+    print("  OK" if ok else "  FAILED")
 
 # appliance = create_appliance('collector_unconfigured')
 # print("Get current network settings of collector")
