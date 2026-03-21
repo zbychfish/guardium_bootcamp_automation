@@ -53,9 +53,15 @@ def create_appliance(appliance_name: str) -> ApplianceCommand:
 
 
 # Przykład użycia
+print("Lab 1 - appliance setup")
+print("---------------------------")
+print("Get current network settings")
+
 appliance = create_appliance('collector')
 
 if appliance.connect():
-    output = appliance.execute_command("support show hosts")
+    output = appliance.execute_command("show network interface all")
+    output = appliance.execute_command("show network route default")
+    output = appliance.execute_command("show network resolvers")
     print(output)
     appliance.disconnect()
