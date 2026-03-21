@@ -226,10 +226,17 @@ class ApplianceCommand:
             
             buf_for_match = strip_ansi(buf) if self.strip_ansi_flag else buf
             if confirmation_re.search(buf_for_match):
-                # Found confirmation prompt - send response
+                # Found confirmation prompt - wait a bit for system to be ready
+                time.sleep(0.3)
+                
+                # Send response
                 if self.debug:
                     print(f"[DEBUG] Confirmation prompt detected, sending: {response}", file=sys.stderr)
-                self.channel.send((response + "\r\n").encode())
+                
+                self.channel.send(response.encode())
+                time.sleep(0.1)
+                self.channel.send(b"\n")
+                time.sleep(0.1)
                 break
             
             if self.channel.closed:
