@@ -16,8 +16,6 @@ common_config = {
     'timeout': 120
 }
 
-#appliances_resolving =[('cm.gdemo.com', '10.10.9.219'), ('coll1.gdemo.com', '10.10.9.239'), ('guard', '10.10.9.239'), ('cm', '10.10.9.219'), ('cm_unconfigured', '10.10.9.219'), ('guard', '10.10.9.239'), ('toolnode.gdemo.com', '10.10.9.229')]
-
 
 # Konfiguracja specyficzna dla każdego appliance
 appliances = {
@@ -115,8 +113,8 @@ if appliance.connect():
         # jeśli para (IP, host) już istnieje w output → pomiń
         if (ip, prompt_host) in existing:
             continue
-        command = f'support store hosts {cfg["host"]}, {prompt_host}'
-        print(command)
+        command = f'support store hosts {cfg["host"]} {prompt_host}'
+        # print(command)
         appliance.execute_command(command)
     print(appliance.execute_command("support show hosts"))
     appliance.disconnect()
