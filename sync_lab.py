@@ -116,6 +116,7 @@ if appliance.connect():
         if (ip, prompt_host) in existing:
             continue
         command = f'support store hosts {cfg["host"]}, {prompt_host}'
+        print(command)
         appliance.execute_command(command)
-    appliance.execute_command("support show hosts")
+    print(appliance.execute_command("support show hosts"))
     appliance.disconnect()
