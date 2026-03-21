@@ -5,6 +5,8 @@ Sync Lab - orkiestracja synchronizacji środowiska laboratoryjnego
 """
 
 from appliance_command import ApplianceCommand
+import re
+
 
 
 # Wspólna konfiguracja dla wszystkich appliance
@@ -81,19 +83,36 @@ def create_appliance(appliance_name: str) -> ApplianceCommand:
 # Przykład użycia
 print("Lab 1 - appliance setup")
 print("---------------------------")
-print("Get current network settings")
-
 appliance = create_appliance('collector_unconfigured')
-
+print("Get current network settings of collector")
 if appliance.connect():
     print(appliance.execute_command("show network interface all"))
     print(appliance.execute_command("show network route default"))
     print(appliance.execute_command("show network resolvers"))
-    print(appliance.execute_command("support show hosts"))
+    print("Set manual hosts settings")
+    output = appliance.execute_command("support show hosts")
+    existing = set()
+    for line in output.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = line.split()
+        if len(parts) >= 2:
+            ip = parts[0].strip().lower()
+            host = parts[1].strip().lower()
+            existing.add((ip, host))
     current_appliances = appliances
     del current_appliances['collector_unconfigured']
     machines = current_appliances | managed_machines
+
     for machine, cfg in machines.items():
-        print("support store hosts", cfg['host'], cfg['prompt_regex'].replace("\\", ""))
-       
+        ip = str(cfg["host"]).strip().lower()
+        prompt_host = re.sub(r"\\", "", str(cfg["prompt_regex"])).strip()
+        if prompt_host.endswith(">"):
+            prompt_host = prompt_host[:-1]
+        prompt_host = prompt_host.strip().lower()
+        # jeśli para (IP, host) już istnieje w output → pomiń
+        if (ip, prompt_host) in existing:
+            continue
+        print("support store hosts", cfg["host"], prompt_host)
     appliance.disconnect()
