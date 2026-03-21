@@ -107,40 +107,42 @@ for name, cfg in current_appliances.items():
     )
     print("  OK" if ok else "  FAILED")
 
-# appliance = create_appliance('collector_unconfigured')
-# print("Get current network settings of collector")
-# if appliance.connect():
-#     print(appliance.execute_command("show network interface all"))
-#     print(appliance.execute_command("show network route default"))
-#     print(appliance.execute_command("show network resolvers"))
-#     print("Set manual hosts settings")
-#     output = appliance.execute_command("support show hosts")
-#     existing = set()
-#     for line in output.splitlines():
-#         line = line.strip()
-#         if not line or line.startswith("#"):
-#             continue
-#         parts = line.split()
-#         if len(parts) >= 2:
-#             ip = parts[0].strip().lower()
-#             host = parts[1].strip().lower()
-#             existing.add((ip, host))
-#     current_appliances = appliances
-#     del current_appliances['collector_unconfigured']
-#     del current_appliances['collector']
-#     machines = current_appliances | managed_machines
+appliance = create_appliance('collector_unconfigured')
+print("Get current network settings of collector")
+if appliance.connect():
+    print(appliance.execute_command("show network interface all"))
+    print(appliance.execute_command("show network route default"))
+    print(appliance.execute_command("show network resolvers"))
+    print("Set manual hosts settings")
+    output = appliance.execute_command("support show hosts")
+    existing = set()
+    for line in output.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = line.split()
+        if len(parts) >= 2:
+            ip = parts[0].strip().lower()
+            host = parts[1].strip().lower()
+            existing.add((ip, host))
+    current_appliances = appliances
+    del current_appliances['collector_unconfigured']
+    del current_appliances['collector']
+    machines = current_appliances | managed_machines
 
-#     for machine, cfg in machines.items():
-#         ip = str(cfg["host"]).strip().lower()
-#         prompt_host = re.sub(r"\\", "", str(cfg["prompt_regex"])).strip()
-#         if prompt_host.endswith(">"):
-#             prompt_host = prompt_host[:-1]
-#         prompt_host = prompt_host.strip().lower()
-#         # jeśli para (IP, host) już istnieje w output → pomiń
-#         if (ip, prompt_host) in existing:
-#             continue
-#         command = f'support store hosts {cfg["host"]} {prompt_host}'
-#         # print(command)
-#         appliance.execute_command(command)
-#     print(appliance.execute_command("support show hosts"))
-#     appliance.disconnect()
+    for machine, cfg in machines.items():
+        ip = str(cfg["host"]).strip().lower()
+        prompt_host = re.sub(r"\\", "", str(cfg["prompt_regex"])).strip()
+        if prompt_host.endswith(">"):
+            prompt_host = prompt_host[:-1]
+        prompt_host = prompt_host.strip().lower()
+        # jeśli para (IP, host) już istnieje w output → pomiń
+        if (ip, prompt_host) in existing:
+            continue
+        command = f'support store hosts {cfg["host"]} {prompt_host}'
+        # print(command)
+        appliance.execute_command(command)
+    print(appliance.execute_command("support show hosts"))
+    print("Set time zone on collector to Europe/Warsaw")
+    print(appliance.execute_command("show system clock all"))
+    appliance.disconnect()
