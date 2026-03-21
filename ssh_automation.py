@@ -6,7 +6,7 @@ Paramiko CLI runner for proprietary shells (e.g., Guardium).
 What it does:
   - Connects via SSH (password or key).
   - Optionally waits for an initial banner/pattern (e.g., "Last login").
-  - Detects the CLI prompt via a user-supplied regex (e.g., r"coll1\.gdemo\.com>").
+  - Detects the CLI prompt via a user-supplied regex (e.g., r"coll1\\.gdemo\\.com>").
   - Sends ONE or MANY commands; for each command:
       * sends CRLF,
       * captures output until the NEXT prompt,
@@ -230,22 +230,21 @@ def run_commands_sequence(
     """
     all_ok = True
     for idx, cmd in enumerate(commands, 1):
-        print(f"\n[INFO] Running [{idx}/{len(commands)}]: {cmd}")
+        if debug:
+            print(f"\n[INFO] Running [{idx}/{len(commands)}]: {cmd}")
         output = send_command_until_prompt(
             channel,
             cmd,
             prompt_re=prompt_re,
             timeout=timeout,
-            echo=echo,
+            echo=False,  # Don't echo during command execution
             stripansi=stripansi,
             debug=debug,
         )
 
+        # Only print the actual command output, not the command itself
         if output:
-            print("[INFO] Output:")
             print(output)
-        else:
-            print("[INFO] (no output)")
 
         if error_re.search(output):
             print("[ERROR] Error pattern matched in command output.")
@@ -421,29 +420,30 @@ def main() -> int:
     try:
         chan = open_shell(client, debug=args.debug)
 
-        # 1) Initial banner/pattern (optional)
+        # 1) Initial banner/pattern (optional) - suppress output
         if initial_re is not None:
             try:
                 _ = read_until_regex(
                     chan,
                     initial_re,
                     timeout=args.timeout,
-                    echo=not args.no_echo,
+                    echo=False,  # Don't show login banner
                     stripansi=args.strip_ansi,
                     debug=args.debug,
                 )
-                print(f"\n[INFO] Initial pattern matched: {initial_re.pattern!r}\n")
+                if args.debug:
+                    print(f"\n[INFO] Initial pattern matched: {initial_re.pattern!r}\n")
             except TimeoutError as te:
                 print(str(te), file=sys.stderr)
                 return 3
 
-        # 2) Ensure we see the prompt before sending commands
+        # 2) Ensure we see the prompt before sending commands - suppress output
         try:
             _ = read_until_regex(
                 chan,
                 prompt_re,
                 timeout=args.timeout,
-                echo=not args.no_echo,
+                echo=False,  # Don't show prompt waiting
                 stripansi=args.strip_ansi,
                 debug=args.debug,
             )
@@ -454,7 +454,7 @@ def main() -> int:
                 chan,
                 prompt_re,
                 timeout=args.timeout,
-                echo=not args.no_echo,
+                echo=False,  # Don't show prompt waiting
                 stripansi=args.strip_ansi,
                 debug=args.debug,
             )
