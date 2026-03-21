@@ -330,7 +330,7 @@ def lab2_gim(appliance=None):
         print("  ✗ Failed to connect to CM")
         return None
     
-    print("\n[LAB 2.2] Check OAuth clients list")
+    print("\n[LAB 2.2] Create oauth client for bootcamp sync")
     result = appliance.execute_command("grdapi list_oauth_clients")
     print(result)
     
@@ -370,7 +370,9 @@ def lab2_gim(appliance=None):
         # headers = api.get_headers()
         # print(f"Headers: {headers}")
         users = api.get_users()
-        print(users)
+        for u in users:
+            status = "DISABLED" if u.get("disabled") == "true" else "ACTIVE"
+            print(f"{u['user_name']:12} | {status}")
     except Exception as e:
         print(f"Error: {e}")
 
