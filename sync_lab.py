@@ -148,10 +148,23 @@ if appliance.connect():
     timezone = output.strip().splitlines()[-1]
     if timezone != "Europe/Warsaw":
         output = appliance.execute_command_with_confirmation(
-            command="store system clock timezone Europe/Sofia",
+            command="store system clock timezone Europe/Warsaw",
             response="y",
             confirmation_pattern=r"Do you want to proceed\?\s*\(y/n\)\s*"
         )
         print(output)
         output = appliance.execute_command("show system clock all")
+        print(output)
+    else:
+        print(f"Time zone already set to {timezone}")
+    print(f"Setting public NTP servers")
+    appliance.execute_command("store system time_server hostname 0.pool.ntp.org 1.pool.ntp.org 2.pool.ntp.org")
+    print(appliance.execute_command("show system time_server all"))
+    print(f"Time synchronization is switching on")
+    appliance.execute_command("store system time_server state on")
+    print(appliance.execute_command("show system time_server all"))
+    print(f"Time synchronization switched on")
     appliance.disconnect()
+    # print(f"Relogin to collector because of")
+
+    # appliance = create_appliance('collector_unconfigured')
