@@ -144,5 +144,8 @@ if appliance.connect():
         appliance.execute_command(command)
     print(appliance.execute_command("support show hosts"))
     print("Set time zone on collector to Europe/Warsaw")
-    print(appliance.execute_command("show system clock all"))
+    output = appliance.execute_command("show system clock all")
+    timezone = output.strip().splitlines()[-1]
+    if timezone != "Europe/Warsaw":
+        print("Timezone is NOT Europe/Warsaw – do something")
     appliance.disconnect()
