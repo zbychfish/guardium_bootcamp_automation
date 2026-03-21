@@ -405,47 +405,19 @@ def lab2_gim(appliance=None):
         units = api.get_registered_units()
         print(f"  Raw units data: {units}")
         
-        # Przetwórz dane units - wyciągnij listę IP z mus
-        registered_ips = []
+        # Wyekstrahuj wartość mus z root elementu
         if units and 'Message' in units:
-            try:
-                message_str = units['Message'].strip()
-                
-                # Użyj regex do wyciągnięcia IP z mus
-                # Szukamy wzorca: mus: [{...ip: X.X.X.X...}, {...ip: Y.Y.Y.Y...}]
-                import re
-                
-                # Znajdź główny blok mus: [...]
-                mus_match = re.search(r'mus:\s*\[(.*?)\]\s*\}', message_str, re.DOTALL)
-                if mus_match:
-                    mus_content = mus_match.group(1)
-                    
-                    # Znajdź wszystkie IP w tym bloku (ale tylko na pierwszym poziomie)
-                    # Szukamy ip: X.X.X.X przed kolejnym mus: []
-                    ip_pattern = r'ip:\s*([\d.]+)'
-                    ips = re.findall(ip_pattern, mus_content)
-                    
-                    # Filtruj - bierzemy tylko IP które są przed "mus: []" (pierwszy poziom)
-                    # Podziel na jednostki po przecinkach między nawiasami {}
-                    units_blocks = re.findall(r'\{[^}]+\}', mus_content)
-                    for block in units_blocks:
-                        ip_match = re.search(r'ip:\s*([\d.]+)', block)
-                        if ip_match:
-                            registered_ips.append(ip_match.group(1))
-                    
-                    if registered_ips:
-                        print(f"  Registered units IPs: {registered_ips}")
-                    else:
-                        print("  No managed units found in mus")
-                else:
-                    print("  No managed units registered (mus is empty)")
-            except Exception as e:
-                print(f"  ⚠ Warning: Could not parse units data: {e}")
-        
-        # Sprawdź czy collector jest zarejestrowany
-        collector_ip = '10.10.9.239'
-        if collector_ip not in registered_ips:
-            print(f"\n  Collector {collector_ip} not registered, registering...")
+            import re
+            message_str = units['Message'].strip()
+            
+            # Znajdź główny blok mus: [...] (pierwszy poziom, nie zagnieżdżony)
+            # Szukamy mus: [ ... ] gdzie ... może zawierać zagnieżdżone []
+            mus_match = re.search(r',\s*mus:\s*(\[.*\])\s*\}', message_str, re.DOTALL)
+            if mus_match:
+                mus_value = mus_match.group(1)
+                print(f"  Extracted mus value: {mus_value}")
+            else:
+                print("  Could not extract mus value")
             # result = api.register_unit(
         #     unit_ip='10.10.9.239',
         #     unit_port='8443',
