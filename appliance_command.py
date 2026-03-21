@@ -7,6 +7,7 @@ Appliance Command - klasa do wykonywania poleceń na urządzeniach CLI przez SSH
 import re
 import sys
 import time
+import socket
 from typing import List, Optional, Tuple
 
 import paramiko
@@ -26,6 +27,54 @@ def _find_last_prompt_span(text: str, prompt_re: re.Pattern) -> Optional[Tuple[i
     for m in prompt_re.finditer(text):
         last = (m.start(), m.end())
     return last
+
+
+
+def change_password_as_root(
+    host: str,
+    root_password: str,
+    target_user: str,
+    new_password: str,
+    port: int = 22,
+    timeout: int = 10,
+) -> bool:
+    """
+    Loguje się jako root przez SSH (hasłem) i zmienia hasło target_user.
+    Zwraca True jeśli OK, False jeśli błąd.
+    """
+
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    try:
+        client.connect(
+            hostname=host,
+            port=port,
+            username="root",
+            password=root_password,
+            look_for_keys=False,
+            allow_agent=False,
+            timeout=timeout,
+            banner_timeout=timeout,
+            auth_timeout=timeout,
+        )
+
+        # chpasswd czyta z stdin: user:new_password
+        cmd = "chpasswd"
+        stdin, stdout, stderr = client.exec_command(cmd)
+
+        stdin.write(f"{target_user}:{new_password}\n")
+        stdin.flush()
+        stdin.close()
+
+        exit_code = stdout.channel.recv_exit_status()
+        client.close()
+
+        return exit_code == 0
+
+    except (paramiko.SSHException, socket.error) as e:
+        print(f"SSH error on {host}: {e}")
+        return False
 
 
 class ApplianceCommand:

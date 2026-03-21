@@ -26,7 +26,7 @@ appliances = {
     },
     'collector_unconfigured': {
         'host': '10.10.9.239',
-        'prompt_regex': r'coll1\.gdemo\.com>',
+        'prompt_regex': r'guard\.yourcompany\.com>',
         'password': 'guardium'
     },
     'cm': {
@@ -83,7 +83,7 @@ print("Lab 1 - appliance setup")
 print("---------------------------")
 print("Get current network settings")
 
-appliance = create_appliance('collector')
+appliance = create_appliance('collector_unconfigured')
 
 if appliance.connect():
     print(appliance.execute_command("show network interface all"))
