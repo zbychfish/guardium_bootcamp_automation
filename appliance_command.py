@@ -187,9 +187,9 @@ class ApplianceCommand:
     def execute_command_with_confirmation(
         self,
         command: str,
-        confirmation_pattern: str = r"\(y/n\)",
+        confirmation_pattern: str = r"Do you want to proceed\?\s*\(y/n\)\s*",
         response: str = "y",
-        timeout_confirmation: int = 10
+        confirm_idle: float = 0.2
     ) -> str:
         """
         Wykonuje polecenie, które wymaga interaktywnego potwierdzenia.
@@ -197,8 +197,8 @@ class ApplianceCommand:
         Args:
             command: Polecenie do wykonania
             confirmation_pattern: Regex pattern dla pytania o potwierdzenie
-            response: Odpowiedź do wysłania (np. 'y', 'n', 'yes', 'no')
-            timeout_confirmation: Timeout dla oczekiwania na pytanie (sekundy)
+            response: Odpowiedź do wysłania (np. 'y', 'n')
+            confirm_idle: Czas oczekiwania na idle przed wysłaniem odpowiedzi (sekundy)
         
         Returns:
             Pełny output polecenia
@@ -207,58 +207,61 @@ class ApplianceCommand:
             raise RuntimeError("Not connected")
         
         # Flush buffer
-        time.sleep(0.05)
+        time.sleep(0.03)
         while self.channel.recv_ready():
             self.channel.recv(65535)
         
-        # Send command
-        self.channel.send((command + "\r\n").encode())
+        # Send command with CR only (no LF)
+        self.channel.send((command + "\r").encode())
         
-        # Wait for confirmation prompt
         confirmation_re = re.compile(confirmation_pattern)
         buf = ""
-        deadline = time.time() + timeout_confirmation
-        prompt_time = None
+        deadline = time.time() + self.timeout
+        confirmed = False
         
         while time.time() < deadline:
             if self.channel.recv_ready():
                 chunk = self.channel.recv(65535).decode(errors="replace")
                 buf += chunk
-                prompt_time = None  # Reset if we got new data
             
             buf_for_match = strip_ansi(buf) if self.strip_ansi_flag else buf
-            if confirmation_re.search(buf_for_match):
-                if prompt_time is None:
-                    # Mark that we found the prompt
-                    prompt_time = time.time()
-                else:
-                    # Check if no new data arrived for 0.3 seconds
-                    if time.time() - prompt_time > 0.3:
-                        # System is waiting for input - send response with ENTER
-                        if self.debug:
-                            print(f"[DEBUG] Confirmation prompt detected, sending: {response}", file=sys.stderr)
-                            print(f"[DEBUG] Buffer content: {repr(buf_for_match[-200:])}", file=sys.stderr)
-                        
-                        # Send response with carriage return and newline (like terminal ENTER)
-                        self.channel.send((response + "\r\n").encode())
-                        time.sleep(0.2)
+            
+            # Handle confirmation once when detected
+            if (not confirmed) and confirmation_re.search(buf_for_match):
+                if self.debug:
+                    print(f"[DEBUG] Confirmation detected, waiting idle {confirm_idle}s then sending '{response}'", file=sys.stderr)
+                
+                # Wait until channel is idle
+                idle_deadline = time.time() + confirm_idle
+                while time.time() < deadline:
+                    if self.channel.recv_ready():
+                        chunk = self.channel.recv(65535).decode(errors="replace")
+                        buf += chunk
+                        idle_deadline = time.time() + confirm_idle
+                    if time.time() >= idle_deadline:
                         break
+                    time.sleep(0.01)
+                
+                # Send response with CR only
+                self.channel.send((response + "\r").encode())
+                confirmed = True
+                time.sleep(0.02)
+            
+            # Check if prompt returned
+            if self.prompt_re.search(buf_for_match):
+                if self.debug:
+                    print(f"[DEBUG] Prompt detected after command", file=sys.stderr)
+                break
             
             if self.channel.closed:
-                raise RuntimeError("Channel closed while waiting for confirmation")
+                raise RuntimeError("Channel closed")
             
-            time.sleep(0.05)
+            time.sleep(0.005)
         else:
-            raise TimeoutError(f"Timeout waiting for confirmation pattern: {confirmation_pattern}")
-        
-        # Now wait for the system prompt to return
-        raw = self._read_until_regex(self.prompt_re, echo=False)
-        
-        # Combine all output
-        full_output = buf + raw
+            raise TimeoutError(f"Timeout waiting for prompt: {self.prompt_re.pattern}")
         
         # Clean output
-        working = strip_ansi(full_output) if self.strip_ansi_flag else full_output
+        working = strip_ansi(buf) if self.strip_ansi_flag else buf
         last_span = _find_last_prompt_span(working, self.prompt_re)
         output_region = working[: last_span[0]] if last_span else working
         
@@ -267,24 +270,10 @@ class ApplianceCommand:
         # Remove empty lines and command echo
         while lines and not lines[0].strip():
             lines.pop(0)
+        if lines and lines[0].strip() == command.strip():
+            lines = lines[1:]
         
-        if lines:
-            first = lines[0].rstrip("\r\n")
-            if first.strip() == command.strip():
-                lines = lines[1:]
-        
-        # Filter out unwanted lines
-        filtered_lines = []
-        for line in lines:
-            stripped = line.strip()
-            # Skip empty lines and prompt lines
-            if not stripped:
-                continue
-            if self.prompt_re.search(stripped):
-                continue
-            filtered_lines.append(line)
-        
-        return "\n".join(filtered_lines)
+        return "\n".join(lines).strip()
     
     def execute_command(self, command: str) -> str:
         """Wykonuje pojedyncze polecenie i zwraca output"""
