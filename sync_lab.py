@@ -45,7 +45,7 @@ def create_appliance(appliance_name: str) -> ApplianceCommand:
     return ApplianceCommand(
         host=appliance_config['host'],
         user=common_config['user'],
-        password=common_config['password'],
+        password=appliance_config['password'],
         prompt_regex=appliance_config['prompt_regex'],
         initial_pattern=common_config['initial_pattern'],
         timeout=common_config['timeout']
