@@ -4,7 +4,7 @@
 Sync Lab - orkiestracja synchronizacji środowiska laboratoryjnego
 """
 
-from appliance_command import ApplianceCommand
+from appliance_command import ApplianceCommand, change_password_as_root
 import re
 
 
@@ -81,40 +81,55 @@ def create_appliance(appliance_name: str) -> ApplianceCommand:
 # Przykład użycia
 print("Lab 1 - appliance setup")
 print("---------------------------")
-appliance = create_appliance('collector_unconfigured')
-print("Get current network settings of collector")
-if appliance.connect():
-    print(appliance.execute_command("show network interface all"))
-    print(appliance.execute_command("show network route default"))
-    print(appliance.execute_command("show network resolvers"))
-    print("Set manual hosts settings")
-    output = appliance.execute_command("support show hosts")
-    existing = set()
-    for line in output.splitlines():
-        line = line.strip()
-        if not line or line.startswith("#"):
-            continue
-        parts = line.split()
-        if len(parts) >= 2:
-            ip = parts[0].strip().lower()
-            host = parts[1].strip().lower()
-            existing.add((ip, host))
-    current_appliances = appliances
-    del current_appliances['collector_unconfigured']
-    del current_appliances['collector']
-    machines = current_appliances | managed_machines
+print("Password change for cli user on appliances")
+current_appliances = appliances
+del current_appliances['collector']
+for name, cfg in current_appliances.items():
+    print(f"Changing password on {name} ({cfg['host']})")
 
-    for machine, cfg in machines.items():
-        ip = str(cfg["host"]).strip().lower()
-        prompt_host = re.sub(r"\\", "", str(cfg["prompt_regex"])).strip()
-        if prompt_host.endswith(">"):
-            prompt_host = prompt_host[:-1]
-        prompt_host = prompt_host.strip().lower()
-        # jeśli para (IP, host) już istnieje w output → pomiń
-        if (ip, prompt_host) in existing:
-            continue
-        command = f'support store hosts {cfg["host"]} {prompt_host}'
-        # print(command)
-        appliance.execute_command(command)
-    print(appliance.execute_command("support show hosts"))
-    appliance.disconnect()
+    # ok = change_password_as_root(
+    #     host=cfg["host"],
+    #     root_password="RootPassword123!",
+    #     target_user="cli",
+    #     new_password="NoweHaslo!2026"
+    # )
+
+    # print("  OK" if ok else "  FAILED")
+
+# appliance = create_appliance('collector_unconfigured')
+# print("Get current network settings of collector")
+# if appliance.connect():
+#     print(appliance.execute_command("show network interface all"))
+#     print(appliance.execute_command("show network route default"))
+#     print(appliance.execute_command("show network resolvers"))
+#     print("Set manual hosts settings")
+#     output = appliance.execute_command("support show hosts")
+#     existing = set()
+#     for line in output.splitlines():
+#         line = line.strip()
+#         if not line or line.startswith("#"):
+#             continue
+#         parts = line.split()
+#         if len(parts) >= 2:
+#             ip = parts[0].strip().lower()
+#             host = parts[1].strip().lower()
+#             existing.add((ip, host))
+#     current_appliances = appliances
+#     del current_appliances['collector_unconfigured']
+#     del current_appliances['collector']
+#     machines = current_appliances | managed_machines
+
+#     for machine, cfg in machines.items():
+#         ip = str(cfg["host"]).strip().lower()
+#         prompt_host = re.sub(r"\\", "", str(cfg["prompt_regex"])).strip()
+#         if prompt_host.endswith(">"):
+#             prompt_host = prompt_host[:-1]
+#         prompt_host = prompt_host.strip().lower()
+#         # jeśli para (IP, host) już istnieje w output → pomiń
+#         if (ip, prompt_host) in existing:
+#             continue
+#         command = f'support store hosts {cfg["host"]} {prompt_host}'
+#         # print(command)
+#         appliance.execute_command(command)
+#     print(appliance.execute_command("support show hosts"))
+#     appliance.disconnect()
