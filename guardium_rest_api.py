@@ -100,5 +100,25 @@ class GuardiumRestAPI:
             'Authorization': f'Bearer {self.access_token}',
             'Content-Type': 'application/json'
         }
+    
+    def get_users(self) -> dict:
+        """
+        Pobiera listę użytkowników z Guardium.
+        
+        Returns:
+            Słownik z danymi użytkowników
+        
+        Raises:
+            RuntimeError: Jeśli token nie został jeszcze pobrany
+            requests.exceptions.RequestException: W przypadku błędu HTTP
+        """
+        url = f'{self.base_url}:8443/restAPI/user'
+        headers = self.get_headers()
+        
+        response = requests.get(url, headers=headers, verify=self.verify_ssl)
+        response.raise_for_status()
+        
+        return response.json()
+
 
 # Made with Bob
