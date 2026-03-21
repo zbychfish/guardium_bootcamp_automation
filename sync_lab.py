@@ -208,7 +208,21 @@ if appliance.connect():
         appliance = wait_for_appliance('collector_unconfigured')
         print("[INFO] Appliance available, can continue ...")
         # Tutaj możesz kontynuować konfigurację po restarcie
-        appliance.disconnect()
+        print("[INFO] Set collector hostname to coll1")
+        result = appliance.execute_command("store system hostname coll1")
+        print("[INFO] Set collector domain to gdemo.com")
+        result = appliance.execute_command("store system domain gdemo.com")
+        print("[INFO] Show unit type")
+        result = appliance.execute_command("show unit type")
+        print(result)
+        print("[INFO] Set sessions timeouts")
+        result = appliance.execute_command("store gui session_timeout 9999")
+        result = appliance.execute_command("store timeout cli_session 600")
+        print("[INFO] Restart GUI")
+        appliance.execute_command_with_confirmation(
+            command="restart gui",
+            response="y",
+            confirmation_pattern=r"Are you sure you want to restart GUI\s*\(y/n\)\?")
     else:
         print("\n[INFO] I could not restart appliance because MYSQL is busy, check it or restart task in a while ...")
         
