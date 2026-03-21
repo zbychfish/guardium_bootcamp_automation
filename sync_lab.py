@@ -41,7 +41,7 @@ appliances = {
     }
 }
 
-managed_machines: Dict[str, Dict[str, Any]] = {
+managed_machines: dict[str, dict[str, str]] = {
     'raptor': {
         'host': '10.10.9.70',
         'prompt_regex': r'raptor\.gdemo\.com>',
