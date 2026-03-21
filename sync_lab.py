@@ -360,7 +360,7 @@ def lab2_gim(appliance=None):
         print("  ⚠ Warning: Could not extract client_secret from response")
         return None
     api = GuardiumRestAPI(
-        base_url='https://10.10.9.219',
+        base_url='https://10.10.9.219:8443',
         client_id='BOOTCAMP'
     )
     try:
