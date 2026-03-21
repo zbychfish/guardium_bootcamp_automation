@@ -14,6 +14,9 @@ common_config = {
     'timeout': 120
 }
 
+#appliances_resolving =[('cm.gdemo.com', '10.10.9.219'), ('coll1.gdemo.com', '10.10.9.239'), ('guard', '10.10.9.239'), ('cm', '10.10.9.219'), ('cm_unconfigured', '10.10.9.219'), ('guard', '10.10.9.239'), ('toolnode.gdemo.com', '10.10.9.229')]
+
+
 # Konfiguracja specyficzna dla każdego appliance
 appliances = {
     'collector': {
@@ -34,6 +37,29 @@ appliances = {
     'toolnode': {
         'host': '10.10.9.229',
         'prompt_regex': r'toolnode\.gdemo\.com>',
+        'password': 'Guardium123!'
+    }
+}
+
+managed_machines: Dict[str, Dict[str, Any]] = {
+    'raptor': {
+        'host': '10.10.9.70',
+        'prompt_regex': r'raptor\.gdemo\.com>',
+        'password': 'Guardium123!'
+    },
+    'hana': {
+        'host': '10.10.9.60',
+        'prompt_regex': r'hana\.gdemo\.com>',
+        'password': 'Guardium123!'
+    },
+    'winsql': {
+        'host': '10.10.9.59',
+        'prompt_regex': r'winsql\.gdemo\.com>',
+        'password': 'gdptraining'
+    },
+    'appnode': {
+        'host': '10.10.9.50',
+        'prompt_regex': r'appnode\.gdemo\.com>',
         'password': 'Guardium123!'
     }
 }
@@ -63,4 +89,11 @@ if appliance.connect():
     print(appliance.execute_command("show network interface all"))
     print(appliance.execute_command("show network route default"))
     print(appliance.execute_command("show network resolvers"))
+    print(appliance.execute_command("support show hosts"))
+    current_appliances = appliances
+    del current_appliances['collector_unconfigured']
+    machines = current_appliances | managed_machines
+    for machine in machines:
+        print("support store hosts", machine['host'], machine['prompt_regex'])
+   
     appliance.disconnect()
