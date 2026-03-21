@@ -127,29 +127,40 @@ def wait_for_appliance(appliance_name: str, max_attempts: int = 40, interval: in
     raise RuntimeError(f"Nie udało się połączyć z '{appliance_name}' po {max_attempts} próbach")
 
 
-# Przykład użycia
-print("Lab 1 - appliance setup")
-print("---------------------------")
-print("\n[INFO] Password change for cli user on appliances")
-current_appliances = appliances.copy()
-del current_appliances['collector']
-for name, cfg in current_appliances.items():
-    print(f"\n[INFO] Changing password on {name} ({cfg['host']})")
-    ok = change_password_as_root(
-        host=cfg["host"],
-        root_password=get_env_password("ROOT_PASSWORD"),
-        target_user="cli",
-        new_password=get_env_password("COLLECTOR_PASSWORD")
-    )
-    print("  OK" if ok else "  FAILED")
-
-appliance = create_appliance('collector_unconfigured')
-print("\n[INFO] Get current network settings of collector")
-if appliance.connect():
+def lab1_appliance_setup(appliance=None):
+    """
+    LAB 1 - Konfiguracja appliance (collector).
+    
+    Returns:
+        appliance: Połączony obiekt ApplianceCommand lub None w przypadku błędu
+    """
+    print("=" * 60)
+    print("LAB 1 - Appliance Setup")
+    print("=" * 60)
+    
+    print("\n[LAB 1.1] Password change for cli user on appliances")
+    current_appliances = appliances.copy()
+    del current_appliances['collector']
+    for name, cfg in current_appliances.items():
+        print(f"  Changing password on {name} ({cfg['host']})")
+        ok = change_password_as_root(
+            host=cfg["host"],
+            root_password=get_env_password("ROOT_PASSWORD"),
+            target_user="cli",
+            new_password=get_env_password("COLLECTOR_PASSWORD")
+        )
+        print("    ✓ OK" if ok else "    ✗ FAILED")
+    
+    print("\n[LAB 1.2] Connect to collector and get network settings")
+    appliance = create_appliance('collector_unconfigured')
+    if not appliance.connect():
+        print("  ✗ Failed to connect to collector")
+        return None
     print(appliance.execute_command("show network interface all"))
     print(appliance.execute_command("show network route default"))
     print(appliance.execute_command("show network resolvers"))
-    print("\n[INFO] Set manual hosts settings")
+    
+    print("\n[LAB 1.3] Set manual hosts settings")
     output = appliance.execute_command("support show hosts")
     existing = set()
     for line in output.splitlines():
@@ -161,25 +172,25 @@ if appliance.connect():
             ip = parts[0].strip().lower()
             host = parts[1].strip().lower()
             existing.add((ip, host))
+    
     current_appliances = appliances.copy()
     del current_appliances['collector_unconfigured']
     del current_appliances['collector']
     machines = current_appliances | managed_machines
-
+    
     for machine, cfg in machines.items():
         ip = str(cfg["host"]).strip().lower()
         prompt_host = re.sub(r"\\", "", str(cfg["prompt_regex"])).strip()
         if prompt_host.endswith(">"):
             prompt_host = prompt_host[:-1]
         prompt_host = prompt_host.strip().lower()
-        # jeśli para (IP, host) już istnieje w output → pomiń
         if (ip, prompt_host) in existing:
             continue
         command = f'support store hosts {cfg["host"]} {prompt_host}'
-        # print(command)
         appliance.execute_command(command)
     print(appliance.execute_command("support show hosts"))
-    print("\n[INFO] Set time zone on collector to Europe/Warsaw")
+    
+    print("\n[LAB 1.4] Set time zone to Europe/Warsaw")
     output = appliance.execute_command("show system clock all")
     timezone = output.strip().splitlines()[-1]
     if timezone != "Europe/Warsaw":
@@ -192,39 +203,111 @@ if appliance.connect():
         output = appliance.execute_command("show system clock all")
         print(output)
     else:
-        print(f"\n[INFO] Time zone already set to {timezone}")
-    print(f"\n[INFO] Setting public NTP servers")
+        print(f"  Time zone already set to {timezone}")
+    
+    print("\n[LAB 1.5] Configure NTP servers")
     appliance.execute_command("store system time_server hostname 0.pool.ntp.org 1.pool.ntp.org 2.pool.ntp.org")
     print(appliance.execute_command("show system time_server all"))
-    print(f"\n[INFO] Time synchronization is switching on")
+    print("  Enabling time synchronization...")
     appliance.execute_command("store system time_server state on")
     print(appliance.execute_command("show system time_server all"))
-    print(f"\n[INFO] Time synchronization switched on")
+    
+    print("\n[LAB 1.6] Restart system")
     result = appliance.execute_restart_with_check()
-    print(result)
+    print(f"  {result}")
     appliance.disconnect()
-    if "System is restarting" in result:
-        print("\n[INFO] System restarted waiting for its availability...")
+    
+    if "restartowany" in result:
+        print("\n[LAB 1.7] Waiting for system availability...")
         appliance = wait_for_appliance('collector_unconfigured')
-        print("[INFO] Appliance available, can continue ...")
-        # Tutaj możesz kontynuować konfigurację po restarcie
-        print("[INFO] Set collector hostname to coll1")
-        result = appliance.execute_command("store system hostname coll1")
-        print("[INFO] Set collector domain to gdemo.com")
-        result = appliance.execute_command("store system domain gdemo.com")
-        print("[INFO] Show unit type")
-        result = appliance.execute_command("show unit type")
-        print(result)
-        print("[INFO] Set sessions timeouts")
-        result = appliance.execute_command("store gui session_timeout 9999")
-        result = appliance.execute_command("store timeout cli_session 600")
-        print("[INFO] Restart GUI")
-        appliance.execute_command_with_confirmation(
-            command="restart gui",
-            response="y",
-            confirmation_pattern=r"Are you sure you want to restart GUI\s*\(y/n\)\?")
+        print("  ✓ Appliance available")
     else:
-        print("\n[INFO] I could not restart appliance because MYSQL is busy, check it or restart task in a while ...")
-        
-        
+        print("  ✗ Could not restart - MYSQL is busy")
+        return None
+    
+    print("\n[LAB 1.8] Post-restart configuration")
+    print("  Setting hostname to coll1...")
+    appliance.execute_command("store system hostname coll1")
+    print("  Setting domain to gdemo.com...")
+    appliance.execute_command("store system domain gdemo.com")
+    print("  Unit type:")
+    result = appliance.execute_command("show unit type")
+    print(f"    {result}")
+    
+    print("\n[LAB 1.9] Configure session timeouts")
+    appliance.execute_command("store gui session_timeout 9999")
+    appliance.execute_command("store timeout cli_session 600")
+    print("  ✓ Timeouts configured")
+    
+    print("\n[LAB 1.10] Restart GUI")
+    appliance.execute_command_with_confirmation(
+        command="restart gui",
+        response="y",
+        confirmation_pattern=r"Are you sure you want to restart GUI\s*\(y/n\)\?"
+    )
+    print("  ✓ GUI restarted")
+    
+    print("\n" + "=" * 60)
+    print("LAB 1 completed!")
+    print("=" * 60)
+    
+    return appliance
 
+
+def sync_lab(skip_below: int = 0):
+    """
+    Główna funkcja synchronizacji laboratorium.
+    
+    Args:
+        skip_below: Pomiń LAB-y o numerze mniejszym niż podana wartość (domyślnie 0 - wykonaj wszystkie)
+    """
+    appliance = None
+    
+    # LAB 1: Appliance Setup
+    if skip_below < 1:
+        appliance = lab1_appliance_setup()
+        if appliance:
+            appliance.disconnect()
+    else:
+        print("\n[LAB 1] SKIPPED - Appliance setup")
+    
+    # LAB 2: Tutaj dodasz kolejny lab
+    if skip_below < 2:
+        # print("\n[LAB 2] ...")
+        pass
+    else:
+        print("\n[LAB 2] SKIPPED")
+    
+    # LAB 3: Tutaj dodasz kolejny lab
+    if skip_below < 3:
+        # print("\n[LAB 3] ...")
+        pass
+    else:
+        print("\n[LAB 3] SKIPPED")
+    
+    print("\n" + "=" * 60)
+    print("All labs completed!")
+    print("=" * 60)
+
+
+if __name__ == "__main__":
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="Sync Lab - synchronizacja środowiska laboratoryjnego")
+    parser.add_argument(
+        "--skip-below",
+        type=int,
+        default=0,
+        help="Pomiń LAB-y o numerze mniejszym niż podana wartość (domyślnie 0 - wykonaj wszystkie)"
+    )
+    
+    args = parser.parse_args()
+    
+    try:
+        sync_lab(skip_below=args.skip_below)
+    except KeyboardInterrupt:
+        print("\n\n[INFO] Przerwano przez użytkownika")
+    except Exception as e:
+        print(f"\n[ERROR] Błąd: {e}")
+        import traceback
+        traceback.print_exc()
