@@ -302,41 +302,24 @@ def lab1_appliance_setup(appliance=None):
         confirmation_pattern=r"Are you sure you want to restart GUI\s*\(y/n\)\?"
     )
     print("  ✓ GUI restarted")
-    
+    print("\n[LAB 1.11] Set shared secret on collector")
+    appliance.execute_command("store system shared secret guardium")
+    print("  ✓ Shared Secret set")
     print("\n" + "=" * 60)
     print("LAB 1 completed!")
     print("=" * 60)
-    
     return appliance
-
-def lab2_gim(appliance=None):
-    """
-    LAB 2 - Konfiguracja GIM (Group Identity Management).
-    
-    Args:
-        appliance: Opcjonalny połączony obiekt ApplianceCommand
-    
-    Returns:
-        appliance: Połączony obiekt ApplianceCommand lub None w przypadku błędu
-    """
-    print("=" * 60)
-    print("LAB 2 - GIM Setup")
-    print("=" * 60)
-    
-    # Połącz się z CM
-    print("\n[LAB 2.1] Connect to Central Manager")
+    print("\n[LAB 1.12] Connect to Central Manager")
     appliance = create_appliance('cm')
     if not appliance.connect():
         print("  ✗ Failed to connect to CM")
         return None
-    
-    print("\n[LAB 2.2] Create oauth client for bootcamp sync")
+    print("\n[LAB 1.12] Create oauth client for bootcamp sync")
     result = appliance.execute_command("grdapi list_oauth_clients")
     if "Client Id: BOOTCAMP" in result:
         appliance.execute_command("grdapi delete_oauth_clients client_id=BOOTCAMP")
     result = appliance.execute_command('grdapi register_oauth_client client_id=BOOTCAMP grant_types="password"')
     client_secret = None
-    appliance.disconnect
     for line in result.splitlines():
         line = line.strip()
         if line.startswith('{') and line.endswith('}'):
@@ -354,6 +337,28 @@ def lab2_gim(appliance=None):
     if not client_secret:
         print("  ⚠ Warning: Could not extract client_secret from response")
         return None
+    print("\n[LAB 1.11] Set shared secret on Central Manager")
+    appliance.execute_command("store system shared secret guardium")
+    print("  ✓ Shared Secret set")
+    appliance.disconnect
+
+def lab2_gim(appliance=None):
+    """
+    LAB 2 - Konfiguracja GIM (Group Identity Management).
+    
+    Args:
+        appliance: Opcjonalny połączony obiekt ApplianceCommand
+    
+    Returns:
+        appliance: Połączony obiekt ApplianceCommand lub None w przypadku błędu
+    """
+    print("=" * 60)
+    print("LAB 2 - GIM Setup")
+    print("=" * 60)
+    
+    # Połącz się z CM
+    
+    
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443',
         client_id='BOOTCAMP'
@@ -395,6 +400,14 @@ def lab2_gim(appliance=None):
         print("\n[LAB 2.4] Import Training dashboard for demo user")
         token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
         result = api.import_definitions('guardium_definition_files/exp_dashboard_training.sql')
+        print("\n[LAB 2.4] Register collector to central manager")
+        units = api.get_registered_units()
+        print(units)
+        # result = api.register_unit(
+        #     unit_ip='10.10.9.239',
+        #     unit_port='8443',
+        #     secret_key='guardium'
+        # )
     except Exception as e:
         print(f"  ✗ Error: {e}")
         import traceback

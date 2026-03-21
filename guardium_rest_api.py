@@ -248,6 +248,55 @@ class GuardiumRestAPI:
         response.raise_for_status()
         
         return response.json()
+    
+    def register_unit(self, unit_ip: str, unit_port: str, secret_key: str) -> dict:
+        """
+        Rejestruje jednostkę (unit) w Guardium Central Manager.
+        
+        Args:
+            unit_ip: Adres IP jednostki (wymagane)
+            unit_port: Port jednostki (wymagane)
+            secret_key: Klucz tajny do rejestracji (wymagane)
+        
+        Returns:
+            Słownik z odpowiedzią API
+        
+        Raises:
+            RuntimeError: Jeśli token nie został jeszcze pobrany
+            requests.exceptions.RequestException: W przypadku błędu HTTP
+        """
+        url = f'{self.base_url}/restAPI/register_unit'
+        headers = self.get_headers()
+        
+        data = {
+            'unitIp': unit_ip,
+            'unitPort': unit_port,
+            'secretKey': secret_key
+        }
+        
+        response = requests.post(url, json=data, headers=headers, verify=self.verify_ssl)
+        response.raise_for_status()
+        
+        return response.json()
+    
+    def get_registered_units(self) -> dict:
+        """
+        Pobiera listę zarejestrowanych jednostek (units) w Guardium Central Manager.
+        
+        Returns:
+            Słownik z listą zarejestrowanych jednostek
+        
+        Raises:
+            RuntimeError: Jeśli token nie został jeszcze pobrany
+            requests.exceptions.RequestException: W przypadku błędu HTTP
+        """
+        url = f'{self.base_url}:8443/restAPI/get_registered_units'
+        headers = self.get_headers()
+        
+        response = requests.get(url, headers=headers, verify=self.verify_ssl)
+        response.raise_for_status()
+        
+        return response.json()
 
 
 # Made with Bob
