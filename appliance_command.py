@@ -167,7 +167,20 @@ class ApplianceCommand:
             if first.strip() == command.strip():
                 lines = lines[1:]
         
-        return "\n".join(lines).strip("\n")
+        # Filter out unwanted lines
+        filtered_lines = []
+        for line in lines:
+            stripped = line.strip()
+            # Skip empty lines, "ok", and prompt lines
+            if not stripped:
+                continue
+            if stripped == "ok":
+                continue
+            if self.prompt_re.match(stripped):
+                continue
+            filtered_lines.append(line)
+        
+        return "\n".join(filtered_lines).strip("\n")
     
     def execute_commands(self, commands: List[str]) -> List[str]:
         """Wykonuje listę poleceń i zwraca listę outputów"""
