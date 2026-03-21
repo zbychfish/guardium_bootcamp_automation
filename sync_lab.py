@@ -390,7 +390,9 @@ def lab2_gim(appliance=None):
             print(f"  ✓ Demo user created")
         else:
             print("\n  Demo user already exists")
-        
+        print("\n[LAB 2.4] Assign roles to demo user")    
+        result = api.set_user_roles(username='demo', roles='admin,cli,user,vulnerability-assess')  
+
     except Exception as e:
         print(f"  ✗ Error: {e}")
         import traceback

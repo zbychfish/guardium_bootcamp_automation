@@ -180,6 +180,35 @@ class GuardiumRestAPI:
         response.raise_for_status()
         
         return response.json()
+    
+    def set_user_roles(self, username: str, roles: str) -> dict:
+        """
+        Przypisuje lub aktualizuje role użytkownika w Guardium.
+        
+        Args:
+            username: Nazwa użytkownika (wymagane)
+            roles: Rola lub role do przypisania (wymagane)
+                   Dla wielu ról użyj przecinka bez spacji, np. "role1,role2,role3"
+        
+        Returns:
+            Słownik z odpowiedzią API
+        
+        Raises:
+            RuntimeError: Jeśli token nie został jeszcze pobrany
+            requests.exceptions.RequestException: W przypadku błędu HTTP
+        """
+        url = f'{self.base_url}/restAPI/user_roles'
+        headers = self.get_headers()
+        
+        data = {
+            'userName': username,
+            'roles': roles
+        }
+        
+        response = requests.put(url, json=data, headers=headers, verify=self.verify_ssl)
+        response.raise_for_status()
+        
+        return response.json()
 
 
 # Made with Bob
