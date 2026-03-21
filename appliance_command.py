@@ -176,11 +176,11 @@ class ApplianceCommand:
                 continue
             if stripped == "ok":
                 continue
-            if self.prompt_re.match(stripped):
+            if self.prompt_re.search(stripped):
                 continue
             filtered_lines.append(line)
         
-        return "\n".join(filtered_lines).strip("\n")
+        return "\n".join(filtered_lines)
     
     def execute_commands(self, commands: List[str]) -> List[str]:
         """Wykonuje listę poleceń i zwraca listę outputów"""
