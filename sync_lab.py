@@ -335,8 +335,8 @@ def lab2_gim(appliance=None):
     if "Client Id: BOOTCAMP" in result:
         appliance.execute_command("grdapi delete_oauth_clients client_id=BOOTCAMP")
     result = appliance.execute_command('grdapi register_oauth_client client_id=BOOTCAMP grant_types="password"')
-    print(result)
     client_secret = None
+    appliance.disconnect
     for line in result.splitlines():
         line = line.strip()
         if line.startswith('{') and line.endswith('}'):
@@ -392,7 +392,9 @@ def lab2_gim(appliance=None):
             print("\n  Demo user already exists")
         print("\n[LAB 2.4] Assign roles to demo user")    
         result = api.set_user_roles(username='demo', roles='admin,cli,user,vulnerability-assess')  
-
+        print("\n[LAB 2.4] Import Training dashboard for demo user")
+        token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
+        result = api.import_definitions('guardium_definitions_file/exp_dashboard_training.sql')
     except Exception as e:
         print(f"  ✗ Error: {e}")
         import traceback

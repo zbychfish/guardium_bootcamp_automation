@@ -209,6 +209,45 @@ class GuardiumRestAPI:
         response.raise_for_status()
         
         return response.json()
+    
+    def import_definitions(self, file_path: str) -> dict:
+        """
+        Importuje definicje z pliku do Guardium.
+        
+        Args:
+            file_path: Ścieżka do pliku z definicjami (np. z katalogu guardium_definitions_file)
+        
+        Returns:
+            Słownik z odpowiedzią API
+        
+        Raises:
+            RuntimeError: Jeśli token nie został jeszcze pobrany
+            FileNotFoundError: Jeśli plik nie istnieje
+            requests.exceptions.RequestException: W przypadku błędu HTTP
+        """
+        import os
+        
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"File not found: {file_path}")
+        
+        url = f'{self.base_url}/restAPI/import_definitions'
+        headers = self.get_headers()
+        
+        # Usuń Content-Type z nagłówków, requests ustawi go automatycznie dla multipart/form-data
+        headers_without_content_type = {k: v for k, v in headers.items() if k != 'Content-Type'}
+        
+        with open(file_path, 'rb') as f:
+            files = {'file': (os.path.basename(file_path), f)}
+            response = requests.post(
+                url,
+                files=files,
+                headers=headers_without_content_type,
+                verify=self.verify_ssl
+            )
+        
+        response.raise_for_status()
+        
+        return response.json()
 
 
 # Made with Bob
