@@ -218,26 +218,30 @@ class ApplianceCommand:
         confirmation_re = re.compile(confirmation_pattern)
         buf = ""
         deadline = time.time() + timeout_confirmation
+        prompt_time = None
         
         while time.time() < deadline:
             if self.channel.recv_ready():
                 chunk = self.channel.recv(65535).decode(errors="replace")
                 buf += chunk
+                prompt_time = None  # Reset if we got new data
             
             buf_for_match = strip_ansi(buf) if self.strip_ansi_flag else buf
             if confirmation_re.search(buf_for_match):
-                # Found confirmation prompt - wait a bit for system to be ready
-                time.sleep(0.3)
-                
-                # Send response
-                if self.debug:
-                    print(f"[DEBUG] Confirmation prompt detected, sending: {response}", file=sys.stderr)
-                
-                self.channel.send(response.encode())
-                time.sleep(0.1)
-                self.channel.send(b"\n")
-                time.sleep(0.1)
-                break
+                if prompt_time is None:
+                    # Mark that we found the prompt
+                    prompt_time = time.time()
+                else:
+                    # Check if no new data arrived for 0.5 seconds
+                    if time.time() - prompt_time > 0.5:
+                        # System is waiting for input - send response
+                        if self.debug:
+                            print(f"[DEBUG] Confirmation prompt detected, sending: {response}", file=sys.stderr)
+                        
+                        self.channel.send(response.encode())
+                        self.channel.send(b"\n")
+                        time.sleep(0.2)
+                        break
             
             if self.channel.closed:
                 raise RuntimeError("Channel closed while waiting for confirmation")
