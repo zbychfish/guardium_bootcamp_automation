@@ -147,5 +147,12 @@ if appliance.connect():
     output = appliance.execute_command("show system clock all")
     timezone = output.strip().splitlines()[-1]
     if timezone != "Europe/Warsaw":
-        print("Timezone is NOT Europe/Warsaw – do something")
+        output = appliance.execute_command_with_confirmation(
+            command="store system clock timezone Europe/Warsaw",
+            confirmation_pattern=r"\(y/n\)",  # opcjonalne, domyślnie (y/n)
+            response="y",                      # opcjonalne, domyślnie 'y'
+            timeout_confirmation=500            # opcjonalne, domyślnie 10 sekund
+        )
+        print(output)
+        output = appliance.execute_command("show system clock all")
     appliance.disconnect()

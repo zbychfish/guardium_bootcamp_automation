@@ -184,6 +184,96 @@ class ApplianceCommand:
         
         raise TimeoutError(f"Timeout waiting for: {regex.pattern}")
     
+    def execute_command_with_confirmation(
+        self,
+        command: str,
+        confirmation_pattern: str = r"\(y/n\)",
+        response: str = "y",
+        timeout_confirmation: int = 10
+    ) -> str:
+        """
+        Wykonuje polecenie, które wymaga interaktywnego potwierdzenia.
+        
+        Args:
+            command: Polecenie do wykonania
+            confirmation_pattern: Regex pattern dla pytania o potwierdzenie
+            response: Odpowiedź do wysłania (np. 'y', 'n', 'yes', 'no')
+            timeout_confirmation: Timeout dla oczekiwania na pytanie (sekundy)
+        
+        Returns:
+            Pełny output polecenia
+        """
+        if not self.channel:
+            raise RuntimeError("Not connected")
+        
+        # Flush buffer
+        time.sleep(0.05)
+        while self.channel.recv_ready():
+            self.channel.recv(65535)
+        
+        # Send command
+        self.channel.send((command + "\r\n").encode())
+        
+        # Wait for confirmation prompt
+        confirmation_re = re.compile(confirmation_pattern)
+        buf = ""
+        deadline = time.time() + timeout_confirmation
+        
+        while time.time() < deadline:
+            if self.channel.recv_ready():
+                chunk = self.channel.recv(65535).decode(errors="replace")
+                buf += chunk
+            
+            buf_for_match = strip_ansi(buf) if self.strip_ansi_flag else buf
+            if confirmation_re.search(buf_for_match):
+                # Found confirmation prompt - send response
+                if self.debug:
+                    print(f"[DEBUG] Confirmation prompt detected, sending: {response}", file=sys.stderr)
+                self.channel.send((response + "\r\n").encode())
+                break
+            
+            if self.channel.closed:
+                raise RuntimeError("Channel closed while waiting for confirmation")
+            
+            time.sleep(0.05)
+        else:
+            raise TimeoutError(f"Timeout waiting for confirmation pattern: {confirmation_pattern}")
+        
+        # Now wait for the system prompt to return
+        raw = self._read_until_regex(self.prompt_re, echo=False)
+        
+        # Combine all output
+        full_output = buf + raw
+        
+        # Clean output
+        working = strip_ansi(full_output) if self.strip_ansi_flag else full_output
+        last_span = _find_last_prompt_span(working, self.prompt_re)
+        output_region = working[: last_span[0]] if last_span else working
+        
+        lines = output_region.splitlines()
+        
+        # Remove empty lines and command echo
+        while lines and not lines[0].strip():
+            lines.pop(0)
+        
+        if lines:
+            first = lines[0].rstrip("\r\n")
+            if first.strip() == command.strip():
+                lines = lines[1:]
+        
+        # Filter out unwanted lines
+        filtered_lines = []
+        for line in lines:
+            stripped = line.strip()
+            # Skip empty lines and prompt lines
+            if not stripped:
+                continue
+            if self.prompt_re.search(stripped):
+                continue
+            filtered_lines.append(line)
+        
+        return "\n".join(filtered_lines)
+    
     def execute_command(self, command: str) -> str:
         """Wykonuje pojedyncze polecenie i zwraca output"""
         if not self.channel:
