@@ -7,33 +7,55 @@ Sync Lab - orkiestracja synchronizacji środowiska laboratoryjnego
 from appliance_command import ApplianceCommand
 
 
-# Konfiguracja
-config = {
-    'host': '10.10.9.239',
+# Wspólna konfiguracja dla wszystkich appliance
+common_config = {
     'user': 'cli',
-    'password': 'Guardium123!',
-    'prompt_regex': r'coll1\.gdemo\.com>',
     'initial_pattern': 'Last login',
     'timeout': 120
 }
 
-# Utworzenie instancji
-appliance = ApplianceCommand(
-    host=config['host'],
-    user=config['user'],
-    password=config['password'],
-    prompt_regex=config['prompt_regex'],
-    initial_pattern=config['initial_pattern'],
-    timeout=config['timeout']
-)
+# Konfiguracja specyficzna dla każdego appliance
+appliances = {
+    'collector': {
+        'host': '10.10.9.239',
+        'prompt_regex': r'coll1\.gdemo\.com>',
+        'password': 'Guardium123!'
+    },
+    'collector_unconfigured': {
+        'host': '10.10.9.239',
+        'prompt_regex': r'coll1\.gdemo\.com>',
+        'password': 'guardium'
+    },
+    'cm': {
+        'host': '10.10.9.219',
+        'prompt_regex': r'cm\.gdemo\.com>',
+        'password': 'Guardium123!'
+    },
+    'toolnode': {
+        'host': '10.10.9.229',
+        'prompt_regex': r'toolnode\.gdemo\.com>',
+        'password': 'Guardium123!'
+    }
+}
 
-# Połączenie
+def create_appliance(appliance_name: str) -> ApplianceCommand:
+    """Tworzy instancję ApplianceCommand dla danego appliance"""
+    appliance_config = appliances[appliance_name]
+    
+    return ApplianceCommand(
+        host=appliance_config['host'],
+        user=common_config['user'],
+        password=common_config['password'],
+        prompt_regex=appliance_config['prompt_regex'],
+        initial_pattern=common_config['initial_pattern'],
+        timeout=common_config['timeout']
+    )
+
+
+# Przykład użycia
+appliance = create_appliance('collector')
+
 if appliance.connect():
-    # Wykonanie polecenia
     output = appliance.execute_command("support show hosts")
     print(output)
-    
-    # Rozłączenie
     appliance.disconnect()
-
-# Made with Bob
