@@ -190,7 +190,11 @@ def lab1_appliance_setup(appliance=None):
         appliance.execute_command(command)
     print(appliance.execute_command("support show hosts"))
     
-    print("\n[LAB 1.4] Set time zone to Europe/Warsaw")
+    print("\n[LAB 1.4] Disabling purge")
+    output = appliance.execute_command("grdapi diable_purge")
+
+
+    print("\n[LAB 1.5] Set time zone to Europe/Warsaw")
     output = appliance.execute_command("show system clock all")
     timezone = output.strip().splitlines()[-1]
     if timezone != "Europe/Warsaw":
@@ -205,7 +209,7 @@ def lab1_appliance_setup(appliance=None):
     else:
         print(f"  Time zone already set to {timezone}")
     
-    print("\n[LAB 1.5] Configure NTP servers")
+    print("\n[LAB 1.6] Configure NTP servers")
     appliance.execute_command("store system time_server hostname 0.pool.ntp.org 1.pool.ntp.org 2.pool.ntp.org")
     print(appliance.execute_command("show system time_server all"))
     print("  Enabling time synchronization...")
@@ -223,6 +227,7 @@ def lab1_appliance_setup(appliance=None):
         print("  ✓ Appliance available")
     else:
         print("  ✗ Could not restart - MYSQL is busy")
+        print("  ✗ Run script again in 1 minute or restart collector manually and then start again")
         return None
     
     print("\n[LAB 1.8] Post-restart configuration")
@@ -254,7 +259,6 @@ def lab1_appliance_setup(appliance=None):
     return appliance
 
 
-def sync_lab(skip_below: int = 0):
     """
     Główna funkcja synchronizacji laboratorium.
     
