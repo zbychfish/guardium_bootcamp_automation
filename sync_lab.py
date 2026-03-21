@@ -220,7 +220,7 @@ def lab1_appliance_setup(appliance=None):
     print(f"  {result}")
     appliance.disconnect()
     
-    if "restartowany" in result:
+    if "System is restarting - connection broke" in result:
         print("\n[LAB 1.7] Waiting for system availability...")
         appliance = wait_for_appliance('collector_unconfigured')
         print("  ✓ Appliance available")
