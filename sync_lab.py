@@ -164,6 +164,8 @@ if appliance.connect():
     appliance.execute_command("store system time_server state on")
     print(appliance.execute_command("show system time_server all"))
     print(f"Time synchronization switched on")
+    result = appliance.execute_restart_with_check()
+    print(result)
     appliance.disconnect()
     # print(f"Relogin to collector because of")
 

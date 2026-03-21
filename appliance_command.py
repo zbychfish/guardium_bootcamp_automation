@@ -275,6 +275,112 @@ class ApplianceCommand:
         
         return "\n".join(lines).strip()
     
+    def execute_restart_with_check(
+        self,
+        command: str = "restart system",
+        confirmation_pattern: str = r"Are you sure you want to restart the system\s*\(y/n\)\?",
+        busy_pattern: str = r"MYSQL is busy updating the database",
+        confirm_idle: float = 0.2
+    ) -> str:
+        """
+        Wykonuje restart systemu z warunkiem - sprawdza czy MySQL jest busy.
+        
+        Args:
+            command: Polecenie restartu
+            confirmation_pattern: Regex pattern dla pytania o potwierdzenie
+            busy_pattern: Regex pattern dla komunikatu o busy MySQL
+            confirm_idle: Czas oczekiwania na idle przed wysłaniem odpowiedzi
+        
+        Returns:
+            Komunikat o wyniku operacji
+        """
+        if not self.channel:
+            raise RuntimeError("Not connected")
+        
+        # Flush buffer
+        time.sleep(0.03)
+        while self.channel.recv_ready():
+            self.channel.recv(65535)
+        
+        # Send command with CR only
+        self.channel.send((command + "\r").encode())
+        
+        confirmation_re = re.compile(confirmation_pattern)
+        busy_re = re.compile(busy_pattern)
+        buf = ""
+        deadline = time.time() + self.timeout
+        confirmed = False
+        
+        while time.time() < deadline:
+            if self.channel.recv_ready():
+                chunk = self.channel.recv(65535).decode(errors="replace")
+                buf += chunk
+            
+            buf_for_match = strip_ansi(buf) if self.strip_ansi_flag else buf
+            
+            # Handle confirmation once when detected
+            if (not confirmed) and confirmation_re.search(buf_for_match):
+                # Wait until channel is idle
+                idle_deadline = time.time() + confirm_idle
+                while time.time() < deadline:
+                    if self.channel.recv_ready():
+                        chunk = self.channel.recv(65535).decode(errors="replace")
+                        buf += chunk
+                        idle_deadline = time.time() + confirm_idle
+                    if time.time() >= idle_deadline:
+                        break
+                    time.sleep(0.01)
+                
+                buf_for_match = strip_ansi(buf) if self.strip_ansi_flag else buf
+                
+                # Check if MySQL is busy
+                if busy_re.search(buf_for_match):
+                    if self.debug:
+                        print("[DEBUG] MySQL busy detected, sending 'n'", file=sys.stderr)
+                    # Send 'n' to reject restart
+                    self.channel.send(b"n\r")
+                    confirmed = True
+                    time.sleep(0.02)
+                    
+                    # Wait for prompt
+                    try:
+                        self._read_until_regex(self.prompt_re, echo=False)
+                    except TimeoutError:
+                        pass
+                    
+                    return "Restart odrzucony - MySQL is busy updating the database"
+                else:
+                    if self.debug:
+                        print("[DEBUG] No busy detected, sending 'y' - system will restart", file=sys.stderr)
+                    # Send 'y' to confirm restart
+                    self.channel.send(b"y\r")
+                    confirmed = True
+                    time.sleep(0.5)
+                    
+                    # System will restart - connection will be lost
+                    # Try to read any remaining output
+                    try:
+                        remaining = ""
+                        end_time = time.time() + 5
+                        while time.time() < end_time:
+                            if self.channel.recv_ready():
+                                chunk = self.channel.recv(65535).decode(errors="replace")
+                                remaining += chunk
+                            if self.channel.closed:
+                                break
+                            time.sleep(0.1)
+                    except Exception:
+                        pass
+                    
+                    return "System restartowany - połączenie przerwane"
+            
+            if self.channel.closed:
+                return "System restartowany - połączenie przerwane"
+            
+            time.sleep(0.005)
+        
+        raise TimeoutError(f"Timeout waiting for confirmation pattern: {confirmation_pattern}")
+    
     def execute_command(self, command: str) -> str:
         """Wykonuje pojedyncze polecenie i zwraca output"""
         if not self.channel:
