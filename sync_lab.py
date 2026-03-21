@@ -364,7 +364,7 @@ def lab2_gim(appliance=None):
         client_id='BOOTCAMP'
     )
     try:
-        token = api.get_token(username='admin', password='Guardium123!')
+        token = api.get_token(username='accessmgr', password='Guardium123!')
         print(f"Access token: {token}")
         # Użyj nagłówków w requestach
         # headers = api.get_headers()
