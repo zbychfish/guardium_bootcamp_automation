@@ -409,29 +409,37 @@ def lab2_gim(appliance=None):
         registered_ips = []
         if units and 'Message' in units:
             try:
-                # Parsuj Message jako Python dict
                 message_str = units['Message'].strip()
-                # Zamień na poprawny JSON format
-                message_str = message_str.replace('hostName:', '"hostName":')
-                message_str = message_str.replace('port:', '"port":')
-                message_str = message_str.replace('unitType:', '"unitType":')
-                message_str = message_str.replace('lastInstalledPatch:', '"lastInstalledPatch":')
-                message_str = message_str.replace('guardRelease:', '"guardRelease":')
-                message_str = message_str.replace('ip:', '"ip":')
-                message_str = message_str.replace('mus:', '"mus":')
                 
-                # Parsuj jako JSON
-                data = json.loads(message_str)
+                # Użyj regex do wyciągnięcia IP z mus
+                # Szukamy wzorca: mus: [{...ip: X.X.X.X...}, {...ip: Y.Y.Y.Y...}]
+                import re
                 
-                # Wyciągnij IP z mus (managed units)
-                if 'mus' in data and data['mus']:
-                    for unit in data['mus']:
-                        if 'ip' in unit:
-                            registered_ips.append(unit['ip'])
-                    print(f"  Registered units IPs: {registered_ips}")
+                # Znajdź główny blok mus: [...]
+                mus_match = re.search(r'mus:\s*\[(.*?)\]\s*\}', message_str, re.DOTALL)
+                if mus_match:
+                    mus_content = mus_match.group(1)
+                    
+                    # Znajdź wszystkie IP w tym bloku (ale tylko na pierwszym poziomie)
+                    # Szukamy ip: X.X.X.X przed kolejnym mus: []
+                    ip_pattern = r'ip:\s*([\d.]+)'
+                    ips = re.findall(ip_pattern, mus_content)
+                    
+                    # Filtruj - bierzemy tylko IP które są przed "mus: []" (pierwszy poziom)
+                    # Podziel na jednostki po przecinkach między nawiasami {}
+                    units_blocks = re.findall(r'\{[^}]+\}', mus_content)
+                    for block in units_blocks:
+                        ip_match = re.search(r'ip:\s*([\d.]+)', block)
+                        if ip_match:
+                            registered_ips.append(ip_match.group(1))
+                    
+                    if registered_ips:
+                        print(f"  Registered units IPs: {registered_ips}")
+                    else:
+                        print("  No managed units found in mus")
                 else:
-                    print("  No managed units registered")
-            except (json.JSONDecodeError, KeyError) as e:
+                    print("  No managed units registered (mus is empty)")
+            except Exception as e:
                 print(f"  ⚠ Warning: Could not parse units data: {e}")
         
         # Sprawdź czy collector jest zarejestrowany
