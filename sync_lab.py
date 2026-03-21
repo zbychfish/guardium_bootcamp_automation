@@ -7,8 +7,11 @@ Sync Lab - orkiestracja synchronizacji środowiska laboratoryjnego
 import os
 import re
 import time
+import json
 from dotenv import load_dotenv
 from appliance_command import ApplianceCommand, change_password_as_root
+from guardium_rest_api import GuardiumRestAPI
+
 
 # Załaduj zmienne środowiskowe z pliku .env
 load_dotenv()
@@ -20,6 +23,55 @@ def get_env_password(key: str) -> str:
     if not password:
         raise ValueError(f"Hasło dla {key} nie zostało znalezione w pliku .env")
     return password
+
+
+def save_to_env(key: str, value: str, env_file: str = ".env") -> bool:
+    """
+    Zapisuje lub aktualizuje zmienną w pliku .env
+    
+    Args:
+        key: Nazwa zmiennej
+        value: Wartość zmiennej
+        env_file: Ścieżka do pliku .env
+    
+    Returns:
+        True jeśli sukces, False w przypadku błędu
+    """
+    try:
+        env_path = os.path.join(os.path.dirname(__file__), env_file)
+        
+        # Wczytaj istniejące linie
+        lines = []
+        key_found = False
+        
+        if os.path.exists(env_path):
+            with open(env_path, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+            
+            # Zaktualizuj istniejący klucz lub oznacz że nie znaleziono
+            for i, line in enumerate(lines):
+                if line.strip().startswith(f"{key}="):
+                    lines[i] = f"{key}={value}\n"
+                    key_found = True
+                    break
+        
+        # Jeśli klucz nie istnieje, dodaj na końcu
+        if not key_found:
+            if lines and not lines[-1].endswith('\n'):
+                lines.append('\n')
+            lines.append(f"{key}={value}\n")
+        
+        # Zapisz plik
+        with open(env_path, 'w', encoding='utf-8') as f:
+            f.writelines(lines)
+        
+        # Zaktualizuj zmienną środowiskową w bieżącej sesji
+        os.environ[key] = value
+        
+        return True
+    except Exception as e:
+        print(f"  ✗ Error saving to .env: {e}")
+        return False
 
 
 
@@ -257,6 +309,75 @@ def lab1_appliance_setup(appliance=None):
     
     return appliance
 
+def lab2_gim(appliance=None):
+    """
+    LAB 2 - Konfiguracja GIM (Group Identity Management).
+    
+    Args:
+        appliance: Opcjonalny połączony obiekt ApplianceCommand
+    
+    Returns:
+        appliance: Połączony obiekt ApplianceCommand lub None w przypadku błędu
+    """
+    print("=" * 60)
+    print("LAB 2 - GIM Setup")
+    print("=" * 60)
+    
+    # Połącz się z CM
+    print("\n[LAB 2.1] Connect to Central Manager")
+    appliance = create_appliance('cm')
+    if not appliance.connect():
+        print("  ✗ Failed to connect to CM")
+        return None
+    
+    print("\n[LAB 2.2] Check OAuth clients list")
+    result = appliance.execute_command("grdapi list_oauth_clients")
+    print(result)
+    
+    # Sprawdź czy BOOTCAMP jest na liście
+    if "Client Id: BOOTCAMP" in result:
+        appliance.execute_command("grdapi delete_oauth_clients client_id=BOOTCAMP")
+    result = appliance.execute_command('grdapi register_oauth_client client_id=BOOTCAMP grant_types="password"')
+    print(result)
+    
+    # Wyekstrahuj client_secret z JSON-a
+    client_secret = None
+    for line in result.splitlines():
+        line = line.strip()
+        if line.startswith('{') and line.endswith('}'):
+            try:
+                data = json.loads(line)
+                client_secret = data.get('client_secret')
+                if client_secret:
+                    if save_to_env("CLIENT_SECRET", client_secret):
+                        print(f"  ✓ Client secret saved to .env")
+                    else:
+                        print(f"  ⚠ Warning: Could not save client_secret to .env")
+                    break
+            except json.JSONDecodeError:
+                pass
+    if not client_secret:
+        print("  ⚠ Warning: Could not extract client_secret from response")
+        return None
+    api = GuardiumRestAPI(
+        base_url='https://10.10.9.219',
+        client_id='BOOTCAMP'
+    )
+    try:
+        token = api.get_token(username='admin', password='Guardium123!')
+        print(f"Access token: {token}")
+        # Użyj nagłówków w requestach
+        headers = api.get_headers()
+        print(f"Headers: {headers}")
+    except Exception as e:
+        print(f"Error: {e}")
+
+    print("\n" + "=" * 60)
+    print("LAB 2 completed!")
+    print("=" * 60)
+    
+    return appliance
+
 
 def sync_lab(skip_below: int = 0):
     """
@@ -272,15 +393,18 @@ def sync_lab(skip_below: int = 0):
         appliance = lab1_appliance_setup()
         if appliance:
             appliance.disconnect()
+            appliance = None
     else:
         print("\n[LAB 1] SKIPPED - Appliance setup")
     
-    # LAB 2: Tutaj dodasz kolejny lab
+    # LAB 2: GIM Setup
     if skip_below < 2:
-        # print("\n[LAB 2] ...")
-        pass
+        appliance = lab2_gim(appliance)
+        if appliance:
+            appliance.disconnect()
+            appliance = None
     else:
-        print("\n[LAB 2] SKIPPED")
+        print("\n[LAB 2] SKIPPED - GIM setup")
     
     # LAB 3: Tutaj dodasz kolejny lab
     if skip_below < 3:
