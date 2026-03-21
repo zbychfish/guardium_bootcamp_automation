@@ -500,3 +500,4 @@ Ten playbook jest dostarczany "tak jak jest" bez żadnych gwarancji.
 Dla problemów związanych z MinIO, odwiedź:
 - Dokumentacja MinIO: https://min.io/docs/minio/linux/index.html
 - GitHub MinIO: https://github.com/minio/minio
+# guardium_bootcamp_automation
