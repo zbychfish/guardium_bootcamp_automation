@@ -60,8 +60,7 @@ print("Get current network settings")
 appliance = create_appliance('collector')
 
 if appliance.connect():
-    output = appliance.execute_command("show network interface all")
-    output = appliance.execute_command("show network route default")
-    output = appliance.execute_command("show network resolvers")
-    print(output)
+    print(appliance.execute_command("show network interface all"))
+    print(appliance.execute_command("show network route default"))
+    print(appliance.execute_command("show network resolvers"))
     appliance.disconnect()
