@@ -104,7 +104,6 @@ if appliance.connect():
     current_appliances = appliances
     del current_appliances['collector_unconfigured']
     del current_appliances['collector']
-    managed_machines = {k: v for k, v in appliances.items() if v["prompt_regex"] != ".*"}
     machines = current_appliances | managed_machines
 
     for machine, cfg in machines.items():
@@ -116,5 +115,7 @@ if appliance.connect():
         # jeśli para (IP, host) już istnieje w output → pomiń
         if (ip, prompt_host) in existing:
             continue
-        print("support store hosts", cfg["host"], prompt_host)
+        command = "support store hosts", cfg["host"], prompt_host
+        print(command)
+        #appliance.execute_command("show network resolvers")
     appliance.disconnect()
