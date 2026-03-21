@@ -372,10 +372,10 @@ class ApplianceCommand:
                     except Exception:
                         pass
                     
-                    return "System restartowany - połączenie przerwane"
+                    return "System is restarting - connection broken"
             
             if self.channel.closed:
-                return "System restartowany - połączenie przerwane"
+                return "System is restarting - connection broken"
             
             time.sleep(0.005)
         

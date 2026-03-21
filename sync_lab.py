@@ -6,6 +6,7 @@ Sync Lab - orkiestracja synchronizacji środowiska laboratoryjnego
 
 import os
 import re
+import time
 from dotenv import load_dotenv
 from appliance_command import ApplianceCommand, change_password_as_root
 
@@ -91,14 +92,49 @@ def create_appliance(appliance_name: str) -> ApplianceCommand:
     )
 
 
+def wait_for_appliance(appliance_name: str, max_attempts: int = 40, interval: int = 15) -> ApplianceCommand:
+    """
+    Czeka aż appliance będzie dostępny i nawiąże połączenie.
+    
+    Args:
+        appliance_name: Nazwa appliance z konfiguracji
+        max_attempts: Maksymalna liczba prób połączenia
+        interval: Odstęp między próbami w sekundach
+    
+    Returns:
+        Połączony obiekt ApplianceCommand
+    
+    Raises:
+        RuntimeError: Jeśli nie udało się połączyć po wszystkich próbach
+    """
+    print(f"\n[INFO] Oczekiwanie na dostępność appliance '{appliance_name}'...")
+    
+    for attempt in range(1, max_attempts + 1):
+        print(f"[INFO] Próba połączenia {attempt}/{max_attempts}...")
+        
+        try:
+            appliance = create_appliance(appliance_name)
+            if appliance.connect():
+                print(f"[INFO] ✓ Połączono z '{appliance_name}' po {attempt} próbach")
+                return appliance
+        except Exception as e:
+            print(f"[INFO] ✗ Próba {attempt} nieudana: {e}")
+        
+        if attempt < max_attempts:
+            print(f"[INFO] Oczekiwanie {interval} sekund przed kolejną próbą...")
+            time.sleep(interval)
+    
+    raise RuntimeError(f"Nie udało się połączyć z '{appliance_name}' po {max_attempts} próbach")
+
+
 # Przykład użycia
 print("Lab 1 - appliance setup")
 print("---------------------------")
-print("Password change for cli user on appliances")
+print("\n[INFO] Password change for cli user on appliances")
 current_appliances = appliances.copy()
 del current_appliances['collector']
 for name, cfg in current_appliances.items():
-    print(f"Changing password on {name} ({cfg['host']})")
+    print(f"\n[INFO] Changing password on {name} ({cfg['host']})")
     ok = change_password_as_root(
         host=cfg["host"],
         root_password=get_env_password("ROOT_PASSWORD"),
@@ -108,12 +144,12 @@ for name, cfg in current_appliances.items():
     print("  OK" if ok else "  FAILED")
 
 appliance = create_appliance('collector_unconfigured')
-print("Get current network settings of collector")
+print("\n[INFO] Get current network settings of collector")
 if appliance.connect():
     print(appliance.execute_command("show network interface all"))
     print(appliance.execute_command("show network route default"))
     print(appliance.execute_command("show network resolvers"))
-    print("Set manual hosts settings")
+    print("\n[INFO] Set manual hosts settings")
     output = appliance.execute_command("support show hosts")
     existing = set()
     for line in output.splitlines():
@@ -143,7 +179,7 @@ if appliance.connect():
         # print(command)
         appliance.execute_command(command)
     print(appliance.execute_command("support show hosts"))
-    print("Set time zone on collector to Europe/Warsaw")
+    print("\n[INFO] Set time zone on collector to Europe/Warsaw")
     output = appliance.execute_command("show system clock all")
     timezone = output.strip().splitlines()[-1]
     if timezone != "Europe/Warsaw":
@@ -156,17 +192,25 @@ if appliance.connect():
         output = appliance.execute_command("show system clock all")
         print(output)
     else:
-        print(f"Time zone already set to {timezone}")
-    print(f"Setting public NTP servers")
+        print(f"\n[INFO] Time zone already set to {timezone}")
+    print(f"\n[INFO] Setting public NTP servers")
     appliance.execute_command("store system time_server hostname 0.pool.ntp.org 1.pool.ntp.org 2.pool.ntp.org")
     print(appliance.execute_command("show system time_server all"))
-    print(f"Time synchronization is switching on")
+    print(f"\n[INFO] Time synchronization is switching on")
     appliance.execute_command("store system time_server state on")
     print(appliance.execute_command("show system time_server all"))
-    print(f"Time synchronization switched on")
+    print(f"\n[INFO] Time synchronization switched on")
     result = appliance.execute_restart_with_check()
     print(result)
     appliance.disconnect()
-    # print(f"Relogin to collector because of")
+    if "System is restarting" in result:
+        print("\n[INFO] System restarted waiting for its availability...")
+        appliance = wait_for_appliance('collector_unconfigured')
+        print("[INFO] Appliance available, can continue ...")
+        # Tutaj możesz kontynuować konfigurację po restarcie
+        appliance.disconnect()
+    else:
+        print("\n[INFO] I could not restart appliance because MYSQL is busy, check it or restart task in a while ...")
+        
+        
 
-    # appliance = create_appliance('collector_unconfigured')
