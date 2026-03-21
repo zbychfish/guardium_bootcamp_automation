@@ -193,7 +193,6 @@ def lab1_appliance_setup(appliance=None):
     print("\n[LAB 1.4] Disabling purge")
     output = appliance.execute_command("grdapi diable_purge")
 
-
     print("\n[LAB 1.5] Set time zone to Europe/Warsaw")
     output = appliance.execute_command("show system clock all")
     timezone = output.strip().splitlines()[-1]
@@ -259,6 +258,7 @@ def lab1_appliance_setup(appliance=None):
     return appliance
 
 
+def sync_lab(skip_below: int = 0):
     """
     Główna funkcja synchronizacji laboratorium.
     
