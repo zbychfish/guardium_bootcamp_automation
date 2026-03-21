@@ -157,7 +157,7 @@ class GuardiumRestAPI:
         if password != confirm_password:
             raise ValueError("Password and confirmPassword must match")
         
-        url = f'{self.base_url}:8443/restAPI/user'
+        url = f'{self.base_url}/restAPI/user'
         headers = self.get_headers()
         
         data = {
