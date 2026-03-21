@@ -363,14 +363,14 @@ def lab2_gim(appliance=None):
         base_url='https://10.10.9.219:8443',
         client_id='BOOTCAMP'
     )
-    users = api.get_users()
-    print(users)
     try:
         token = api.get_token(username='admin', password='Guardium123!')
         print(f"Access token: {token}")
         # Użyj nagłówków w requestach
-        headers = api.get_headers()
-        print(f"Headers: {headers}")
+        # headers = api.get_headers()
+        # print(f"Headers: {headers}")
+        users = api.get_users()
+        print(users)
     except Exception as e:
         print(f"Error: {e}")
 
