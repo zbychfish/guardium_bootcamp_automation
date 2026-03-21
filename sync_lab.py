@@ -95,7 +95,7 @@ def create_appliance(appliance_name: str) -> ApplianceCommand:
 print("Lab 1 - appliance setup")
 print("---------------------------")
 print("Password change for cli user on appliances")
-current_appliances = appliances
+current_appliances = appliances.copy()
 del current_appliances['collector']
 for name, cfg in current_appliances.items():
     print(f"Changing password on {name} ({cfg['host']})")
@@ -125,7 +125,7 @@ if appliance.connect():
             ip = parts[0].strip().lower()
             host = parts[1].strip().lower()
             existing.add((ip, host))
-    current_appliances = appliances
+    current_appliances = appliances.copy()
     del current_appliances['collector_unconfigured']
     del current_appliances['collector']
     machines = current_appliances | managed_machines
