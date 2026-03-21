@@ -232,14 +232,15 @@ class ApplianceCommand:
                     # Mark that we found the prompt
                     prompt_time = time.time()
                 else:
-                    # Check if no new data arrived for 0.5 seconds
-                    if time.time() - prompt_time > 0.5:
-                        # System is waiting for input - send response
+                    # Check if no new data arrived for 0.3 seconds
+                    if time.time() - prompt_time > 0.3:
+                        # System is waiting for input - send response with ENTER
                         if self.debug:
                             print(f"[DEBUG] Confirmation prompt detected, sending: {response}", file=sys.stderr)
+                            print(f"[DEBUG] Buffer content: {repr(buf_for_match[-200:])}", file=sys.stderr)
                         
-                        self.channel.send(response.encode())
-                        self.channel.send(b"\n")
+                        # Send response with carriage return and newline (like terminal ENTER)
+                        self.channel.send((response + "\r\n").encode())
                         time.sleep(0.2)
                         break
             
