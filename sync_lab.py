@@ -27,7 +27,7 @@ appliances = {
     'collector_unconfigured': {
         'host': '10.10.9.239',
         'prompt_regex': r'guard\.yourcompany\.com>',
-        'password': 'guardium'
+        'password': 'Guardium123!'
     },
     'cm': {
         'host': '10.10.9.219',
