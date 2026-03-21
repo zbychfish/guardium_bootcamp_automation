@@ -93,7 +93,7 @@ if appliance.connect():
     current_appliances = appliances
     del current_appliances['collector_unconfigured']
     machines = current_appliances | managed_machines
-    for machine in machines:
-        print("support store hosts", machine['host'], machine['prompt_regex'])
-   
+    for machine, cfg in machines.items():
+        print("support store hosts", cfg['host'], cfg['prompt_regex'].replace("\\", ""))
+       
     appliance.disconnect()
