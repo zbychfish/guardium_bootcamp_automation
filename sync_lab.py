@@ -17,12 +17,12 @@ from guardium_rest_api import GuardiumRestAPI
 load_dotenv()
 
 
-def get_env_password(key: str) -> str:
-    """Pobiera hasło ze zmiennych środowiskowych"""
-    password = os.getenv(key)
-    if not password:
-        raise ValueError(f"Hasło dla {key} nie zostało znalezione w pliku .env")
-    return password
+def get_env_value(key: str) -> str:
+    """Pobiera wartość ze zmiennych środowiskowych"""
+    value = os.getenv(key)
+    if not value:
+        raise ValueError(f"Wartość dla {key} nie została znaleziona w pliku .env")
+    return value
 
 
 def save_to_env(key: str, value: str, env_file: str = ".env") -> bool:
@@ -88,22 +88,22 @@ appliances = {
     'collector': {
         'host': '10.10.9.239',
         'prompt_regex': r'coll1\.gdemo\.com>',
-        'password': get_env_password('COLLECTOR_PASSWORD')
+        'password': get_env_value('COLLECTOR_PASSWORD')
     },
     'collector_unconfigured': {
         'host': '10.10.9.239',
         'prompt_regex': r'guard\.yourcompany\.com>',
-        'password': get_env_password('COLLECTOR_PASSWORD')
+        'password': get_env_value('COLLECTOR_PASSWORD')
     },
     'cm': {
         'host': '10.10.9.219',
         'prompt_regex': r'cm\.gdemo\.com>',
-        'password': get_env_password('CM_PASSWORD')
+        'password': get_env_value('CM_PASSWORD')
     },
     'toolnode': {
         'host': '10.10.9.229',
         'prompt_regex': r'toolnode\.gdemo\.com>',
-        'password': get_env_password('TOOLNODE_PASSWORD')
+        'password': get_env_value('TOOLNODE_PASSWORD')
     }
 }
 
@@ -111,22 +111,22 @@ managed_machines: dict[str, dict[str, str]] = {
     'raptor': {
         'host': '10.10.9.70',
         'prompt_regex': r'raptor\.gdemo\.com>',
-        'password': get_env_password('RAPTOR_PASSWORD')
+        'password': get_env_value('RAPTOR_PASSWORD')
     },
     'hana': {
         'host': '10.10.9.60',
         'prompt_regex': r'hana\.gdemo\.com>',
-        'password': get_env_password('HANA_PASSWORD')
+        'password': get_env_value('HANA_PASSWORD')
     },
     'winsql': {
         'host': '10.10.9.59',
         'prompt_regex': r'winsql\.gdemo\.com>',
-        'password': get_env_password('WINSQL_PASSWORD')
+        'password': get_env_value('WINSQL_PASSWORD')
     },
     'appnode': {
         'host': '10.10.9.50',
         'prompt_regex': r'appnode\.gdemo\.com>',
-        'password': get_env_password('APPNODE_PASSWORD')
+        'password': get_env_value('APPNODE_PASSWORD')
     }
 }
 
@@ -197,9 +197,9 @@ def lab1_appliance_setup(appliance=None):
         print(f"  Changing password on {name} ({cfg['host']})")
         ok = change_password_as_root(
             host=cfg["host"],
-            root_password=get_env_password("ROOT_PASSWORD"),
+            root_password=get_env_value("ROOT_PASSWORD"),
             target_user="cli",
-            new_password=get_env_password("COLLECTOR_PASSWORD")
+            new_password=get_env_value("COLLECTOR_PASSWORD")
         )
         print("    ✓ OK" if ok else "    ✗ FAILED")
     
@@ -332,15 +332,10 @@ def lab2_gim(appliance=None):
     
     print("\n[LAB 2.2] Create oauth client for bootcamp sync")
     result = appliance.execute_command("grdapi list_oauth_clients")
-    print(result)
-    
-    # Sprawdź czy BOOTCAMP jest na liście
     if "Client Id: BOOTCAMP" in result:
         appliance.execute_command("grdapi delete_oauth_clients client_id=BOOTCAMP")
     result = appliance.execute_command('grdapi register_oauth_client client_id=BOOTCAMP grant_types="password"')
     print(result)
-    
-    # Wyekstrahuj client_secret z JSON-a
     client_secret = None
     for line in result.splitlines():
         line = line.strip()
@@ -363,18 +358,43 @@ def lab2_gim(appliance=None):
         base_url='https://10.10.9.219:8443',
         client_id='BOOTCAMP'
     )
+    print("\n[LAB 2.3] Create demo user")
     try:
-        token = api.get_token(username='accessmgr', password='Guardium123!')
+        token = api.get_token(username='accessmgr', password=get_env_value('ACCESSMGR_PASSWORD'))
         print(f"Access token: {token}")
         # Użyj nagłówków w requestach
         # headers = api.get_headers()
         # print(f"Headers: {headers}")
         users = api.get_users()
+        print("  Current users:")
         for u in users:
             status = "DISABLED" if u.get("disabled") == "true" else "ACTIVE"
-            print(f"{u['user_name']:12} | {status}")
+            print(f"    {u['user_name']:12} | {status}")
+        
+        # Sprawdź czy użytkownik demo istnieje
+        demo_exists = any(u.get('user_name') == 'demo' for u in users)
+        if not demo_exists:
+            print("\n  Creating demo user...")
+            demo_password = get_env_value('DEMOUSER_PASSWORD')
+            result = api.create_user(
+                username='demo',
+                password=demo_password,
+                confirm_password=demo_password,
+                first_name='User',
+                last_name='Demo',
+                email='demo@demo.training',
+                country='PL',
+                disabled=False,
+                disable_pwd_expiry=True
+            )
+            print(f"  ✓ Demo user created")
+        else:
+            print("\n  Demo user already exists")
+        
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"  ✗ Error: {e}")
+        import traceback
+        traceback.print_exc()
 
     print("\n" + "=" * 60)
     print("LAB 2 completed!")

@@ -119,6 +119,67 @@ class GuardiumRestAPI:
         response.raise_for_status()
         
         return response.json()
+    
+    def create_user(
+        self,
+        username: str,
+        password: str,
+        confirm_password: str,
+        first_name: str,
+        last_name: str,
+        email: Optional[str] = None,
+        country: Optional[str] = None,
+        disabled: bool = False,
+        disable_pwd_expiry: bool = False
+    ) -> dict:
+        """
+        Tworzy nowego użytkownika w Guardium.
+        
+        Args:
+            username: Nazwa użytkownika (wymagane)
+            password: Hasło (wymagane, min. 8 znaków, wielka/mała litera, cyfra, znak specjalny)
+            confirm_password: Potwierdzenie hasła (wymagane, musi być takie samo jak password)
+            first_name: Imię (wymagane)
+            last_name: Nazwisko (wymagane)
+            email: Adres email (opcjonalne)
+            country: Kod kraju ISO 3166 2-literowy, np. 'US', 'PL' (opcjonalne)
+            disabled: Czy użytkownik jest wyłączony (domyślnie False)
+            disable_pwd_expiry: Czy wyłączyć wymóg zmiany hasła przy pierwszym logowaniu (domyślnie False)
+        
+        Returns:
+            Słownik z odpowiedzią API
+        
+        Raises:
+            RuntimeError: Jeśli token nie został jeszcze pobrany
+            requests.exceptions.RequestException: W przypadku błędu HTTP
+            ValueError: Jeśli password != confirm_password
+        """
+        if password != confirm_password:
+            raise ValueError("Password and confirmPassword must match")
+        
+        url = f'{self.base_url}:8443/restAPI/user'
+        headers = self.get_headers()
+        
+        data = {
+            'userName': username,
+            'password': password,
+            'confirmPassword': confirm_password,
+            'firstName': first_name,
+            'lastName': last_name,
+            'disabled': 1 if disabled else 0,
+            'disablePwdExpiry': 1 if disable_pwd_expiry else 0
+        }
+        
+        # Dodaj opcjonalne parametry
+        if email:
+            data['email'] = email
+        if country:
+            data['country'] = country
+        
+        response = requests.post(url, json=data, headers=headers, verify=self.verify_ssl)
+        response.raise_for_status()
+        
+        return response.json()
 
 
 # Made with Bob
