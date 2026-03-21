@@ -1,0 +1,354 @@
+---
+- name: Deploy MinIO in Container
+  hosts: localhost
+  become: true
+  vars:
+    # MinIO Configuration
+    minio_admin_user: "minioadmin"
+    minio_admin_password: "minioadmin123"
+    minio_data_path: "/data/minio"
+    minio_container_name: "minio"
+    minio_image: "quay.io/minio/minio:latest"
+    minio_console_port: 9001
+    minio_api_port: 9000
+    
+    # S3 Bucket Configuration
+    s3_bucket_name: "my-bucket"
+    
+    # Certificate Configuration (optional)
+    use_custom_certs: false
+    ca_cert_path: ""
+    minio_cert_path: ""
+    minio_key_path: ""
+    
+    # Network Configuration
+    use_host_network: true  # Recommended for Podman - uses host network
+    bind_to_all_interfaces: true  # If false and not using host network, binds to 0.0.0.0
+    
+    # Firewall Configuration
+    configure_firewall: true  # Automatically opens ports in firewalld
+    
+    # Validation Configuration
+    validate_external_access: true  # Checks external access after deployment
+    
+    # Output Configuration
+    output_file: "minio_access_info.txt"
+    
+    # Container Runtime (docker or podman)
+    container_runtime: "docker"
+
+  tasks:
+    - name: Ensure data directory exists
+      file:
+        path: "{{ minio_data_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create MinIO certs directory (if using custom certs)
+      file:
+        path: "{{ minio_data_path }}/certs"
+        state: directory
+        mode: '0755'
+      when: use_custom_certs
+
+    - name: Create MinIO CAs directory (if using custom CA)
+      file:
+        path: "{{ minio_data_path }}/certs/CAs"
+        state: directory
+        mode: '0755'
+      when: use_custom_certs and ca_cert_path != ""
+
+    - name: Copy CA certificate
+      copy:
+        src: "{{ ca_cert_path }}"
+        dest: "{{ minio_data_path }}/certs/CAs/ca.crt"
+        mode: '0644'
+      when: use_custom_certs and ca_cert_path != ""
+
+    - name: Copy MinIO certificate
+      copy:
+        src: "{{ minio_cert_path }}"
+        dest: "{{ minio_data_path }}/certs/public.crt"
+        mode: '0644'
+      when: use_custom_certs and minio_cert_path != ""
+
+    - name: Copy MinIO private key
+      copy:
+        src: "{{ minio_key_path }}"
+        dest: "{{ minio_data_path }}/certs/private.key"
+        mode: '0600'
+      when: use_custom_certs and minio_key_path != ""
+
+    - name: Stop existing MinIO container (if exists)
+      command: "{{ container_runtime }} stop {{ minio_container_name }}"
+      ignore_errors: true
+
+    - name: Remove existing MinIO container (if exists)
+      command: "{{ container_runtime }} rm {{ minio_container_name }}"
+      ignore_errors: true
+
+    - name: Start MinIO container with proper network configuration
+      command: >
+        {{ container_runtime }} run -d
+        --name {{ minio_container_name }}
+        {% if use_host_network %}
+        --network host
+        {% else %}
+        {% if bind_to_all_interfaces %}
+        -p 0.0.0.0:{{ minio_api_port }}:9000
+        -p 0.0.0.0:{{ minio_console_port }}:9001
+        {% else %}
+        -p {{ minio_api_port }}:9000
+        -p {{ minio_console_port }}:9001
+        {% endif %}
+        {% endif %}
+        -e MINIO_ROOT_USER={{ minio_admin_user }}
+        -e MINIO_ROOT_PASSWORD={{ minio_admin_password }}
+        -v {{ minio_data_path }}:/data
+        {{ minio_image }}
+        server /data --console-address ":9001"
+      register: container_start
+
+    - name: Wait for MinIO to be ready
+      uri:
+        url: "http://localhost:{{ minio_api_port }}/minio/health/live"
+        method: GET
+        status_code: 200
+      register: result
+      until: result.status == 200
+      retries: 30
+      delay: 2
+
+    - name: Configure firewalld for MinIO
+      block:
+        - name: Check if firewalld is running
+          systemd:
+            name: firewalld
+            state: started
+          register: firewalld_status
+          ignore_errors: true
+
+        - name: Open MinIO API port in firewalld
+          firewalld:
+            port: "{{ minio_api_port }}/tcp"
+            permanent: true
+            state: enabled
+            immediate: true
+          when: firewalld_status is succeeded
+
+        - name: Open MinIO Console port in firewalld
+          firewalld:
+            port: "{{ minio_console_port }}/tcp"
+            permanent: true
+            state: enabled
+            immediate: true
+          when: firewalld_status is succeeded
+
+        - name: Display firewall configuration
+          command: firewall-cmd --list-ports
+          register: firewall_ports
+          when: firewalld_status is succeeded
+          changed_when: false
+
+        - name: Show opened ports
+          debug:
+            msg: "Opened ports in firewall: {{ firewall_ports.stdout }}"
+          when: firewalld_status is succeeded
+      when: configure_firewall and ansible_os_family == "RedHat"
+
+    - name: Validate HTTPS configuration (if using custom certs)
+      block:
+        - name: Wait a moment for MinIO to load certificates
+          pause:
+            seconds: 5
+
+        - name: Check MinIO logs for HTTPS
+          command: "{{ container_runtime }} logs {{ minio_container_name }}"
+          register: minio_logs
+          changed_when: false
+
+        - name: Verify HTTPS is enabled in logs
+          assert:
+            that:
+              - "'https://' in minio_logs.stdout"
+            fail_msg: "MinIO is not running with HTTPS despite use_custom_certs=true. Check certificate configuration."
+            success_msg: "MinIO is running with HTTPS enabled."
+
+        - name: Display MinIO endpoints from logs
+          debug:
+            msg: "{{ minio_logs.stdout_lines | select('search', 'API:|WebUI:') | list }}"
+      when: use_custom_certs
+
+    - name: Install MinIO client (mc) in container
+      command: "{{ container_runtime }} exec {{ minio_container_name }} sh -c 'curl -o /usr/local/bin/mc https://dl.min.io/client/mc/release/linux-amd64/mc && chmod +x /usr/local/bin/mc'"
+      register: mc_install
+
+    - name: Configure MinIO client alias
+      command: >
+        {{ container_runtime }} exec {{ minio_container_name }}
+        mc alias set myminio http://localhost:9000 {{ minio_admin_user }} {{ minio_admin_password }}
+      register: mc_alias
+
+    - name: Create S3 bucket
+      command: >
+        {{ container_runtime }} exec {{ minio_container_name }}
+        mc mb myminio/{{ s3_bucket_name }} --ignore-existing
+      register: bucket_create
+
+    - name: Set bucket policy to public (optional - adjust as needed)
+      command: >
+        {{ container_runtime }} exec {{ minio_container_name }}
+        mc anonymous set download myminio/{{ s3_bucket_name }}
+      ignore_errors: true
+
+    - name: Validate external access to MinIO
+      block:
+        - name: Get server IP address
+          set_fact:
+            server_ip: "{{ ansible_default_ipv4.address }}"
+
+        - name: Test MinIO API accessibility from server itself
+          uri:
+            url: "{{ 'https' if use_custom_certs else 'http' }}://{{ server_ip }}:{{ minio_api_port }}/minio/health/live"
+            method: GET
+            status_code: 200
+            validate_certs: false
+          register: external_access_test
+          retries: 3
+          delay: 2
+
+        - name: Display external access test result
+          debug:
+            msg: |
+              ✅ MinIO is accessible from external IP: {{ server_ip }}
+              API Endpoint: {{ 'https' if use_custom_certs else 'http' }}://{{ server_ip }}:{{ minio_api_port }}
+              Console: {{ 'https' if use_custom_certs else 'http' }}://{{ server_ip }}:{{ minio_console_port }}
+          when: external_access_test is succeeded
+
+        - name: Warning if external access failed
+          debug:
+            msg: |
+              ⚠️  WARNING: Cannot access MinIO from external IP {{ server_ip }}
+              This might be due to:
+              - Firewall blocking the ports
+              - Network configuration issues
+              - MinIO not binding to the correct interface
+          when: external_access_test is failed
+      when: validate_external_access
+      ignore_errors: true
+
+    - name: Generate access credentials output
+      copy:
+        content: |
+          ==========================================
+          MinIO Access Information
+          ==========================================
+          
+          Server IP: {{ server_ip | default(ansible_default_ipv4.address) }}
+          Protocol: {{ 'HTTPS' if use_custom_certs else 'HTTP' }}
+          
+          External Access URLs:
+          ---------------------
+          MinIO Console: {{ 'https' if use_custom_certs else 'http' }}://{{ server_ip | default(ansible_default_ipv4.address) }}:{{ minio_console_port }}
+          MinIO API: {{ 'https' if use_custom_certs else 'http' }}://{{ server_ip | default(ansible_default_ipv4.address) }}:{{ minio_api_port }}
+          
+          Local Access URLs:
+          ------------------
+          Console: {{ 'https' if use_custom_certs else 'http' }}://localhost:{{ minio_console_port }}
+          API: {{ 'https' if use_custom_certs else 'http' }}://localhost:{{ minio_api_port }}
+          
+          Admin Credentials:
+          ------------------
+          Username: {{ minio_admin_user }}
+          Password: {{ minio_admin_password }}
+          
+          S3 Bucket Information:
+          ----------------------
+          Bucket Name: {{ s3_bucket_name }}
+          S3 Endpoint: {{ 'https' if use_custom_certs else 'http' }}://{{ server_ip | default(ansible_default_ipv4.address) }}:{{ minio_api_port }}
+          
+          AWS CLI Configuration:
+          ----------------------
+          aws configure set aws_access_key_id {{ minio_admin_user }}
+          aws configure set aws_secret_access_key {{ minio_admin_password }}
+          aws configure set default.region us-east-1
+          aws --endpoint-url {{ 'https' if use_custom_certs else 'http' }}://{{ server_ip | default(ansible_default_ipv4.address) }}:{{ minio_api_port }} s3 ls s3://{{ s3_bucket_name }}
+          {% if use_custom_certs %}
+          # For self-signed certificates, add: --no-verify-ssl
+          {% endif %}
+          
+          MinIO Client (mc) Configuration:
+          ---------------------------------
+          mc alias set myminio {{ 'https' if use_custom_certs else 'http' }}://{{ server_ip | default(ansible_default_ipv4.address) }}:{{ minio_api_port }} {{ minio_admin_user }} {{ minio_admin_password }}{{ ' --insecure' if use_custom_certs else '' }}
+          mc ls myminio/{{ s3_bucket_name }}
+          
+          Network Configuration:
+          ----------------------
+          Network Mode: {{ 'host' if use_host_network else 'bridge' }}
+          Bind to All Interfaces: {{ bind_to_all_interfaces }}
+          Firewall Configured: {{ configure_firewall }}
+          
+          Data Location:
+          --------------
+          Host Path: {{ minio_data_path }}
+          Container Path: /data
+          
+          Certificate Configuration:
+          --------------------------
+          Custom Certs Enabled: {{ use_custom_certs }}
+          {% if use_custom_certs %}
+          CA Certificate: {{ minio_data_path }}/certs/CAs/ca.crt
+          Server Certificate: {{ minio_data_path }}/certs/public.crt
+          Server Key: {{ minio_data_path }}/certs/private.key
+          {% endif %}
+          
+          Container Information:
+          ----------------------
+          Container Name: {{ minio_container_name }}
+          Container Runtime: {{ container_runtime }}
+          Image: {{ minio_image }}
+          
+          Firewall Ports:
+          ---------------
+          {% if configure_firewall %}
+          API Port: {{ minio_api_port }}/tcp (opened)
+          Console Port: {{ minio_console_port }}/tcp (opened)
+          {% else %}
+          Firewall configuration skipped (configure_firewall=false)
+          {% endif %}
+          
+          ==========================================
+          Generated: {{ ansible_date_time.iso8601 }}
+          ==========================================
+        dest: "{{ output_file }}"
+        mode: '0644'
+
+    - name: Display access information
+      debug:
+        msg: |
+          ==========================================
+          MinIO Deployment Completed Successfully!
+          ==========================================
+          
+          Access information saved to: {{ output_file }}
+          
+          External Access (from other machines):
+          - Console: {{ 'https' if use_custom_certs else 'http' }}://{{ server_ip | default(ansible_default_ipv4.address) }}:{{ minio_console_port }}
+          - API: {{ 'https' if use_custom_certs else 'http' }}://{{ server_ip | default(ansible_default_ipv4.address) }}:{{ minio_api_port }}
+          
+          Local Access (from this machine):
+          - Console: {{ 'https' if use_custom_certs else 'http' }}://localhost:{{ minio_console_port }}
+          - API: {{ 'https' if use_custom_certs else 'http' }}://localhost:{{ minio_api_port }}
+          
+          Credentials:
+          - Username: {{ minio_admin_user }}
+          - Password: {{ minio_admin_password }}
+          
+          S3 Bucket: {{ s3_bucket_name }}
+          
+          Network Configuration:
+          - Mode: {{ 'host network' if use_host_network else 'bridge network' }}
+          - Firewall: {{ 'configured' if configure_firewall else 'not configured' }}
+          - Protocol: {{ 'HTTPS' if use_custom_certs else 'HTTP' }}
+          
+          ==========================================
