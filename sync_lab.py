@@ -630,13 +630,19 @@ def lab2_gim(appliance=None):
     print("\n[LAB 1.21] Installing patch on CM...")
     time.sleep(2)
     
-    install_patch(
+    output = install_patch(
         host='10.10.9.219',
         username='cli',
         password=get_env_value('CM_PASSWORD'),
         patch_selection="2",
-        reinstall_answer="y"
+        reinstall_answer="y",
+        live_log=False
     )
+    
+    if output:
+        print("  ✓ Patch installation completed")
+    else:
+        print("  ✗ Patch installation failed")
 
     #print(output)
 

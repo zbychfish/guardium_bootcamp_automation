@@ -26,10 +26,11 @@ def install_patch(
     password: str,
     patch_selection: str = "2",
     reinstall_answer: str = "y",
-    command: str = "store system patch install sys"
+    command: str = "store system patch install sys",
+    live_log: bool = False
 ):
     """
-    Instalacja patcha na appliance Guardium z live output.
+    Instalacja patcha na appliance Guardium.
     
     Args:
         host: Adres IP appliance
@@ -38,9 +39,14 @@ def install_patch(
         patch_selection: Wybór patcha (np. "2", "1-2", "1,3")
         reinstall_answer: Odpowiedź na pytanie o reinstalację ("y" lub "n")
         command: Polecenie instalacji (domyślnie "store system patch install sys")
+        live_log: Czy wyświetlać output na żywo (domyślnie False)
+    
+    Returns:
+        String z pełnym outputem z instalacji
     """
     
-    print(f"Connecting to {host}...")
+    if live_log:
+        print(f"Connecting to {host}...")
     
     # Połącz się
     client = paramiko.SSHClient()
@@ -71,7 +77,8 @@ def install_patch(
                 chunk = channel.recv(4096).decode('utf-8', errors='replace')
                 if chunk:
                     buf += chunk
-                    print(strip_ansi(chunk), end='', flush=True)
+                    if live_log:
+                        print(strip_ansi(chunk), end='', flush=True)
                     
                     # Sprawdź czy jest prompt (cm.gdemo.com> lub inne)
                     buf_clean = strip_ansi(buf)
@@ -82,10 +89,12 @@ def install_patch(
                 time.sleep(0.1)
         
         if not prompt_found:
-            print("\n\nERROR: Prompt not found!")
-            return
+            if live_log:
+                print("\n\nERROR: Prompt not found!")
+            return None
         
-        print(f"\n\n=== Prompt found! Sending command: {command} ===\n")
+        if live_log:
+            print(f"\n\n=== Prompt found! Sending command: {command} ===\n")
         time.sleep(0.5)
         
         # Wyślij polecenie
@@ -104,7 +113,8 @@ def install_patch(
                     buf += chunk
                     last_activity = time.time()
                     # Wyświetl na żywo
-                    print(strip_ansi(chunk), end='', flush=True)
+                    if live_log:
+                        print(strip_ansi(chunk), end='', flush=True)
                     
                     buf_clean = strip_ansi(buf)
                     
@@ -120,11 +130,13 @@ def install_patch(
                                 extra = channel.recv(4096).decode('utf-8', errors='replace')
                                 if extra:
                                     buf += extra
-                                    print(strip_ansi(extra), end='', flush=True)
+                                    if live_log:
+                                        print(strip_ansi(extra), end='', flush=True)
                             except:
                                 pass
                             
-                            print(f"\n>>> Sending patch selection: {patch_selection} <<<", flush=True)
+                            if live_log:
+                                print(f"\n>>> Sending patch selection: {patch_selection} <<<", flush=True)
                             channel.send((patch_selection + "\r").encode())
                             patch_selected = True
                             last_activity = time.time()
@@ -141,11 +153,13 @@ def install_patch(
                                 extra = channel.recv(4096).decode('utf-8', errors='replace')
                                 if extra:
                                     buf += extra
-                                    print(strip_ansi(extra), end='', flush=True)
+                                    if live_log:
+                                        print(strip_ansi(extra), end='', flush=True)
                             except:
                                 pass
                             
-                            print(f"\n>>> Sending reinstall answer: {reinstall_answer} <<<", flush=True)
+                            if live_log:
+                                print(f"\n>>> Sending reinstall answer: {reinstall_answer} <<<", flush=True)
                             channel.send((reinstall_answer + "\r").encode())
                             reinstall_answered = True
                             last_activity = time.time()
@@ -159,37 +173,48 @@ def install_patch(
                             while True:
                                 chunk = channel.recv(4096).decode('utf-8', errors='replace')
                                 if chunk:
-                                    print(strip_ansi(chunk), end='', flush=True)
+                                    if live_log:
+                                        print(strip_ansi(chunk), end='', flush=True)
                                 else:
                                     break
                         except:
                             pass
-                        print("\n\n=== Command completed ===")
-                        break
+                        if live_log:
+                            print("\n\n=== Command completed ===")
+                        
+                        channel.close()
+                        client.close()
+                        return buf
                         
             except socket.timeout:
                 # Timeout jest normalny - po prostu nie ma danych
                 # Sprawdź czy nie minęło zbyt dużo czasu bez aktywności
                 if time.time() - last_activity > 300:  # 5 minut bez aktywności
-                    print("\n\nTimeout: No activity for 5 minutes")
+                    if live_log:
+                        print("\n\nTimeout: No activity for 5 minutes")
                     break
                 time.sleep(0.1)
             except Exception as e:
-                print(f"\nUnexpected error: {e}")
+                if live_log:
+                    print(f"\nUnexpected error: {e}")
                 break
             
             # Sprawdź czy nadal połączeni
             if channel.closed:
-                print("\nChannel closed")
+                if live_log:
+                    print("\nChannel closed")
                 break
         
         channel.close()
         client.close()
+        return buf
         
     except Exception as e:
-        print(f"Error: {e}")
-        import traceback
-        traceback.print_exc()
+        if live_log:
+            print(f"Error: {e}")
+            import traceback
+            traceback.print_exc()
+        return None
 
 
 # Made with Bob
