@@ -623,6 +623,17 @@ def lab2_gim(appliance=None):
     result = appliance.execute_command("show system patch available")
     print(result)
 
+    api = GuardiumRestAPI(
+        base_url='https://10.10.9.219:8443',
+        client_id='BOOTCAMP'
+    )
+    result = api.install_patch(
+        patch_number=9997,
+        unit_ip_list="10.10.9.219",
+        mode="local_only"
+    )
+
+
 
     
     print("\n" + "=" * 60)

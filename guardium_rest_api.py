@@ -323,6 +323,49 @@ class GuardiumRestAPI:
         response.raise_for_status()
         
         return response.json()
+    
+    def install_patch(
+        self,
+        patch_number: int,
+        unit_ip_list: str,
+        mode: str = "local_only"
+    ) -> dict:
+        """
+        Instaluje patch na jednostkach Guardium.
+        
+        Args:
+            patch_number: Numer patcha do zainstalowania
+            unit_ip_list: Lista IP jednostek oddzielona przecinkami (np. "10.10.9.219,10.10.9.220")
+            mode: Tryb instalacji:
+                - "local_only": Instaluj tylko lokalnie
+                - "pull_only": Tylko pobierz patch
+                - "pull_install": Pobierz i zainstaluj
+        
+        Returns:
+            Słownik z odpowiedzią API
+        
+        Raises:
+            RuntimeError: Jeśli token nie został jeszcze pobrany
+            ValueError: Jeśli mode jest nieprawidłowy
+            requests.exceptions.RequestException: W przypadku błędu HTTP
+        """
+        valid_modes = ["local_only", "pull_only", "pull_install"]
+        if mode not in valid_modes:
+            raise ValueError(f"Invalid mode: {mode}. Valid values: {', '.join(valid_modes)}")
+        
+        url = f'{self.base_url}/restAPI/patch_install'
+        headers = self.get_headers()
+        
+        data = {
+            'mode': mode,
+            'patch_number': patch_number,
+            'unitIpList': unit_ip_list
+        }
+        
+        response = requests.put(url, json=data, headers=headers, verify=self.verify_ssl)
+        response.raise_for_status()
+        
+        return response.json()
 
 
 # Made with Bob
