@@ -523,6 +523,126 @@ class ApplianceCommand:
             results.append(output)
         return results
     
+    def execute_patch_install(
+        self,
+        command: str = "store system patch install sys",
+        patch_selection: str = "1-2",
+        reinstall_answer: str = "yes",
+        confirm_idle: float = 0.2
+    ) -> str:
+        """
+        Wykonuje instalację patcha z obsługą dwóch pytań:
+        1. "Please choose patches to install (1-2, or multiple numbers separated by ",", or q to quit):"
+        2. "Do you really want to install again (yes or no)?" (opcjonalne)
+        
+        Args:
+            command: Polecenie instalacji patcha
+            patch_selection: Wybór patchy (np. "1-2", "1,3", "1")
+            reinstall_answer: Odpowiedź na pytanie o reinstalację ("yes" lub "no")
+            confirm_idle: Czas oczekiwania na idle przed wysłaniem odpowiedzi
+        
+        Returns:
+            Output z instalacji patcha
+        """
+        if not self.channel:
+            raise RuntimeError("Not connected")
+        
+        # Flush buffer
+        time.sleep(0.03)
+        while self.channel.recv_ready():
+            self.channel.recv(65535)
+        
+        # Send command with CR only
+        self.channel.send((command + "\r").encode())
+        
+        # Pattern dla pierwszego pytania (wybór patchy)
+        patch_choice_re = re.compile(r"Please choose patches to install.*?:", re.IGNORECASE | re.DOTALL)
+        # Pattern dla drugiego pytania (reinstalacja)
+        reinstall_re = re.compile(r"Do you really want to install again.*?\(yes or no\)\?", re.IGNORECASE)
+        
+        buf = ""
+        deadline = time.time() + self.timeout
+        first_answered = False
+        second_answered = False
+        
+        while time.time() < deadline:
+            if self.channel.recv_ready():
+                chunk = self.channel.recv(65535).decode(errors="replace")
+                buf += chunk
+            
+            buf_for_match = strip_ansi(buf) if self.strip_ansi_flag else buf
+            
+            # Handle first question (patch selection)
+            if (not first_answered) and patch_choice_re.search(buf_for_match):
+                # Wait until channel is idle
+                idle_deadline = time.time() + confirm_idle
+                while time.time() < deadline:
+                    if self.channel.recv_ready():
+                        chunk = self.channel.recv(65535).decode(errors="replace")
+                        buf += chunk
+                        idle_deadline = time.time() + confirm_idle
+                    if time.time() >= idle_deadline:
+                        break
+                    time.sleep(0.01)
+                
+                if self.debug:
+                    print(f"[DEBUG] Sending patch selection: {patch_selection}", file=sys.stderr)
+                
+                # Send patch selection
+                self.channel.send((patch_selection + "\r").encode())
+                first_answered = True
+                time.sleep(0.1)
+                continue
+            
+            # Handle second question (reinstall confirmation) - optional
+            if first_answered and (not second_answered) and reinstall_re.search(buf_for_match):
+                # Wait until channel is idle
+                idle_deadline = time.time() + confirm_idle
+                while time.time() < deadline:
+                    if self.channel.recv_ready():
+                        chunk = self.channel.recv(65535).decode(errors="replace")
+                        buf += chunk
+                        idle_deadline = time.time() + confirm_idle
+                    if time.time() >= idle_deadline:
+                        break
+                    time.sleep(0.01)
+                
+                if self.debug:
+                    print(f"[DEBUG] Sending reinstall answer: {reinstall_answer}", file=sys.stderr)
+                
+                # Send reinstall answer
+                self.channel.send((reinstall_answer + "\r").encode())
+                second_answered = True
+                time.sleep(0.1)
+                continue
+            
+            # Check if we got back to prompt
+            if first_answered and self.prompt_re.search(buf_for_match):
+                # Wait a bit more to collect any remaining output
+                time.sleep(0.2)
+                while self.channel.recv_ready():
+                    chunk = self.channel.recv(65535).decode(errors="replace")
+                    buf += chunk
+                
+                # Clean and return output
+                working = strip_ansi(buf) if self.strip_ansi_flag else buf
+                last_span = _find_last_prompt_span(working, self.prompt_re)
+                output_region = working[: last_span[0]] if last_span else working
+                
+                lines = output_region.splitlines()
+                
+                # Remove empty lines and command echo
+                while lines and not lines[0].strip():
+                    lines.pop(0)
+                if lines and lines[0].strip() == command.strip():
+                    lines = lines[1:]
+                
+                return "\n".join(lines).strip()
+            
+            time.sleep(0.01)
+        
+        raise TimeoutError(f"Timeout waiting for patch install prompts")
+    
     def disconnect(self):
         """Zamyka połączenie"""
         try:

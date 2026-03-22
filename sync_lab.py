@@ -614,71 +614,7 @@ def lab2_gim(appliance=None):
     print("=" * 60)
     print("LAB 2 - GIM Setup")
     print("=" * 60)
-    
-    print("\n[LAB 1.18] Download and unpack patches locally")
-    target_dir = "/root/gn-trainings/appliance-patches"
-    if not os.path.isdir(target_dir):
-        os.makedirs(target_dir, exist_ok=True)
-        filename = os.path.join(target_dir, os.path.basename("patches.zip"))
-        urllib.request.urlretrieve(get_env_value("PATCH_ARCHIVE"), filename)
-        with zipfile.ZipFile(filename, "r") as zipf:
-                zipf.extractall(path=target_dir)
-        print(f"  ✓ Patches extracted")
-    else:
-        print(f"  ✓ Patches already extracted")
-
-    print("\n[LAB 1.19] Copying patches to central manager")
-    patch_files = glob.glob('/root/gn-trainings/appliance-patches/patches/*.sig')
-    
-    if not patch_files:
-        print("  ✗ No patch files found in /root/gn-trainings/appliance-patches/patches/")
-        exit(1)
-    
-    print(f"  Found {len(patch_files)} patch files to copy")
-    all_success = True
-    for patch_file in patch_files:
-        success = scp_file_as_root(
-            host='10.10.9.219',
-            root_password=get_env_value("ROOT_PASSWORD"),
-            local_path=patch_file,
-            remote_path='/var/log/guard/patches/',
-            direction='put'
-        )
-        if not success:
-            all_success = False
-            break
-    if all_success:
-        print(f"  ✓ All {len(patch_files)} patches copied successfully")
         
-        print("\n[LAB 1.20] Changing ownership of patches to tomcat:tomcat")
-        client = paramiko.SSHClient()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        try:
-            client.connect(
-                hostname='10.10.9.219',
-                username='root',
-                password=get_env_value("ROOT_PASSWORD"),
-                look_for_keys=False,
-                allow_agent=False
-            )
-            stdin, stdout, stderr = client.exec_command('chown tomcat:tomcat /var/log/guard/patches/*.sig')
-            exit_status = stdout.channel.recv_exit_status()
-            if exit_status == 0:
-                print(f"  ✓ Ownership changed to tomcat:tomcat")
-            else:
-                error = stderr.read().decode()
-                print(f"  ✗ Failed to change ownership: {error}")
-                exit(1)
-            client.close()
-        except Exception as e:
-            print(f"  ✗ Error changing ownership: {e}")
-            exit(1)
-    else:
-        print("  ✗ Problem with copying of patches to central manager")
-        exit(1)
-
-
-
     print("\n[LAB 1.21] Register patches on cm")
     appliance = create_appliance('cm')
     if not appliance.connect():
@@ -686,18 +622,26 @@ def lab2_gim(appliance=None):
         return None
     result = appliance.execute_command("show system patch available")
     print(result)
+    appliance.execute_command_with_confirmation("store system patch install sys")
+    appliance.disconnect()
+    
+    output = appliance.execute_patch_install(
+        patch_selection="2",
+        reinstall_answer="y"
+    )
+    print(output)
 
-    api = GuardiumRestAPI(
-        base_url='https://10.10.9.219:8443',
-        client_id='BOOTCAMP'
-    )
-    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
-    print("\n[LAB 1.22] Patch installation on cm")
-    result = api.install_patch(
-        patch_number=9997,
-        unit_ip_list="10.10.9.219",
-        mode="local_only"
-    )
+    # api = GuardiumRestAPI(
+    #     base_url='https://10.10.9.219:8443',
+    #     client_id='BOOTCAMP'
+    # )
+    # token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
+    # print("\n[LAB 1.22] Patch installation on cm")
+    # result = api.install_patch(
+    #     patch_number=9997,
+    #     unit_ip_list="10.10.9.219",
+    #     mode="local_only"
+    # )
 
 
 
