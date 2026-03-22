@@ -119,9 +119,8 @@ def test_patch_install():
                     
                     # Sprawdź czy jest pytanie o reinstalację
                     if patch_selected and not reinstall_answered and "Do you really want to install again" in buf_clean:
-                        # Sprawdź czy linia kończy się znakiem zapytania (pytanie jest kompletne)
-                        last_line = buf_clean.strip().split('\n')[-1]
-                        if '?' in last_line:
+                        # Sprawdź czy pytanie jest kompletne - szukaj "(yes or no)?"
+                        if "(yes or no)?" in buf_clean:
                             # Poczekaj jeszcze chwilę aby upewnić się że to koniec pytania
                             time.sleep(1.0)
                             # Sprawdź czy nie ma więcej danych
