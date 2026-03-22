@@ -297,6 +297,32 @@ class GuardiumRestAPI:
         response.raise_for_status()
         
         return response.json()
+    
+    def get_unit_data(self, api_target_host: str) -> dict:
+        """
+        Pobiera dane jednostki (unit) z Guardium.
+        
+        Args:
+            api_target_host: Adres IP lub hostname jednostki
+        
+        Returns:
+            Słownik z danymi jednostki
+        
+        Raises:
+            RuntimeError: Jeśli token nie został jeszcze pobrany
+            requests.exceptions.RequestException: W przypadku błędu HTTP
+        """
+        url = f'{self.base_url}:8443/restAPI/unit_data'
+        headers = self.get_headers()
+        
+        params = {
+            'api_target_host': api_target_host
+        }
+        
+        response = requests.get(url, headers=headers, params=params, verify=self.verify_ssl)
+        response.raise_for_status()
+        
+        return response.json()
 
 
 # Made with Bob

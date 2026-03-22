@@ -434,13 +434,16 @@ def lab2_gim(appliance=None):
                 disable_pwd_expiry=True
             )
             print(f"  ✓ Demo user created")
+            print("\n[LAB 2.4] Assign roles to demo user")    
+            result = api.set_user_roles(username='demo', roles='admin,cli,user,vulnerability-assess')  
+            print(f"  ✓ Roles assigned to demo user")
         else:
             print("\n  Demo user already exists")
-        print("\n[LAB 2.4] Assign roles to demo user")    
-        result = api.set_user_roles(username='demo', roles='admin,cli,user,vulnerability-assess')  
-        print("\n[LAB 2.4] Import Training dashboard for demo user")
         token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
-        result = api.import_definitions('guardium_definition_files/exp_dashboard_training.sql')
+        if not demo_exists:
+            print("\n[LAB 2.4] Import Training dashboard for demo user")
+            result = api.import_definitions('guardium_definition_files/exp_dashboard_training.sql')
+            print(f"  ✓ Dashboard Training added to demo user UI")
         print("\n[LAB 2.4] Register collector to central manager")
         units = api.get_registered_units()
         units = parse_mus_from_message_dict(units)
@@ -449,7 +452,13 @@ def lab2_gim(appliance=None):
             out.append({
                 "ip": u.get("ip"),
             })
-        print(out)
+        if not any(d.get('ip') == '10.10.9.239' for d in out):
+
+            pass
+        else:
+            unit_data = api.get_unit_data(api_target_host='10.10.9.239')
+            print(unit_data)
+
         # Wyekstrahuj wartość mus z root elementu
         
             # result = api.register_unit(
