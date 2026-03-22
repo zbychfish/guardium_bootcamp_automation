@@ -94,20 +94,45 @@ def test_patch_install():
                     
                     # Sprawdź czy jest pytanie o wybór patcha
                     if not patch_selected and ("Please choose patches" in buf_clean or "or q to quit" in buf_clean):
-                        if ":" in buf_clean.split('\n')[-1]:
-                            time.sleep(0.5)
-                            print("\n\n>>> Sending patch selection: 2 <<<\n", flush=True)
+                        # Sprawdź czy linia kończy się dwukropkiem (pytanie jest kompletne)
+                        last_line = buf_clean.strip().split('\n')[-1]
+                        if last_line.endswith(':'):
+                            # Poczekaj jeszcze chwilę aby upewnić się że to koniec pytania
+                            time.sleep(1.0)
+                            # Sprawdź czy nie ma więcej danych
+                            try:
+                                extra = channel.recv(4096).decode('utf-8', errors='replace')
+                                if extra:
+                                    buf += extra
+                                    print(strip_ansi(extra), end='', flush=True)
+                            except:
+                                pass
+                            
+                            print("\n>>> Sending patch selection: 2 <<<", flush=True)
                             channel.send(b"2\r")
                             patch_selected = True
                             time.sleep(0.5)
                     
                     # Sprawdź czy jest pytanie o reinstalację
                     if patch_selected and not reinstall_answered and "Do you really want to install again" in buf_clean:
-                        time.sleep(0.5)
-                        print("\n\n>>> Sending reinstall answer: y <<<\n", flush=True)
-                        channel.send(b"y\r")
-                        reinstall_answered = True
-                        time.sleep(0.5)
+                        # Sprawdź czy linia kończy się znakiem zapytania (pytanie jest kompletne)
+                        last_line = buf_clean.strip().split('\n')[-1]
+                        if '?' in last_line:
+                            # Poczekaj jeszcze chwilę aby upewnić się że to koniec pytania
+                            time.sleep(1.0)
+                            # Sprawdź czy nie ma więcej danych
+                            try:
+                                extra = channel.recv(4096).decode('utf-8', errors='replace')
+                                if extra:
+                                    buf += extra
+                                    print(strip_ansi(extra), end='', flush=True)
+                            except:
+                                pass
+                            
+                            print("\n>>> Sending reinstall answer: y <<<", flush=True)
+                            channel.send(b"y\r")
+                            reinstall_answered = True
+                            time.sleep(0.5)
                     
                     # Sprawdź czy wróciliśmy do promptu
                     if patch_selected and ("cm.gdemo.com>" in buf_clean or ".com>" in buf_clean or "grdadmin>" in buf_clean):
