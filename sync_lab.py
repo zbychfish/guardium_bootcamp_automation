@@ -16,7 +16,7 @@ import urllib.request
 import sys
 import traceback
 import zipfile
-
+import glob
 
 
 
@@ -564,15 +564,29 @@ def lab2_gim(appliance=None):
         print(f"  ✓ Patches already extracted")
 
     print("\n[LAB 1.18] Copying patches to central manager")
-    success = scp_file_as_root(
-        host='10.10.9.219',
-        root_password=get_env_value("ROOT_PASSWORD"),
-        local_path='/root/gn-trainings/appliance-patches/patches/*.sig',
-        remote_path='/var/log/guard/patches',
-        direction='put'
-    )
-    if success:
-        print(f"  ✓ Patches copied")
+    
+    patch_files = glob.glob('/root/gn-trainings/appliance-patches/patches/*.sig')
+    
+    if not patch_files:
+        print("  ✗ No patch files found in /root/gn-trainings/appliance-patches/patches/")
+        exit(1)
+    
+    print(f"  Found {len(patch_files)} patch files to copy")
+    all_success = True
+    for patch_file in patch_files:
+        success = scp_file_as_root(
+            host='10.10.9.219',
+            root_password=get_env_value("ROOT_PASSWORD"),
+            local_path=patch_file,
+            remote_path='/var/log/guard/patches/',
+            direction='put'
+        )
+        if not success:
+            all_success = False
+            break
+    
+    if all_success:
+        print(f"  ✓ All {len(patch_files)} patches copied successfully")
     else:
         print("  ✗ Problem with copying of patches to central manager")
         exit(1)

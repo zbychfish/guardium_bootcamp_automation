@@ -87,7 +87,7 @@ def scp_file_as_root(
     direction: str = "put"
 ) -> bool:
     """
-    Przesyła plik przez SCP jako root.
+    Przesyła plik przez SCP jako root używając Paramiko SFTP.
     
     Args:
         host: Adres IP/hostname
@@ -105,6 +105,7 @@ def scp_file_as_root(
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     
     try:
+        # Połącz się jako root
         client.connect(
             hostname=host,
             port=port,
@@ -117,17 +118,35 @@ def scp_file_as_root(
             auth_timeout=timeout,
         )
         
-        # Użyj SFTP do transferu plików
+        # Otwórz SFTP session
         sftp = client.open_sftp()
         
         if direction == "put":
             # Upload: local -> remote
-            sftp.put(local_path, remote_path)
-            print(f"Uploaded: {local_path} -> {host}:{remote_path}")
+            # Upewnij się, że katalog docelowy istnieje
+            try:
+                sftp.stat(remote_path)
+            except IOError:
+                # Katalog nie istnieje, spróbuj go utworzyć
+                try:
+                    sftp.mkdir(remote_path)
+                except:
+                    pass  # Może już istnieje lub nie mamy uprawnień
+            
+            # Jeśli remote_path to katalog, dodaj nazwę pliku
+            import os
+            if remote_path.endswith('/') or '.' not in os.path.basename(remote_path):
+                remote_file = os.path.join(remote_path, os.path.basename(local_path))
+            else:
+                remote_file = remote_path
+            
+            sftp.put(local_path, remote_file)
+            # print(f"  Uploaded: {os.path.basename(local_path)} -> {host}:{remote_file}")
+            
         elif direction == "get":
             # Download: remote -> local
             sftp.get(local_path, remote_path)
-            print(f"Downloaded: {host}:{local_path} -> {remote_path}")
+            # print(f"  Downloaded: {host}:{local_path} -> {remote_path}")
         else:
             raise ValueError(f"Invalid direction: {direction}. Use 'put' or 'get'")
         
@@ -137,8 +156,13 @@ def scp_file_as_root(
         return True
         
     except (paramiko.SSHException, socket.error, IOError, OSError) as e:
-        print(f"SCP error on {host}: {e}")
+        print(f"  SCP error on {host}: {e}")
         return False
+    finally:
+        try:
+            client.close()
+        except:
+            pass
 
 
 class ApplianceCommand:
