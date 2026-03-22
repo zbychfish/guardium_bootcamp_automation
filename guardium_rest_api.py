@@ -312,7 +312,7 @@ class GuardiumRestAPI:
             RuntimeError: Jeśli token nie został jeszcze pobrany
             requests.exceptions.RequestException: W przypadku błędu HTTP
         """
-        url = f'{self.base_url}:8443/restAPI/unit_data'
+        url = f'{self.base_url}/restAPI/unit_data'
         headers = self.get_headers()
         
         params = {
