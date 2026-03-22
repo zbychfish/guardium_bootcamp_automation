@@ -551,130 +551,143 @@ class ApplianceCommand:
         
         use_timeout = timeout if timeout is not None else self.timeout
         
-        # Flush buffer
-        time.sleep(0.03)
-        while self.channel.recv_ready():
-            self.channel.recv(65535)
+        # Set channel timeout for non-blocking recv
+        original_timeout = self.channel.gettimeout()
+        self.channel.settimeout(0.1)
         
-        # Send command with CR only
-        self.channel.send((command + "\r").encode())
-        
-        buf = ""
-        last_activity = time.time()
-        deadline = time.time() + use_timeout
-        patch_selected = False
-        reinstall_answered = False
-        
-        while time.time() < deadline:
-            try:
-                chunk = self.channel.recv(65535).decode(errors="replace")
-                if chunk:
-                    buf += chunk
-                    last_activity = time.time()
-                    
-                    # Print new content live immediately
-                    if live_output:
-                        display_chunk = strip_ansi(chunk) if self.strip_ansi_flag else chunk
-                        print(display_chunk, end='', flush=True)
-                    
-                    buf_clean = strip_ansi(buf) if self.strip_ansi_flag else buf
-                    
-                    # Sprawdź czy jest pytanie o wybór patcha
-                    if not patch_selected and ("Please choose patches" in buf_clean or "or q to quit" in buf_clean):
-                        # Sprawdź czy linia kończy się dwukropkiem (pytanie jest kompletne)
-                        last_line = buf_clean.strip().split('\n')[-1]
-                        if last_line.endswith(':'):
-                            # Poczekaj jeszcze chwilę aby upewnić się że to koniec pytania
-                            time.sleep(1.0)
-                            # Sprawdź czy nie ma więcej danych
-                            try:
-                                extra = self.channel.recv(65535).decode(errors="replace")
-                                if extra:
-                                    buf += extra
-                                    if live_output:
-                                        display_extra = strip_ansi(extra) if self.strip_ansi_flag else extra
-                                        print(display_extra, end='', flush=True)
-                            except:
-                                pass
-                            
-                            if live_output:
-                                print(f"\n[Sending patch selection: {patch_selection}]", flush=True)
-                            
-                            self.channel.send((patch_selection + "\r").encode())
-                            patch_selected = True
-                            last_activity = time.time()
-                            time.sleep(0.5)
-                    
-                    # Sprawdź czy jest pytanie o reinstalację
-                    if patch_selected and not reinstall_answered and "Do you really want to install again" in buf_clean:
-                        # Sprawdź czy pytanie jest kompletne - szukaj "(yes or no)?"
-                        if "(yes or no)?" in buf_clean:
-                            # Poczekaj jeszcze chwilę aby upewnić się że to koniec pytania
-                            time.sleep(1.0)
-                            # Sprawdź czy nie ma więcej danych
-                            try:
-                                extra = self.channel.recv(65535).decode(errors="replace")
-                                if extra:
-                                    buf += extra
-                                    if live_output:
-                                        display_extra = strip_ansi(extra) if self.strip_ansi_flag else extra
-                                        print(display_extra, end='', flush=True)
-                            except:
-                                pass
-                            
-                            if live_output:
-                                print(f"\n[Sending reinstall answer: {reinstall_answer}]", flush=True)
-                            
-                            self.channel.send((reinstall_answer + "\r").encode())
-                            reinstall_answered = True
-                            last_activity = time.time()
-                            time.sleep(0.5)
-                    
-                    # Sprawdź czy wróciliśmy do promptu
-                    if patch_selected and self.prompt_re.search(buf_clean):
-                        # Poczekaj chwilę na ewentualny dodatkowy output
-                        time.sleep(1)
-                        try:
-                            while self.channel.recv_ready():
-                                chunk = self.channel.recv(65535).decode(errors="replace")
-                                if chunk:
-                                    buf += chunk
-                                    if live_output:
-                                        display_chunk = strip_ansi(chunk) if self.strip_ansi_flag else chunk
-                                        print(display_chunk, end='', flush=True)
-                        except:
-                            pass
-                        
-                        if live_output:
-                            print()  # New line at the end
-                        
-                        # Clean and return output
-                        working = strip_ansi(buf) if self.strip_ansi_flag else buf
-                        last_span = _find_last_prompt_span(working, self.prompt_re)
-                        output_region = working[: last_span[0]] if last_span else working
-                        
-                        lines = output_region.splitlines()
-                        
-                        # Remove empty lines and command echo
-                        while lines and not lines[0].strip():
-                            lines.pop(0)
-                        if lines and lines[0].strip() == command.strip():
-                            lines = lines[1:]
-                        
-                        return "\n".join(lines).strip()
-                        
-            except socket.timeout:
-                # Timeout jest normalny - po prostu nie ma danych
-                # Sprawdź czy nie minęło zbyt dużo czasu bez aktywności
-                if time.time() - last_activity > 300:  # 5 minut bez aktywności
-                    raise TimeoutError("No activity for 5 minutes")
-                time.sleep(0.1)
+        try:
+            # Flush buffer
+            time.sleep(0.03)
+            while self.channel.recv_ready():
+                self.channel.recv(65535)
             
-            # Sprawdź czy nadal połączeni
-            if self.channel.closed:
-                raise RuntimeError("Channel closed")
+            # Send command with CR only
+            self.channel.send((command + "\r").encode())
+            
+            buf = ""
+            last_activity = time.time()
+            deadline = time.time() + use_timeout
+            patch_selected = False
+            reinstall_answered = False
+            
+            while time.time() < deadline:
+                try:
+                    chunk = self.channel.recv(65535).decode(errors="replace")
+                    if chunk:
+                        buf += chunk
+                        last_activity = time.time()
+                        
+                        # Print new content live immediately
+                        if live_output:
+                            display_chunk = strip_ansi(chunk) if self.strip_ansi_flag else chunk
+                            print(display_chunk, end='', flush=True)
+                            sys.stdout.flush()
+                        
+                        buf_clean = strip_ansi(buf) if self.strip_ansi_flag else buf
+                        
+                        # Sprawdź czy jest pytanie o wybór patcha
+                        if not patch_selected and ("Please choose patches" in buf_clean or "or q to quit" in buf_clean):
+                            # Sprawdź czy linia kończy się dwukropkiem (pytanie jest kompletne)
+                            last_line = buf_clean.strip().split('\n')[-1]
+                            if last_line.endswith(':'):
+                                # Poczekaj jeszcze chwilę aby upewnić się że to koniec pytania
+                                time.sleep(1.0)
+                                # Sprawdź czy nie ma więcej danych
+                                try:
+                                    extra = self.channel.recv(65535).decode(errors="replace")
+                                    if extra:
+                                        buf += extra
+                                        if live_output:
+                                            display_extra = strip_ansi(extra) if self.strip_ansi_flag else extra
+                                            print(display_extra, end='', flush=True)
+                                except:
+                                    pass
+                                
+                                if live_output:
+                                    print(f"\n[Sending patch selection: {patch_selection}]", flush=True)
+                                    sys.stdout.flush()
+                                
+                                self.channel.send((patch_selection + "\r").encode())
+                                patch_selected = True
+                                last_activity = time.time()
+                                time.sleep(0.5)
+                        
+                        # Sprawdź czy jest pytanie o reinstalację
+                        if patch_selected and not reinstall_answered and "Do you really want to install again" in buf_clean:
+                            # Sprawdź czy pytanie jest kompletne - szukaj "(yes or no)?"
+                            if "(yes or no)?" in buf_clean:
+                                # Poczekaj jeszcze chwilę aby upewnić się że to koniec pytania
+                                time.sleep(1.0)
+                                # Sprawdź czy nie ma więcej danych
+                                try:
+                                    extra = self.channel.recv(65535).decode(errors="replace")
+                                    if extra:
+                                        buf += extra
+                                        if live_output:
+                                            display_extra = strip_ansi(extra) if self.strip_ansi_flag else extra
+                                            print(display_extra, end='', flush=True)
+                                except:
+                                    pass
+                                
+                                if live_output:
+                                    print(f"\n[Sending reinstall answer: {reinstall_answer}]", flush=True)
+                                    sys.stdout.flush()
+                                
+                                self.channel.send((reinstall_answer + "\r").encode())
+                                reinstall_answered = True
+                                last_activity = time.time()
+                                time.sleep(0.5)
+                        
+                        # Sprawdź czy wróciliśmy do promptu
+                        if patch_selected and self.prompt_re.search(buf_clean):
+                            # Poczekaj chwilę na ewentualny dodatkowy output
+                            time.sleep(1)
+                            try:
+                                while self.channel.recv_ready():
+                                    chunk = self.channel.recv(65535).decode(errors="replace")
+                                    if chunk:
+                                        buf += chunk
+                                        if live_output:
+                                            display_chunk = strip_ansi(chunk) if self.strip_ansi_flag else chunk
+                                            print(display_chunk, end='', flush=True)
+                            except:
+                                pass
+                            
+                            if live_output:
+                                print()  # New line at the end
+                            
+                            # Clean and return output
+                            working = strip_ansi(buf) if self.strip_ansi_flag else buf
+                            last_span = _find_last_prompt_span(working, self.prompt_re)
+                            output_region = working[: last_span[0]] if last_span else working
+                            
+                            lines = output_region.splitlines()
+                            
+                            # Remove empty lines and command echo
+                            while lines and not lines[0].strip():
+                                lines.pop(0)
+                            if lines and lines[0].strip() == command.strip():
+                                lines = lines[1:]
+                            
+                            return "\n".join(lines).strip()
+                            
+                except socket.timeout:
+                    # Timeout jest normalny - po prostu nie ma danych
+                    # Sprawdź czy nie minęło zbyt dużo czasu bez aktywności
+                    if time.time() - last_activity > 300:  # 5 minut bez aktywności
+                        raise TimeoutError("No activity for 5 minutes")
+                    time.sleep(0.1)
+                
+                # Sprawdź czy nadal połączeni
+                if self.channel.closed:
+                    raise RuntimeError("Channel closed")
+            
+            raise TimeoutError(f"Timeout waiting for patch install prompts")
         
-        raise TimeoutError(f"Timeout waiting for patch install prompts")
+        finally:
+            # Restore original timeout
+            if original_timeout is not None:
+                self.channel.settimeout(original_timeout)
     
     def disconnect(self):
         """Zamyka połączenie"""
