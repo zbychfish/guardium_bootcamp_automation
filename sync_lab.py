@@ -496,8 +496,10 @@ def lab2_gim(appliance=None):
         if not any(d.get('ip') == '10.10.9.239' for d in out):
             print(d.get('ip') == '10.10.9.239' for d in out)
         else:
+            print(f"  ✓ Collector is already registered ")
             unit_data = api.get_unit_data(api_target_host='10.10.9.239')
             unit_data = parse_unit_summary(unit_data['Message'])
+            print(unit_data)
 
 
         # Wyekstrahuj wartość mus z root elementu
