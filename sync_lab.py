@@ -553,7 +553,7 @@ def lab2_gim(appliance=None):
     
     print("\n[LAB 1.18] Download and unpack patches locally")
     target_dir = "/root/gn-trainings/appliance-patches"
-    if os.path.isdir(target_dir):
+    if not os.path.isdir(target_dir):
         os.makedirs(target_dir, exist_ok=True)
         filename = os.path.join(target_dir, os.path.basename("patches.zip"))
         urllib.request.urlretrieve(get_env_value("PATCH_ARCHIVE"), filename)
@@ -565,7 +565,7 @@ def lab2_gim(appliance=None):
 
     print("\n[LAB 1.18] Copying patches to central manager")
     success = scp_file_as_root(
-        host='10.10.9.239',
+        host='10.10.9.219',
         root_password=get_env_value("ROOT_PASSWORD"),
         local_path='/root/gn-trainings/appliance-patches/patches/*.sig',
         remote_path='/var/log/guard/patches',
