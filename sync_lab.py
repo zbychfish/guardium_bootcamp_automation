@@ -210,27 +210,14 @@ def parse_mus_from_message_dict(dct: Dict[str, Any]) -> List[Dict[str, Any]]:
     raw = dct.get("Message") or dct.get("message")
     if not raw:
         return []
-
     fixed = to_valid_json(raw)
     obj = json.loads(fixed)  # tu może polecieć ValueError, jeśli format jest inny niż zakładany
-
     mus = obj.get("mus")
     if not isinstance(mus, list):
         return []
     # W tym miejscu 'mus' to już zwykła lista dictów JSON-owych
     return mus
 
-# --- 3) Przykładowe przemapowanie na prostą listę słowników (host/ip/release/patch) ---
-def simplify_units(units: List[Dict[str, Any]]) -> List[Dict[str, Optional[str]]]:
-    out: List[Dict[str, Optional[str]]] = []
-    for u in units:
-        out.append({
-            "hostName": u.get("hostName"),
-            "ip": u.get("ip"),
-            "guardRelease": u.get("guardRelease"),
-            "lastInstalledPatch": u.get("lastInstalledPatch"),
-        })
-    return out
 
 def lab1_appliance_setup(appliance=None):
     """
@@ -456,10 +443,13 @@ def lab2_gim(appliance=None):
         result = api.import_definitions('guardium_definition_files/exp_dashboard_training.sql')
         print("\n[LAB 2.4] Register collector to central manager")
         units = api.get_registered_units()
-        print(f"  Raw units data: {units}")
         units = parse_mus_from_message_dict(units)
-        print(units)
-        print(simplify_units(units))
+        out: List[Dict[str, Optional[str]]] = []
+        for u in units:
+            out.append({
+                "ip": u.get("ip"),
+            })
+        print(out)
         # Wyekstrahuj wartość mus z root elementu
         
             # result = api.register_unit(
