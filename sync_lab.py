@@ -616,7 +616,7 @@ def lab2_gim(appliance=None):
     print("=" * 60)
     
     print("\n[LAB 1.21] Register patches on cm")
-    appliance = create_appliance('collector')
+    appliance = create_appliance('cm')
     if not appliance.connect():
         print("  ✗ Failed to connect to collector")
         return None
