@@ -494,12 +494,11 @@ def lab2_gim(appliance=None):
             })
         print(out)
         if not any(d.get('ip') == '10.10.9.239' for d in out):
-            appliance = create_appliance('cm')
+            appliance = create_appliance('collector')
             if not appliance.connect():
-                print("  ✗ Failed to connect to CM")
+                print("  ✗ Failed to connect to collector")
                 return None
-            print("\n[LAB 1.12] Create oauth client for bootcamp sync")
-            result = appliance.execute_command("register management 10.10.9.239 8443")
+            result = appliance.execute_command("register management 10.10.9.219 8443", timeout=240)
             print(result)
             unit_data = api.get_unit_data(api_target_host='10.10.9.239')
             unit_data = parse_unit_summary(unit_data['Message'])

@@ -155,14 +155,16 @@ class ApplianceCommand:
     def _read_until_regex(
         self,
         regex: re.Pattern,
-        echo: bool = False
+        echo: bool = False,
+        timeout: Optional[int] = None
     ) -> str:
         """Czyta output do momentu dopasowania regex"""
         if not self.channel:
             raise RuntimeError("No channel available")
         
+        cmd_timeout = timeout if timeout is not None else self.timeout
         buf = ""
-        deadline = time.time() + self.timeout
+        deadline = time.time() + cmd_timeout
         
         while time.time() < deadline:
             if self.channel.recv_ready():
@@ -182,7 +184,7 @@ class ApplianceCommand:
             
             time.sleep(0.05)
         
-        raise TimeoutError(f"Timeout waiting for: {regex.pattern}")
+        raise TimeoutError(f"Timeout waiting for: {regex.pattern} (timeout: {cmd_timeout}s)")
     
     def execute_command_with_confirmation(
         self,
@@ -381,8 +383,17 @@ class ApplianceCommand:
         
         raise TimeoutError(f"Timeout waiting for confirmation pattern: {confirmation_pattern}")
     
-    def execute_command(self, command: str) -> str:
-        """Wykonuje pojedyncze polecenie i zwraca output"""
+    def execute_command(self, command: str, timeout: Optional[int] = None) -> str:
+        """
+        Wykonuje pojedyncze polecenie i zwraca output.
+        
+        Args:
+            command: Polecenie do wykonania
+            timeout: Opcjonalny timeout w sekundach (jeśli None, używa self.timeout)
+        
+        Returns:
+            Output polecenia
+        """
         if not self.channel:
             raise RuntimeError("Not connected")
         
@@ -394,8 +405,8 @@ class ApplianceCommand:
         # Send command
         self.channel.send((command + "\r\n").encode())
         
-        # Read until prompt
-        raw = self._read_until_regex(self.prompt_re, echo=False)
+        # Read until prompt with optional timeout
+        raw = self._read_until_regex(self.prompt_re, echo=False, timeout=timeout)
         
         # Clean output
         working = strip_ansi(raw) if self.strip_ansi_flag else raw
