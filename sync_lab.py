@@ -12,6 +12,14 @@ from dotenv import load_dotenv
 from appliance_command import ApplianceCommand, change_password_as_root
 from guardium_rest_api import GuardiumRestAPI
 from typing import Any, Dict, List, Optional
+import urllib.request
+import sys
+import traceback
+import zipfile
+
+
+
+
 
 # Sprawdź czy plik .env istnieje
 env_file_path = os.path.join(os.path.dirname(__file__), '.env')
@@ -500,16 +508,18 @@ def lab1_appliance_setup(appliance=None):
             try:
                 result = appliance.execute_command("register management 10.10.9.219 8443", timeout=600)
                 print(result)
-            except TimeoutError as e:
-                print(f"  ⚠ Warning: Timeout during registration: {e}")
-                print("  Continuing anyway...")
+            except TimeoutError:
+                pass  # Ignoruj timeout, kontynuuj
             
             unit_data = api.get_unit_data(api_target_host='10.10.9.239')
             unit_data = parse_unit_summary(unit_data['Message'])
             print(unit_data)
             print("  Unit type:")
-            result = appliance.execute_command("show unit type")
-            print(f"    {result}")
+            try:
+                result = appliance.execute_command("show unit type")
+                print(f"    {result}")
+            except TimeoutError:
+                pass  # Ignoruj timeout, kontynuuj
             print(f"  ✓ Collector registered ")
         else:
             unit_data = api.get_unit_data(api_target_host='10.10.9.239')
@@ -541,8 +551,16 @@ def lab2_gim(appliance=None):
     print("LAB 2 - GIM Setup")
     print("=" * 60)
     
-    
+    print("\n[LAB 1.16] Download and unpack patches locally")
+    target_dir = "/root/gn-trainings/appliance-patches"
+    os.makedirs(target_dir, exist_ok=True)
+    filename = os.path.join(target_dir, os.path.basename("patches.zip"))
+    urllib.request.urlretrieve(get_env_value("PATCH_ARCHIVE"), filename)
+    with zipfile.ZipFile(filename, "r") as zipf:
+            zipf.extractall(path=target_dir)
 
+
+    
     print("\n" + "=" * 60)
     print("LAB 2 completed!")
     print("=" * 60)
