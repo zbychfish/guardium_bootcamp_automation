@@ -624,7 +624,6 @@ def lab2_gim(appliance=None):
         return None
     result = appliance.execute_command("show system patch available")
     print(result)
-    # appliance.execute_command_with_confirmation("store system patch install sys")
     appliance.disconnect()
     
     # Poczekaj chwilę po rozłączeniu przed nowym połączeniem
