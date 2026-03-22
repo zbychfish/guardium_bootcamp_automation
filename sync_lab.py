@@ -11,7 +11,8 @@ import json
 import paramiko
 from dotenv import load_dotenv
 from appliance_command import ApplianceCommand, change_password_as_root, scp_file_as_root
-from patch_install_helper import execute_patch_install_standalone
+from guardium_patch import install_patch
+import os
 from guardium_rest_api import GuardiumRestAPI
 from typing import Any, Dict, List, Optional
 import urllib.request
@@ -625,13 +626,12 @@ def lab2_gim(appliance=None):
     print(result)
     appliance.execute_command_with_confirmation("store system patch install sys")
         
-    output = execute_patch_install_standalone(
-        appliance,
-        command="store system patch install sys",
+    install_patch(
+        host='10.10.9.219',
+        username='cli',
+        password=get_env_value('CM_PASSWORD'),
         patch_selection="2",
-        reinstall_answer="y",
-        live_output=True,
-        timeout=600
+        reinstall_answer="y"
     )
     appliance.disconnect()
     #print(output)

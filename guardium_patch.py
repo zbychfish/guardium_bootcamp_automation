@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Prosty test instalacji patcha - bez użycia klasy ApplianceCommand
+Guardium Patch Installation - funkcja do instalacji patchy
 """
 
 import paramiko
@@ -20,12 +20,25 @@ def strip_ansi(text):
     ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
     return ansi_escape.sub('', text)
 
-def test_patch_install():
-    """Testowa instalacja patcha z live output"""
+def install_patch(
+    host: str,
+    username: str,
+    password: str,
+    patch_selection: str = "2",
+    reinstall_answer: str = "y",
+    command: str = "store system patch install sys"
+):
+    """
+    Instalacja patcha na appliance Guardium z live output.
     
-    host = '10.10.9.219'
-    username = 'cli'
-    password = os.getenv('CM_PASSWORD')
+    Args:
+        host: Adres IP appliance
+        username: Nazwa użytkownika (np. 'cli')
+        password: Hasło
+        patch_selection: Wybór patcha (np. "2", "1-2", "1,3")
+        reinstall_answer: Odpowiedź na pytanie o reinstalację ("y" lub "n")
+        command: Polecenie instalacji (domyślnie "store system patch install sys")
+    """
     
     print(f"Connecting to {host}...")
     
@@ -72,11 +85,11 @@ def test_patch_install():
             print("\n\nERROR: Prompt not found!")
             return
         
-        print("\n\n=== Prompt found! Sending command: store system patch install sys ===\n")
+        print(f"\n\n=== Prompt found! Sending command: {command} ===\n")
         time.sleep(0.5)
         
         # Wyślij polecenie
-        channel.send(b"store system patch install sys\r")
+        channel.send((command + "\r").encode())
         
         # Czytaj output na żywo
         buf = ""
@@ -111,8 +124,8 @@ def test_patch_install():
                             except:
                                 pass
                             
-                            print("\n>>> Sending patch selection: 2 <<<", flush=True)
-                            channel.send(b"2\r")
+                            print(f"\n>>> Sending patch selection: {patch_selection} <<<", flush=True)
+                            channel.send((patch_selection + "\r").encode())
                             patch_selected = True
                             last_activity = time.time()
                             time.sleep(0.5)
@@ -132,8 +145,8 @@ def test_patch_install():
                             except:
                                 pass
                             
-                            print("\n>>> Sending reinstall answer: y <<<", flush=True)
-                            channel.send(b"y\r")
+                            print(f"\n>>> Sending reinstall answer: {reinstall_answer} <<<", flush=True)
+                            channel.send((reinstall_answer + "\r").encode())
                             reinstall_answered = True
                             last_activity = time.time()
                             time.sleep(0.5)
@@ -178,7 +191,5 @@ def test_patch_install():
         import traceback
         traceback.print_exc()
 
-if __name__ == "__main__":
-    test_patch_install()
 
 # Made with Bob
