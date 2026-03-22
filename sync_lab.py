@@ -494,8 +494,12 @@ def lab2_gim(appliance=None):
             })
         print(out)
         if not any(d.get('ip') == '10.10.9.239' for d in out):
+            api = GuardiumRestAPI(
+                base_url='https://10.10.9.239:8443',
+                client_id='BOOTCAMP'
+            )
             result = api.register_unit(
-                unit_ip='10.10.9.239',
+                unit_ip='10.10.9.219',
                 unit_port='8443',
                 secret_key='guardium'
             )
