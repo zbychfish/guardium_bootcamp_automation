@@ -13,6 +13,20 @@ from appliance_command import ApplianceCommand, change_password_as_root
 from guardium_rest_api import GuardiumRestAPI
 from typing import Any, Dict, List, Optional
 
+# Sprawdź czy plik .env istnieje
+env_file_path = os.path.join(os.path.dirname(__file__), '.env')
+if not os.path.exists(env_file_path):
+    print("=" * 60)
+    print("ERROR: Plik .env nie został znaleziony!")
+    print("=" * 60)
+    print("\nUtwórz plik .env na podstawie .env.example:")
+    print(f"1. Skopiuj plik .env.example do .env")
+    print(f"2. Uzupełnij hasła w pliku .env")
+    print(f"\nLokalizacja: {env_file_path}")
+    print("=" * 60)
+    import sys
+    sys.exit(1)
+
 # Załaduj zmienne środowiskowe z pliku .env
 load_dotenv()
 
