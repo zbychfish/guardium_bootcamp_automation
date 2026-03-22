@@ -498,6 +498,7 @@ def lab2_gim(appliance=None):
                 base_url='https://10.10.9.239:8443',
                 client_id='BOOTCAMP'
             )
+            token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
             result = api.register_unit(
                 unit_ip='10.10.9.219',
                 unit_port='8443',
