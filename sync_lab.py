@@ -627,6 +627,8 @@ def lab2_gim(appliance=None):
         base_url='https://10.10.9.219:8443',
         client_id='BOOTCAMP'
     )
+    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
+    print("\n[LAB 1.22] Patch installation on cm")
     result = api.install_patch(
         patch_number=9997,
         unit_ip_list="10.10.9.219",
