@@ -624,9 +624,13 @@ def lab2_gim(appliance=None):
         return None
     result = appliance.execute_command("show system patch available")
     print(result)
-    appliance.execute_command_with_confirmation("store system patch install sys")
+    # appliance.execute_command_with_confirmation("store system patch install sys")
     appliance.disconnect()
-
+    
+    # Poczekaj chwilę po rozłączeniu przed nowym połączeniem
+    print("\n[LAB 1.21] Installing patch on CM...")
+    time.sleep(2)
+    
     install_patch(
         host='10.10.9.219',
         username='cli',
