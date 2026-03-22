@@ -143,7 +143,6 @@ def create_appliance(appliance_name: str) -> ApplianceCommand:
         timeout=common_config['timeout']
     )
 
-
 def wait_for_appliance(appliance_name: str, max_attempts: int = 40, interval: int = 15) -> ApplianceCommand:
     """
     Czeka aż appliance będzie dostępny i nawiąże połączenie.
@@ -178,6 +177,60 @@ def wait_for_appliance(appliance_name: str, max_attempts: int = 40, interval: in
     
     raise RuntimeError(f"Nie udało się połączyć z '{appliance_name}' po {max_attempts} próbach")
 
+import re
+import json
+from typing import Any, Dict, List, Optional
+
+# --- 1) Zamiana tekstu pseudo-JSON => prawidłowy JSON ---
+def to_valid_json(src: str) -> str:
+    s = src
+
+    # a) Cytuj klucze: {hostName: ... , port: ...} -> {"hostName": ..., "port": ...}
+    s = re.sub(r'([{\s,])([A-Za-z_]\w*)\s*:', r'\1"\2":', s)
+
+    # b) Cytuj znane wartości tekstowe (hostName, unitType, guardRelease, ip, lastInstalledPatch)
+    #    Używamy osobnych wzorców, żeby nie ruszać liczb, [] ani {}.
+    def quote_value_for(key: str, text: str) -> str:
+        # dopasuj:  "<key>" : <wartość-niecytowana>  kończąca się na  , ] }
+        pattern = rf'("{key}"\s*:\s*)([^"\s\[\]{{}},][^,\]}}]*)'
+        def repl(m):
+            g1, val = m.group(1), m.group(2).strip()
+            return f'{g1}"{val}"'
+        return re.sub(pattern, repl, text)
+
+    for k in ("hostName", "unitType", "guardRelease", "ip", "lastInstalledPatch"):
+        s = quote_value_for(k, s)
+
+    # c) Ewentualnie usuń podwójne spacje/przecinki z artefaktów
+    s = re.sub(r'\s+', ' ', s)
+    return s
+
+# --- 2) Wyciągnięcie listy mus z obiektu Message (który jest już JSON-em) ---
+def parse_mus_from_message_dict(dct: Dict[str, Any]) -> List[Dict[str, Any]]:
+    raw = dct.get("Message") or dct.get("message")
+    if not raw:
+        return []
+
+    fixed = to_valid_json(raw)
+    obj = json.loads(fixed)  # tu może polecieć ValueError, jeśli format jest inny niż zakładany
+
+    mus = obj.get("mus")
+    if not isinstance(mus, list):
+        return []
+    # W tym miejscu 'mus' to już zwykła lista dictów JSON-owych
+    return mus
+
+# --- 3) Przykładowe przemapowanie na prostą listę słowników (host/ip/release/patch) ---
+def simplify_units(units: List[Dict[str, Any]]) -> List[Dict[str, Optional[str]]]:
+    out: List[Dict[str, Optional[str]]] = []
+    for u in units:
+        out.append({
+            "hostName": u.get("hostName"),
+            "ip": u.get("ip"),
+            "guardRelease": u.get("guardRelease"),
+            "lastInstalledPatch": u.get("lastInstalledPatch"),
+        })
+    return out
 
 def lab1_appliance_setup(appliance=None):
     """
@@ -404,20 +457,11 @@ def lab2_gim(appliance=None):
         print("\n[LAB 2.4] Register collector to central manager")
         units = api.get_registered_units()
         print(f"  Raw units data: {units}")
-        
+        units = parse_mus_from_message_dict(units)
+        print(units)
+        print(simplify_units(units))
         # Wyekstrahuj wartość mus z root elementu
-        if units and 'Message' in units:
-            import re
-            message_str = units['Message'].strip()
-            
-            # Znajdź główny blok mus: [...] (pierwszy poziom, nie zagnieżdżony)
-            # Szukamy mus: [ ... ] gdzie ... może zawierać zagnieżdżone []
-            mus_match = re.search(r',\s*mus:\s*(\[.*\])\s*\}', message_str, re.DOTALL)
-            if mus_match:
-                mus_value = mus_match.group(1)
-                print(f"  Extracted mus value: {mus_value}")
-            else:
-                print("  Could not extract mus value")
+        
             # result = api.register_unit(
         #     unit_ip='10.10.9.239',
         #     unit_port='8443',
