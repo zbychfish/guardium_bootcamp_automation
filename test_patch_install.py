@@ -23,8 +23,8 @@ def test_patch_install():
     """Testowa instalacja patcha z live output"""
     
     host = '10.10.9.219'
-    username = 'admin'
-    password = os.getenv('COLLECTOR_PASSWORD')
+    username = 'cli'
+    password = os.getenv('CM_PASSWORD')
     
     print(f"Connecting to {host}...")
     
