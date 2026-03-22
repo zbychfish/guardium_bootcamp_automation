@@ -8,6 +8,7 @@ import paramiko
 import time
 import sys
 import re
+import socket
 from dotenv import load_dotenv
 import os
 
@@ -81,12 +82,14 @@ def test_patch_install():
         buf = ""
         patch_selected = False
         reinstall_answered = False
+        last_activity = time.time()
         
         while True:
             try:
                 chunk = channel.recv(4096).decode('utf-8', errors='replace')
                 if chunk:
                     buf += chunk
+                    last_activity = time.time()
                     # Wyświetl na żywo
                     print(strip_ansi(chunk), end='', flush=True)
                     
@@ -111,6 +114,7 @@ def test_patch_install():
                             print("\n>>> Sending patch selection: 2 <<<", flush=True)
                             channel.send(b"2\r")
                             patch_selected = True
+                            last_activity = time.time()
                             time.sleep(0.5)
                     
                     # Sprawdź czy jest pytanie o reinstalację
@@ -132,6 +136,7 @@ def test_patch_install():
                             print("\n>>> Sending reinstall answer: y <<<", flush=True)
                             channel.send(b"y\r")
                             reinstall_answered = True
+                            last_activity = time.time()
                             time.sleep(0.5)
                     
                     # Sprawdź czy wróciliśmy do promptu
@@ -150,15 +155,21 @@ def test_patch_install():
                         print("\n\n=== Command completed ===")
                         break
                         
-            except Exception as e:
-                if "timed out" not in str(e).lower():
-                    print(f"\nError: {e}")
-                time.sleep(0.1)
-                
-                # Sprawdź czy nadal połączeni
-                if channel.closed:
-                    print("\nChannel closed")
+            except socket.timeout:
+                # Timeout jest normalny - po prostu nie ma danych
+                # Sprawdź czy nie minęło zbyt dużo czasu bez aktywności
+                if time.time() - last_activity > 300:  # 5 minut bez aktywności
+                    print("\n\nTimeout: No activity for 5 minutes")
                     break
+                time.sleep(0.1)
+            except Exception as e:
+                print(f"\nUnexpected error: {e}")
+                break
+            
+            # Sprawdź czy nadal połączeni
+            if channel.closed:
+                print("\nChannel closed")
+                break
         
         channel.close()
         client.close()
