@@ -499,9 +499,10 @@ def lab2_gim(appliance=None):
                 unit_port='8443',
                 secret_key='guardium'
             )
-            unit_data = api.get_unit_data(api_target_host='10.10.9.239')
-            unit_data = parse_unit_summary(unit_data['Message'])
-            print(unit_data)
+            print(result)
+            #unit_data = api.get_unit_data(api_target_host='10.10.9.239')
+            #unit_data = parse_unit_summary(unit_data['Message'])
+            #print(unit_data)
         else:
             print(f"  ✓ Collector is already registered ")
             unit_data = api.get_unit_data(api_target_host='10.10.9.239')
