@@ -627,7 +627,8 @@ def lab2_gim(appliance=None):
     
     output = appliance.execute_patch_install(
         patch_selection="2",
-        reinstall_answer="y"
+        reinstall_answer="y",
+        live_output=True
     )
     print(output)
 

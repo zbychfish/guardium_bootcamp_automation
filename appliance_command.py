@@ -528,7 +528,8 @@ class ApplianceCommand:
         command: str = "store system patch install sys",
         patch_selection: str = "1-2",
         reinstall_answer: str = "yes",
-        confirm_idle: float = 0.2
+        confirm_idle: float = 0.2,
+        live_output: bool = True
     ) -> str:
         """
         Wykonuje instalację patcha z obsługą dwóch pytań:
@@ -540,6 +541,7 @@ class ApplianceCommand:
             patch_selection: Wybór patchy (np. "1-2", "1,3", "1")
             reinstall_answer: Odpowiedź na pytanie o reinstalację ("yes" lub "no")
             confirm_idle: Czas oczekiwania na idle przed wysłaniem odpowiedzi
+            live_output: Czy wyświetlać output na bieżąco (domyślnie True)
         
         Returns:
             Output z instalacji patcha
@@ -561,6 +563,7 @@ class ApplianceCommand:
         reinstall_re = re.compile(r"Do you really want to install again.*?\(yes or no\)\?", re.IGNORECASE)
         
         buf = ""
+        last_printed_len = 0
         deadline = time.time() + self.timeout
         first_answered = False
         second_answered = False
@@ -569,6 +572,15 @@ class ApplianceCommand:
             if self.channel.recv_ready():
                 chunk = self.channel.recv(65535).decode(errors="replace")
                 buf += chunk
+                
+                # Print new content live
+                if live_output:
+                    new_content = buf[last_printed_len:]
+                    if new_content:
+                        # Strip ANSI if needed
+                        display_content = strip_ansi(new_content) if self.strip_ansi_flag else new_content
+                        print(display_content, end='', flush=True)
+                        last_printed_len = len(buf)
             
             buf_for_match = strip_ansi(buf) if self.strip_ansi_flag else buf
             
@@ -580,13 +592,22 @@ class ApplianceCommand:
                     if self.channel.recv_ready():
                         chunk = self.channel.recv(65535).decode(errors="replace")
                         buf += chunk
+                        
+                        # Print new content live
+                        if live_output:
+                            new_content = buf[last_printed_len:]
+                            if new_content:
+                                display_content = strip_ansi(new_content) if self.strip_ansi_flag else new_content
+                                print(display_content, end='', flush=True)
+                                last_printed_len = len(buf)
+                        
                         idle_deadline = time.time() + confirm_idle
                     if time.time() >= idle_deadline:
                         break
                     time.sleep(0.01)
                 
-                if self.debug:
-                    print(f"[DEBUG] Sending patch selection: {patch_selection}", file=sys.stderr)
+                if live_output:
+                    print(f"\n[Sending patch selection: {patch_selection}]", flush=True)
                 
                 # Send patch selection
                 self.channel.send((patch_selection + "\r").encode())
@@ -602,13 +623,22 @@ class ApplianceCommand:
                     if self.channel.recv_ready():
                         chunk = self.channel.recv(65535).decode(errors="replace")
                         buf += chunk
+                        
+                        # Print new content live
+                        if live_output:
+                            new_content = buf[last_printed_len:]
+                            if new_content:
+                                display_content = strip_ansi(new_content) if self.strip_ansi_flag else new_content
+                                print(display_content, end='', flush=True)
+                                last_printed_len = len(buf)
+                        
                         idle_deadline = time.time() + confirm_idle
                     if time.time() >= idle_deadline:
                         break
                     time.sleep(0.01)
                 
-                if self.debug:
-                    print(f"[DEBUG] Sending reinstall answer: {reinstall_answer}", file=sys.stderr)
+                if live_output:
+                    print(f"\n[Sending reinstall answer: {reinstall_answer}]", flush=True)
                 
                 # Send reinstall answer
                 self.channel.send((reinstall_answer + "\r").encode())
@@ -623,6 +653,17 @@ class ApplianceCommand:
                 while self.channel.recv_ready():
                     chunk = self.channel.recv(65535).decode(errors="replace")
                     buf += chunk
+                    
+                    # Print new content live
+                    if live_output:
+                        new_content = buf[last_printed_len:]
+                        if new_content:
+                            display_content = strip_ansi(new_content) if self.strip_ansi_flag else new_content
+                            print(display_content, end='', flush=True)
+                            last_printed_len = len(buf)
+                
+                if live_output:
+                    print()  # New line at the end
                 
                 # Clean and return output
                 working = strip_ansi(buf) if self.strip_ansi_flag else buf
