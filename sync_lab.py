@@ -74,6 +74,46 @@ def save_to_env(key: str, value: str, env_file: str = ".env") -> bool:
         return False
 
 
+def parse_unit_summary(text: str) -> dict:
+    """
+    Ekstrahuje z luźnego tekstu:
+      - host (z 'Unit Host=...'; jeśli brak, użyje pierwszego FQDN w tekście),
+      - ip (z 'IP=...'),
+      - unit_type (z 'Unit Type=...'),
+      - online (z 'Online=true/false' -> bool).
+    Zwraca słownik.
+    """
+    # Bezpiecznie spłaszcz spacje
+    t = re.sub(r"\s+", " ", text.strip())
+
+    def grab(pattern, flags=0, group=1):
+        m = re.search(pattern, t, flags)
+        return m.group(group) if m else None
+
+    # Host: preferuj 'Unit Host=...' ; fallback: pierwszy FQDN na początku linii
+    host = grab(r"\bUnit\s+Host=([A-Za-z0-9._-]+)")
+    if not host:
+        host = grab(r"\b([A-Za-z0-9.-]+\.[A-Za-z]{2,})\b")  # np. coll1.gdemo.com
+
+    # IP (pierwszy po 'IP=')
+    ip = grab(r"\bIP=(\d{1,3}(?:\.\d{1,3}){3})\b")
+
+    # Unit Type
+    unit_type = grab(r"\bUnit\s+Type=([A-Za-z0-9._-]+)")
+
+    # Online (jako bool)
+    online_str = grab(r"\bOnline=(true|false)\b", flags=re.IGNORECASE)
+    online = None
+    if online_str is not None:
+        online = online_str.lower() == "true"
+
+    return {
+        "host": host,
+        "ip": ip,
+        "unit_type": unit_type,
+        "online": online,
+    }
+
 
 # Wspólna konfiguracja dla wszystkich appliance
 common_config = {
@@ -457,7 +497,8 @@ def lab2_gim(appliance=None):
             pass
         else:
             unit_data = api.get_unit_data(api_target_host='10.10.9.239')
-            print(unit_data)
+            unit_data = parse_unit_summary(unit_data['Message'])
+
 
         # Wyekstrahuj wartość mus z root elementu
         
