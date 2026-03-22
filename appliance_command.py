@@ -526,8 +526,8 @@ class ApplianceCommand:
     def execute_patch_install(
         self,
         command: str = "store system patch install sys",
-        patch_selection: str = "1-2",
-        reinstall_answer: str = "yes",
+        patch_selection: str = "2",
+        reinstall_answer: str = "y",
         confirm_idle: float = 0.2,
         live_output: bool = True
     ) -> str:
