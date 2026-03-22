@@ -527,31 +527,13 @@ def lab1_appliance_setup(appliance=None):
             unit_data = parse_unit_summary(unit_data['Message'])
             print(unit_data)
             print(f"  ✓ Collector is already registered ")
+        return appliance
     
     except Exception as e:
         print(f"  ✗ Error: {e}")
         import traceback
         traceback.print_exc()
 
-    print("\n" + "=" * 60)
-    print("LAB 1 completed!")
-    print("=" * 60)
-    
-
-def lab2_gim(appliance=None):
-    """
-    LAB 2 - Konfiguracja GIM (Group Identity Management).
-    
-    Args:
-        appliance: Opcjonalny połączony obiekt ApplianceCommand
-    
-    Returns:
-        appliance: Połączony obiekt ApplianceCommand lub None w przypadku błędu
-    """
-    print("=" * 60)
-    print("LAB 2 - GIM Setup")
-    print("=" * 60)
-    
     print("\n[LAB 1.18] Download and unpack patches locally")
     target_dir = "/root/gn-trainings/appliance-patches"
     if not os.path.isdir(target_dir):
@@ -564,7 +546,7 @@ def lab2_gim(appliance=None):
     else:
         print(f"  ✓ Patches already extracted")
 
-    print("\n[LAB 1.18] Copying patches to central manager")
+    print("\n[LAB 1.19] Copying patches to central manager")
     patch_files = glob.glob('/root/gn-trainings/appliance-patches/patches/*.sig')
     
     if not patch_files:
@@ -587,7 +569,7 @@ def lab2_gim(appliance=None):
     if all_success:
         print(f"  ✓ All {len(patch_files)} patches copied successfully")
         
-        print("\n[LAB 1.19] Changing ownership of patches to tomcat:tomcat")
+        print("\n[LAB 1.20] Changing ownership of patches to tomcat:tomcat")
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         try:
@@ -618,7 +600,35 @@ def lab2_gim(appliance=None):
     print("LAB 2 completed!")
     print("=" * 60)
     
-    return appliance
+
+def lab2_gim(appliance=None):
+    """
+    LAB 2 - Konfiguracja GIM (Group Identity Management).
+    
+    Args:
+        appliance: Opcjonalny połączony obiekt ApplianceCommand
+    
+    Returns:
+        appliance: Połączony obiekt ApplianceCommand lub None w przypadku błędu
+    """
+    print("=" * 60)
+    print("LAB 2 - GIM Setup")
+    print("=" * 60)
+    
+    print("\n[LAB 1.21] Register patches on cm")
+    appliance = create_appliance('collector')
+    if not appliance.connect():
+        print("  ✗ Failed to connect to collector")
+        return None
+    result = appliance.execute_command("show system patch available")
+    print(result)
+
+
+    
+    print("\n" + "=" * 60)
+    print("All labs completed!")
+    print("=" * 60)
+
 
 
 def sync_lab(skip_below: int = 0):
@@ -656,8 +666,10 @@ def sync_lab(skip_below: int = 0):
         print("\n[LAB 3] SKIPPED")
     
     print("\n" + "=" * 60)
-    print("All labs completed!")
+    print("LAB 1 completed!")
     print("=" * 60)
+    
+
 
 
 if __name__ == "__main__":
