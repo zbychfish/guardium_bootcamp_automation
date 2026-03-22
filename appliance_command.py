@@ -77,6 +77,70 @@ def change_password_as_root(
         return False
 
 
+def scp_file_as_root(
+    host: str,
+    root_password: str,
+    local_path: str,
+    remote_path: str,
+    port: int = 22,
+    timeout: int = 30,
+    direction: str = "put"
+) -> bool:
+    """
+    Przesyła plik przez SCP jako root.
+    
+    Args:
+        host: Adres IP/hostname
+        root_password: Hasło root
+        local_path: Ścieżka do lokalnego pliku (dla 'put') lub zdalnego (dla 'get')
+        remote_path: Ścieżka docelowa na serwerze (dla 'put') lub lokalna (dla 'get')
+        port: Port SSH (domyślnie 22)
+        timeout: Timeout w sekundach
+        direction: Kierunek transferu - 'put' (upload) lub 'get' (download)
+    
+    Returns:
+        True jeśli sukces, False w przypadku błędu
+    """
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    
+    try:
+        client.connect(
+            hostname=host,
+            port=port,
+            username="root",
+            password=root_password,
+            look_for_keys=False,
+            allow_agent=False,
+            timeout=timeout,
+            banner_timeout=timeout,
+            auth_timeout=timeout,
+        )
+        
+        # Użyj SFTP do transferu plików
+        sftp = client.open_sftp()
+        
+        if direction == "put":
+            # Upload: local -> remote
+            sftp.put(local_path, remote_path)
+            print(f"Uploaded: {local_path} -> {host}:{remote_path}")
+        elif direction == "get":
+            # Download: remote -> local
+            sftp.get(local_path, remote_path)
+            print(f"Downloaded: {host}:{local_path} -> {remote_path}")
+        else:
+            raise ValueError(f"Invalid direction: {direction}. Use 'put' or 'get'")
+        
+        sftp.close()
+        client.close()
+        
+        return True
+        
+    except (paramiko.SSHException, socket.error, IOError, OSError) as e:
+        print(f"SCP error on {host}: {e}")
+        return False
+
+
 class ApplianceCommand:
     """Klasa do wykonywania poleceń na urządzeniach CLI przez SSH"""
     

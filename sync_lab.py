@@ -9,7 +9,7 @@ import re
 import time
 import json
 from dotenv import load_dotenv
-from appliance_command import ApplianceCommand, change_password_as_root
+from appliance_command import ApplianceCommand, change_password_as_root, scp_file_as_root
 from guardium_rest_api import GuardiumRestAPI
 from typing import Any, Dict, List, Optional
 import urllib.request
@@ -551,16 +551,33 @@ def lab2_gim(appliance=None):
     print("LAB 2 - GIM Setup")
     print("=" * 60)
     
-    print("\n[LAB 1.16] Download and unpack patches locally")
+    print("\n[LAB 1.18] Download and unpack patches locally")
     target_dir = "/root/gn-trainings/appliance-patches"
-    os.makedirs(target_dir, exist_ok=True)
-    filename = os.path.join(target_dir, os.path.basename("patches.zip"))
-    urllib.request.urlretrieve(get_env_value("PATCH_ARCHIVE"), filename)
-    with zipfile.ZipFile(filename, "r") as zipf:
-            zipf.extractall(path=target_dir)
+    if os.path.isdir(target_dir):
+        os.makedirs(target_dir, exist_ok=True)
+        filename = os.path.join(target_dir, os.path.basename("patches.zip"))
+        urllib.request.urlretrieve(get_env_value("PATCH_ARCHIVE"), filename)
+        with zipfile.ZipFile(filename, "r") as zipf:
+                zipf.extractall(path=target_dir)
+        print(f"  ✓ Patches extracted")
+    else:
+        print(f"  ✓ Patches already extracted")
+
+    print("\n[LAB 1.18] Copying patches to central manager")
+    success = scp_file_as_root(
+        host='10.10.9.239',
+        root_password=get_env_value("ROOT_PASSWORD"),
+        local_path='/root/gn-trainings/appliance-patches/patches/*.sig',
+        remote_path='/var/log/guard/patches',
+        direction='put'
+    )
+    if success:
+        print(f"  ✓ Patches copied")
+    else:
+        print("  ✗ Problem with copying of patches to central manager")
+        exit(1)
 
 
-    
     print("\n" + "=" * 60)
     print("LAB 2 completed!")
     print("=" * 60)
