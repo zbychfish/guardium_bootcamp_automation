@@ -11,7 +11,7 @@ import json
 from dotenv import load_dotenv
 from appliance_command import ApplianceCommand, change_password_as_root
 from guardium_rest_api import GuardiumRestAPI
-
+from typing import Any, Dict, List, Optional
 
 # Załaduj zmienne środowiskowe z pliku .env
 load_dotenv()
@@ -217,10 +217,6 @@ def wait_for_appliance(appliance_name: str, max_attempts: int = 40, interval: in
     
     raise RuntimeError(f"Nie udało się połączyć z '{appliance_name}' po {max_attempts} próbach")
 
-import re
-import json
-from typing import Any, Dict, List, Optional
-
 # --- 1) Zamiana tekstu pseudo-JSON => prawidłowy JSON ---
 def to_valid_json(src: str) -> str:
     s = src
@@ -288,44 +284,17 @@ def lab1_appliance_setup(appliance=None):
     if not appliance.connect():
         print("  ✗ Failed to connect to collector")
         return None
+    else:
+        print("    ✓ OK")
     print(appliance.execute_command("show network interface all"))
     print(appliance.execute_command("show network route default"))
     print(appliance.execute_command("show network resolvers"))
     
-    print("\n[LAB 1.3] Set manual hosts settings")
-    output = appliance.execute_command("support show hosts")
-    existing = set()
-    for line in output.splitlines():
-        line = line.strip()
-        if not line or line.startswith("#"):
-            continue
-        parts = line.split()
-        if len(parts) >= 2:
-            ip = parts[0].strip().lower()
-            host = parts[1].strip().lower()
-            existing.add((ip, host))
-    
-    current_appliances = appliances.copy()
-    del current_appliances['collector_unconfigured']
-    del current_appliances['collector']
-    machines = current_appliances | managed_machines
-    
-    for machine, cfg in machines.items():
-        ip = str(cfg["host"]).strip().lower()
-        prompt_host = re.sub(r"\\", "", str(cfg["prompt_regex"])).strip()
-        if prompt_host.endswith(">"):
-            prompt_host = prompt_host[:-1]
-        prompt_host = prompt_host.strip().lower()
-        if (ip, prompt_host) in existing:
-            continue
-        command = f'support store hosts {cfg["host"]} {prompt_host}'
-        appliance.execute_command(command)
-    print(appliance.execute_command("support show hosts"))
-    
-    print("\n[LAB 1.4] Disabling purge")
+    print("\n[LAB 1.3] Disabling purge")
     output = appliance.execute_command("grdapi diable_purge")
+    print("    ✓ OK")
 
-    print("\n[LAB 1.5] Set time zone to Europe/Warsaw")
+    print("\n[LAB 1.4 Set time zone to Europe/Warsaw")
     output = appliance.execute_command("show system clock all")
     timezone = output.strip().splitlines()[-1]
     if timezone != "Europe/Warsaw":
@@ -339,13 +308,15 @@ def lab1_appliance_setup(appliance=None):
         print(output)
     else:
         print(f"  Time zone already set to {timezone}")
+    print("    ✓ OK")
     
-    print("\n[LAB 1.6] Configure NTP servers")
+    print("\n[LAB 1.5 Configure NTP servers")
     appliance.execute_command("store system time_server hostname 0.pool.ntp.org 1.pool.ntp.org 2.pool.ntp.org")
     print(appliance.execute_command("show system time_server all"))
     print("  Enabling time synchronization...")
     appliance.execute_command("store system time_server state on")
     print(appliance.execute_command("show system time_server all"))
+    print("    ✓ OK")
     
     print("\n[LAB 1.6] Restart system")
     result = appliance.execute_restart_with_check()
@@ -361,14 +332,10 @@ def lab1_appliance_setup(appliance=None):
         print("  ✗ Run script again in 1 minute or restart collector manually and then start again")
         return None
     
-    print("\n[LAB 1.8] Post-restart configuration")
-    print("  Setting hostname to coll1...")
+    print("\n[LAB 1.8] Setup collector name and domain")
     appliance.execute_command("store system hostname coll1")
-    print("  Setting domain to gdemo.com...")
     appliance.execute_command("store system domain gdemo.com")
-    print("  Unit type:")
-    result = appliance.execute_command("show unit type")
-    print(f"    {result}")
+    print("  ✓ Collector name set")
     
     print("\n[LAB 1.9] Configure session timeouts")
     appliance.execute_command("store gui session_timeout 9999")
@@ -386,10 +353,41 @@ def lab1_appliance_setup(appliance=None):
     print("\n[LAB 1.11] Set shared secret on collector")
     appliance.execute_command("store system shared secret guardium")
     print("  ✓ Shared Secret set")
+
+    print("\n[LAB 1.12] Set manual hosts settings")
+    output = appliance.execute_command("support show hosts")
+    existing = set()
+    for line in output.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = line.split()
+        if len(parts) >= 2:
+            ip = parts[0].strip().lower()
+            host = parts[1].strip().lower()
+            existing.add((ip, host))
+    current_appliances = appliances.copy()
+    del current_appliances['collector_unconfigured']
+    del current_appliances['collector']
+    machines = current_appliances | managed_machines
+    for machine, cfg in machines.items():
+        ip = str(cfg["host"]).strip().lower()
+        prompt_host = re.sub(r"\\", "", str(cfg["prompt_regex"])).strip()
+        if prompt_host.endswith(">"):
+            prompt_host = prompt_host[:-1]
+        prompt_host = prompt_host.strip().lower()
+        if (ip, prompt_host) in existing:
+            continue
+        command = f'support store hosts {cfg["host"]} {prompt_host}'
+        appliance.execute_command(command)
+    print(appliance.execute_command("support show hosts"))
+    print("  ✓ Hosts updated")
+
+    appliance.disconnect
+
     print("\n" + "=" * 60)
     print("LAB 1 completed!")
     print("=" * 60)
-    appliance.disconnect
     
 
 def lab2_gim(appliance=None):
@@ -407,12 +405,15 @@ def lab2_gim(appliance=None):
     print("=" * 60)
     
     # Połącz się z CM
-    print("\n[LAB 1.12] Connect to Central Manager")
+    print("\n[LAB 1.13] Connect to Central Manager")
     appliance = create_appliance('cm')
     if not appliance.connect():
         print("  ✗ Failed to connect to CM")
         return None
-    print("\n[LAB 1.12] Create oauth client for bootcamp sync")
+    else:
+        print("    ✓ OK")
+
+    print("\n[LAB 1.14] Create oauth client for bootcamp sync")
     result = appliance.execute_command("grdapi list_oauth_clients")
     if "Client Id: BOOTCAMP" in result:
         appliance.execute_command("grdapi delete_oauth_clients client_id=BOOTCAMP")
@@ -435,16 +436,19 @@ def lab2_gim(appliance=None):
     if not client_secret:
         print("  ⚠ Warning: Could not extract client_secret from response")
         return None
-    print("\n[LAB 1.11] Set shared secret on Central Manager")
+    print("  ✓ Oauth client configured")
+
+    print("\n[LAB 1.15] Set shared secret on Central Manager")
     appliance.execute_command("store system shared secret guardium")
     print("  ✓ Shared Secret set")
+
     appliance.disconnect
     
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443',
         client_id='BOOTCAMP'
     )
-    print("\n[LAB 2.3] Create demo user")
+    print("\n[LAB 1.16] Create demo user")
     try:
         token = api.get_token(username='accessmgr', password=get_env_value('ACCESSMGR_PASSWORD'))
         print(f"Access token: {token}")
@@ -474,17 +478,17 @@ def lab2_gim(appliance=None):
                 disable_pwd_expiry=True
             )
             print(f"  ✓ Demo user created")
-            print("\n[LAB 2.4] Assign roles to demo user")    
+            print("\n  Assigning roles to demo user")    
             result = api.set_user_roles(username='demo', roles='admin,cli,user,vulnerability-assess')  
             print(f"  ✓ Roles assigned to demo user")
         else:
             print("\n  Demo user already exists")
         token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
         if not demo_exists:
-            print("\n[LAB 2.4] Import Training dashboard for demo user")
+            print("\n Import Training dashboard for demo user")
             result = api.import_definitions('guardium_definition_files/exp_dashboard_training.sql')
             print(f"  ✓ Dashboard Training added to demo user UI")
-        print("\n[LAB 2.4] Register collector to central manager")
+        print("\n[LAB 1.17] Register collector to central manager")
         units = api.get_registered_units()
         units = parse_mus_from_message_dict(units)
         out: List[Dict[str, Optional[str]]] = []
@@ -492,27 +496,32 @@ def lab2_gim(appliance=None):
             out.append({
                 "ip": u.get("ip"),
             })
-        print(out)
         if not any(d.get('ip') == '10.10.9.239' for d in out):
             appliance = create_appliance('collector')
             if not appliance.connect():
                 print("  ✗ Failed to connect to collector")
                 return None
-            result = appliance.execute_command("register management 10.10.9.219 8443", timeout=240)
+
+            print("  Unit type:")
+            result = appliance.execute_command("show unit type")
+            print(f"    {result}")
+
+            result = appliance.execute_command("register management 10.10.9.219 8443", timeout=600)
             print(result)
             unit_data = api.get_unit_data(api_target_host='10.10.9.239')
             unit_data = parse_unit_summary(unit_data['Message'])
             print(unit_data)
+            print("  Unit type:")
+            result = appliance.execute_command("show unit type")
+            print(f"    {result}")
+            print(f"  ✓ Collector registered ")
         else:
-            print(f"  ✓ Collector is already registered ")
+            
             unit_data = api.get_unit_data(api_target_host='10.10.9.239')
             unit_data = parse_unit_summary(unit_data['Message'])
             print(unit_data)
+            print(f"  ✓ Collector is already registered ")
 
-
-        # Wyekstrahuj wartość mus z root elementu
-        
-           
     except Exception as e:
         print(f"  ✗ Error: {e}")
         import traceback
