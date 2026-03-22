@@ -494,20 +494,16 @@ def lab2_gim(appliance=None):
             })
         print(out)
         if not any(d.get('ip') == '10.10.9.239' for d in out):
-            api = GuardiumRestAPI(
-                base_url='https://10.10.9.239:8443',
-                client_id='BOOTCAMP'
-            )
-            token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
-            result = api.register_unit(
-                unit_ip='10.10.9.219',
-                unit_port='8443',
-                secret_key='guardium'
-            )
+            appliance = create_appliance('cm')
+            if not appliance.connect():
+                print("  ✗ Failed to connect to CM")
+                return None
+            print("\n[LAB 1.12] Create oauth client for bootcamp sync")
+            result = appliance.execute_command("register management 10.10.9.239 8443")
             print(result)
-            #unit_data = api.get_unit_data(api_target_host='10.10.9.239')
-            #unit_data = parse_unit_summary(unit_data['Message'])
-            #print(unit_data)
+            unit_data = api.get_unit_data(api_target_host='10.10.9.239')
+            unit_data = parse_unit_summary(unit_data['Message'])
+            print(unit_data)
         else:
             print(f"  ✓ Collector is already registered ")
             unit_data = api.get_unit_data(api_target_host='10.10.9.239')
