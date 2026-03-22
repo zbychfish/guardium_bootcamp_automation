@@ -625,7 +625,8 @@ def lab2_gim(appliance=None):
     result = appliance.execute_command("show system patch available")
     print(result)
     appliance.execute_command_with_confirmation("store system patch install sys")
-        
+    appliance.disconnect()
+
     install_patch(
         host='10.10.9.219',
         username='cli',
@@ -633,7 +634,7 @@ def lab2_gim(appliance=None):
         patch_selection="2",
         reinstall_answer="y"
     )
-    appliance.disconnect()
+
     #print(output)
 
     # api = GuardiumRestAPI(
