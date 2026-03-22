@@ -46,17 +46,33 @@ def test_patch_install():
         channel.settimeout(0.1)
         
         print("Connected! Waiting for prompt...")
-        time.sleep(2)
         
-        # Wyczyść bufor
-        while True:
+        # Czekaj na prompt systemowy
+        buf = ""
+        prompt_found = False
+        timeout = time.time() + 30
+        
+        while time.time() < timeout:
             try:
                 chunk = channel.recv(4096).decode('utf-8', errors='replace')
-                print(strip_ansi(chunk), end='', flush=True)
+                if chunk:
+                    buf += chunk
+                    print(strip_ansi(chunk), end='', flush=True)
+                    
+                    # Sprawdź czy jest prompt (cm.gdemo.com> lub inne)
+                    buf_clean = strip_ansi(buf)
+                    if "cm.gdemo.com>" in buf_clean or ".com>" in buf_clean or "grdadmin>" in buf_clean:
+                        prompt_found = True
+                        break
             except:
-                break
+                time.sleep(0.1)
         
-        print("\n\n=== Sending command: store system patch install sys ===\n")
+        if not prompt_found:
+            print("\n\nERROR: Prompt not found!")
+            return
+        
+        print("\n\n=== Prompt found! Sending command: store system patch install sys ===\n")
+        time.sleep(0.5)
         
         # Wyślij polecenie
         channel.send(b"store system patch install sys\r")
@@ -94,7 +110,7 @@ def test_patch_install():
                         time.sleep(0.5)
                     
                     # Sprawdź czy wróciliśmy do promptu
-                    if patch_selected and ("guard.yourcompany.com>" in buf_clean or "grdadmin>" in buf_clean):
+                    if patch_selected and ("cm.gdemo.com>" in buf_clean or ".com>" in buf_clean or "grdadmin>" in buf_clean):
                         # Poczekaj chwilę na ewentualny dodatkowy output
                         time.sleep(1)
                         try:
