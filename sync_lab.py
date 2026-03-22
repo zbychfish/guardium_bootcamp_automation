@@ -494,7 +494,14 @@ def lab2_gim(appliance=None):
             })
         print(out)
         if not any(d.get('ip') == '10.10.9.239' for d in out):
-            print(d.get('ip') == '10.10.9.239' for d in out)
+            result = api.register_unit(
+                unit_ip='10.10.9.239',
+                unit_port='8443',
+                secret_key='guardium'
+            )
+            unit_data = api.get_unit_data(api_target_host='10.10.9.239')
+            unit_data = parse_unit_summary(unit_data['Message'])
+            print(unit_data)
         else:
             print(f"  ✓ Collector is already registered ")
             unit_data = api.get_unit_data(api_target_host='10.10.9.239')
@@ -504,11 +511,7 @@ def lab2_gim(appliance=None):
 
         # Wyekstrahuj wartość mus z root elementu
         
-            # result = api.register_unit(
-        #     unit_ip='10.10.9.239',
-        #     unit_port='8443',
-        #     secret_key='guardium'
-        # )
+           
     except Exception as e:
         print(f"  ✗ Error: {e}")
         import traceback
