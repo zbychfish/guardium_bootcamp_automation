@@ -558,12 +558,16 @@ class ApplianceCommand:
         self.channel.send((command + "\r").encode())
         
         # Pattern dla pierwszego pytania (wybór patchy)
-        patch_choice_re = re.compile(r"Please choose patches to install.*?:", re.IGNORECASE | re.DOTALL)
+        # Szuka linii kończącej się na ":" po wyświetleniu listy patchy
+        patch_choice_re = re.compile(
+            r"Please choose patches to install.*?[:\)]|"
+            r"or q to quit\s*\)?\s*:",
+            re.IGNORECASE | re.DOTALL
+        )
         # Pattern dla drugiego pytania (reinstalacja)
         reinstall_re = re.compile(r"Do you really want to install again.*?\(yes or no\)\?", re.IGNORECASE)
         
         buf = ""
-        last_printed_len = 0
         deadline = time.time() + self.timeout
         first_answered = False
         second_answered = False
@@ -573,14 +577,11 @@ class ApplianceCommand:
                 chunk = self.channel.recv(65535).decode(errors="replace")
                 buf += chunk
                 
-                # Print new content live
+                # Print new content live immediately
                 if live_output:
-                    new_content = buf[last_printed_len:]
-                    if new_content:
-                        # Strip ANSI if needed
-                        display_content = strip_ansi(new_content) if self.strip_ansi_flag else new_content
-                        print(display_content, end='', flush=True)
-                        last_printed_len = len(buf)
+                    # Strip ANSI from chunk if needed
+                    display_chunk = strip_ansi(chunk) if self.strip_ansi_flag else chunk
+                    print(display_chunk, end='', flush=True)
             
             buf_for_match = strip_ansi(buf) if self.strip_ansi_flag else buf
             
@@ -593,13 +594,10 @@ class ApplianceCommand:
                         chunk = self.channel.recv(65535).decode(errors="replace")
                         buf += chunk
                         
-                        # Print new content live
+                        # Print new content live immediately
                         if live_output:
-                            new_content = buf[last_printed_len:]
-                            if new_content:
-                                display_content = strip_ansi(new_content) if self.strip_ansi_flag else new_content
-                                print(display_content, end='', flush=True)
-                                last_printed_len = len(buf)
+                            display_chunk = strip_ansi(chunk) if self.strip_ansi_flag else chunk
+                            print(display_chunk, end='', flush=True)
                         
                         idle_deadline = time.time() + confirm_idle
                     if time.time() >= idle_deadline:
@@ -624,13 +622,10 @@ class ApplianceCommand:
                         chunk = self.channel.recv(65535).decode(errors="replace")
                         buf += chunk
                         
-                        # Print new content live
+                        # Print new content live immediately
                         if live_output:
-                            new_content = buf[last_printed_len:]
-                            if new_content:
-                                display_content = strip_ansi(new_content) if self.strip_ansi_flag else new_content
-                                print(display_content, end='', flush=True)
-                                last_printed_len = len(buf)
+                            display_chunk = strip_ansi(chunk) if self.strip_ansi_flag else chunk
+                            print(display_chunk, end='', flush=True)
                         
                         idle_deadline = time.time() + confirm_idle
                     if time.time() >= idle_deadline:
@@ -654,13 +649,10 @@ class ApplianceCommand:
                     chunk = self.channel.recv(65535).decode(errors="replace")
                     buf += chunk
                     
-                    # Print new content live
+                    # Print new content live immediately
                     if live_output:
-                        new_content = buf[last_printed_len:]
-                        if new_content:
-                            display_content = strip_ansi(new_content) if self.strip_ansi_flag else new_content
-                            print(display_content, end='', flush=True)
-                            last_printed_len = len(buf)
+                        display_chunk = strip_ansi(chunk) if self.strip_ansi_flag else chunk
+                        print(display_chunk, end='', flush=True)
                 
                 if live_output:
                     print()  # New line at the end
