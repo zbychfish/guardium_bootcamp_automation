@@ -8,6 +8,7 @@ import os
 import re
 import time
 import json
+import paramiko
 from dotenv import load_dotenv
 from appliance_command import ApplianceCommand, change_password_as_root, scp_file_as_root
 from guardium_rest_api import GuardiumRestAPI
@@ -583,13 +584,35 @@ def lab2_gim(appliance=None):
         if not success:
             all_success = False
             break
-    
     if all_success:
         print(f"  ✓ All {len(patch_files)} patches copied successfully")
+        
+        print("\n[LAB 1.19] Changing ownership of patches to tomcat:tomcat")
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        try:
+            client.connect(
+                hostname='10.10.9.219',
+                username='root',
+                password=get_env_value("ROOT_PASSWORD"),
+                look_for_keys=False,
+                allow_agent=False
+            )
+            stdin, stdout, stderr = client.exec_command('chown tomcat:tomcat /var/log/guard/patches/*.sig')
+            exit_status = stdout.channel.recv_exit_status()
+            if exit_status == 0:
+                print(f"  ✓ Ownership changed to tomcat:tomcat")
+            else:
+                error = stderr.read().decode()
+                print(f"  ✗ Failed to change ownership: {error}")
+                exit(1)
+            client.close()
+        except Exception as e:
+            print(f"  ✗ Error changing ownership: {e}")
+            exit(1)
     else:
         print("  ✗ Problem with copying of patches to central manager")
         exit(1)
-
 
     print("\n" + "=" * 60)
     print("LAB 2 completed!")
