@@ -87,7 +87,7 @@ def scp_file_as_root(
     direction: str = "put"
 ) -> bool:
     """
-    Przesyła plik przez SCP jako root używając Paramiko SFTP.
+    Przesyła plik przez SCP jako root używając sshpass + scp.
     
     Args:
         host: Adres IP/hostname
@@ -101,68 +101,56 @@ def scp_file_as_root(
     Returns:
         True jeśli sukces, False w przypadku błędu
     """
-    client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    import subprocess
     
     try:
-        # Połącz się jako root
-        client.connect(
-            hostname=host,
-            port=port,
-            username="root",
-            password=root_password,
-            look_for_keys=False,
-            allow_agent=False,
-            timeout=timeout,
-            banner_timeout=timeout,
-            auth_timeout=timeout,
-        )
-        
-        # Otwórz SFTP session
-        sftp = client.open_sftp()
-        
         if direction == "put":
             # Upload: local -> remote
-            # Upewnij się, że katalog docelowy istnieje
-            try:
-                sftp.stat(remote_path)
-            except IOError:
-                # Katalog nie istnieje, spróbuj go utworzyć
-                try:
-                    sftp.mkdir(remote_path)
-                except:
-                    pass  # Może już istnieje lub nie mamy uprawnień
-            
-            # Jeśli remote_path to katalog, dodaj nazwę pliku
-            import os
-            if remote_path.endswith('/') or '.' not in os.path.basename(remote_path):
-                remote_file = os.path.join(remote_path, os.path.basename(local_path))
-            else:
-                remote_file = remote_path
-            
-            sftp.put(local_path, remote_file)
-            # print(f"  Uploaded: {os.path.basename(local_path)} -> {host}:{remote_file}")
-            
+            cmd = [
+                "sshpass", "-p", root_password,
+                "scp",
+                "-o", "StrictHostKeyChecking=no",
+                "-o", "UserKnownHostsFile=/dev/null",
+                "-P", str(port),
+                local_path,
+                f"root@{host}:{remote_path}"
+            ]
         elif direction == "get":
             # Download: remote -> local
-            sftp.get(local_path, remote_path)
-            # print(f"  Downloaded: {host}:{local_path} -> {remote_path}")
+            cmd = [
+                "sshpass", "-p", root_password,
+                "scp",
+                "-o", "StrictHostKeyChecking=no",
+                "-o", "UserKnownHostsFile=/dev/null",
+                "-P", str(port),
+                f"root@{host}:{local_path}",
+                remote_path
+            ]
         else:
             raise ValueError(f"Invalid direction: {direction}. Use 'put' or 'get'")
         
-        sftp.close()
-        client.close()
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout
+        )
         
-        return True
-        
-    except (paramiko.SSHException, socket.error, IOError, OSError) as e:
+        if result.returncode == 0:
+            return True
+        else:
+            print(f"  SCP error on {host}: {result.stderr.strip()}")
+            return False
+            
+    except FileNotFoundError:
+        print(f"  SCP error on {host}: sshpass not found. Install: apt-get install sshpass")
+        return False
+    except subprocess.TimeoutExpired:
+        print(f"  SCP error on {host}: Timeout after {timeout}s")
+        return False
+    except Exception as e:
         print(f"  SCP error on {host}: {e}")
         return False
-    finally:
-        try:
-            client.close()
-        except:
-            pass
 
 
 class ApplianceCommand:

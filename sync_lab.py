@@ -564,7 +564,6 @@ def lab2_gim(appliance=None):
         print(f"  ✓ Patches already extracted")
 
     print("\n[LAB 1.18] Copying patches to central manager")
-    
     patch_files = glob.glob('/root/gn-trainings/appliance-patches/patches/*.sig')
     
     if not patch_files:
