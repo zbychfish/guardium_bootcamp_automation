@@ -399,26 +399,6 @@ def lab1_appliance_setup(appliance=None):
 
     appliance.disconnect
 
-    print("\n" + "=" * 60)
-    print("LAB 1 completed!")
-    print("=" * 60)
-    
-
-def lab2_gim(appliance=None):
-    """
-    LAB 2 - Konfiguracja GIM (Group Identity Management).
-    
-    Args:
-        appliance: Opcjonalny połączony obiekt ApplianceCommand
-    
-    Returns:
-        appliance: Połączony obiekt ApplianceCommand lub None w przypadku błędu
-    """
-    print("=" * 60)
-    print("LAB 2 - GIM Setup")
-    print("=" * 60)
-    
-    # Połącz się z CM
     print("\n[LAB 1.13] Connect to Central Manager")
     appliance = create_appliance('cm')
     if not appliance.connect():
@@ -457,7 +437,7 @@ def lab2_gim(appliance=None):
     print("  ✓ Shared Secret set")
 
     appliance.disconnect
-    
+
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443',
         client_id='BOOTCAMP'
@@ -466,16 +446,13 @@ def lab2_gim(appliance=None):
     try:
         token = api.get_token(username='accessmgr', password=get_env_value('ACCESSMGR_PASSWORD'))
         print(f"Access token: {token}")
-        # Użyj nagłówków w requestach
-        # headers = api.get_headers()
-        # print(f"Headers: {headers}")
+  
         users = api.get_users()
         print("  Current users:")
         for u in users:
             status = "DISABLED" if u.get("disabled") == "true" else "ACTIVE"
             print(f"    {u['user_name']:12} | {status}")
         
-        # Sprawdź czy użytkownik demo istnieje
         demo_exists = any(u.get('user_name') == 'demo' for u in users)
         if not demo_exists:
             print("\n  Creating demo user...")
@@ -520,8 +497,13 @@ def lab2_gim(appliance=None):
             result = appliance.execute_command("show unit type")
             print(f"    {result}")
 
-            result = appliance.execute_command("register management 10.10.9.219 8443", timeout=600)
-            print(result)
+            try:
+                result = appliance.execute_command("register management 10.10.9.219 8443", timeout=600)
+                print(result)
+            except TimeoutError as e:
+                print(f"  ⚠ Warning: Timeout during registration: {e}")
+                print("  Continuing anyway...")
+            
             unit_data = api.get_unit_data(api_target_host='10.10.9.239')
             unit_data = parse_unit_summary(unit_data['Message'])
             print(unit_data)
@@ -530,16 +512,36 @@ def lab2_gim(appliance=None):
             print(f"    {result}")
             print(f"  ✓ Collector registered ")
         else:
-            
             unit_data = api.get_unit_data(api_target_host='10.10.9.239')
             unit_data = parse_unit_summary(unit_data['Message'])
             print(unit_data)
             print(f"  ✓ Collector is already registered ")
-
+    
     except Exception as e:
         print(f"  ✗ Error: {e}")
         import traceback
         traceback.print_exc()
+
+    print("\n" + "=" * 60)
+    print("LAB 1 completed!")
+    print("=" * 60)
+    
+
+def lab2_gim(appliance=None):
+    """
+    LAB 2 - Konfiguracja GIM (Group Identity Management).
+    
+    Args:
+        appliance: Opcjonalny połączony obiekt ApplianceCommand
+    
+    Returns:
+        appliance: Połączony obiekt ApplianceCommand lub None w przypadku błędu
+    """
+    print("=" * 60)
+    print("LAB 2 - GIM Setup")
+    print("=" * 60)
+    
+    
 
     print("\n" + "=" * 60)
     print("LAB 2 completed!")
