@@ -319,17 +319,7 @@ def parse_patch_list(output: str) -> dict[int, int]:
     
     return patch_map
 
-    
-    line_numbers = []
-    for patch_num in patch_numbers:
-        if patch_num in patch_map:
-            line_numbers.append(patch_map[patch_num])
-        else:
-            raise ValueError(f"Patch number {patch_num} not found in output")
-    
-    return line_numbers
-
-def get_patch_line_numbers_from_env(output: str) -> list[int]:
+def get_patch_line_numbers(output: str) -> list[int]:
     """
     Zwraca numery linii dla patchy zdefiniowanych w zmiennej środowiskowej PATCH_LIST.
     
@@ -344,7 +334,7 @@ def get_patch_line_numbers_from_env(output: str) -> list[int]:
         >>> output = '''...
         ... 9997    Health Check for GPU and Bundle installation  12.0    de27af692f57b738e50c829a4f1d6800
         ... 4015    Snif Update (Nov 20 2025)                     12.0    4ff4686f434c68c261ba52933bef1d0d'''
-        >>> get_patch_line_numbers_from_env(output)
+        >>> get_patch_line_numbers(output)
         [1, 2]
     """
     # Pobierz PATCH_LIST ze zmiennych środowiskowych
@@ -353,8 +343,18 @@ def get_patch_line_numbers_from_env(output: str) -> list[int]:
     # Parsuj string na listę intów (np. "9997,4015" -> [9997, 4015])
     patch_numbers = [int(p.strip()) for p in patch_list_str.split(',') if p.strip()]
     
-    # Użyj istniejącej funkcji do konwersji na numery linii
-    return get_patch_line_numbers(output, patch_numbers)
+    # Parsuj output i stwórz mapowanie patch_number -> line_number
+    patch_map = parse_patch_list(output)
+    
+    # Konwertuj numery patchy na numery linii w kolejności z PATCH_LIST
+    line_numbers = []
+    for patch_num in patch_numbers:
+        if patch_num in patch_map:
+            line_numbers.append(patch_map[patch_num])
+        else:
+            raise ValueError(f"Patch number {patch_num} not found in output")
+    
+    return line_numbers
 
 
 def lab1_appliance_setup(appliance=None):
@@ -606,12 +606,12 @@ def lab1_appliance_setup(appliance=None):
             unit_data = parse_unit_summary(unit_data['Message'])
             print(unit_data)
             print(f"  ✓ Collector is already registered ")
-        return appliance
     
     except Exception as e:
         print(f"  ✗ Error: {e}")
         import traceback
         traceback.print_exc()
+        return None
 
     print("\n[LAB 1.18] Download and unpack patches locally")
     target_dir = "/root/gn-trainings/appliance-patches"
@@ -626,7 +626,7 @@ def lab1_appliance_setup(appliance=None):
         print(f"  ✓ Patches already extracted")
 
     print("\n[LAB 1.19] Removing old patch archives on central manager")
-    result = api.patch_cleanup
+    result = api.patch_cleanup()
     print("    ✓ OK")
 
 
@@ -680,12 +680,12 @@ def lab1_appliance_setup(appliance=None):
         print("  ✗ Problem with copying of patches to central manager")
         exit(1)
 
-    
-
     print("\n" + "=" * 60)
-    print("LAB 2 completed!")
+    print("LAB 1 - Appliance Setup completed!")
     print("=" * 60)
     
+    return appliance
+
 
 def lab2_gim(appliance=None):
     """
@@ -710,7 +710,7 @@ def lab2_gim(appliance=None):
     
     result = appliance.execute_command("show system patch available")
     print(result)
-    print(",".join(map(str, get_patch_line_numbers_from_env(result))))
+    print(",".join(map(str, get_patch_line_numbers(result))))
    
     appliance.disconnect()
     
