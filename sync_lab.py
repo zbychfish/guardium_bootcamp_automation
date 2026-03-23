@@ -711,36 +711,18 @@ def lab2_gim(appliance=None):
     patch_order = ",".join(map(str, get_patch_line_numbers(result)))
     print(patch_order)
    
-    # expected_order = get_env_value('PATCH_ORDER').split(",")
-    # found = []
+    print("\n[LAB 1.22] Start patch installation on cm")
+    output = install_patch(
+        host='10.10.9.219',
+        username='cli',
+        password=get_env_value('CM_PASSWORD'),
+        patch_selection=patch_order,
+        reinstall_answer="y",
+        live_log=False
+    )
     
-    # for line in result.splitlines():
-    #     m = re.match(r"^\s*(\d+)\b", line)
-    #     if m:
-    #         found.append(m.group(1))
-    # position = {pid: idx + 1 for idx, pid in enumerate(found)}    
-    # order = [str(position[pid]) for pid in expected if pid in position]
-    # result_order = ",".join(order)
-    # print(result_order)
-
-
-
-
-
-
-    # output = install_patch(
-    #     host='10.10.9.219',
-    #     username='cli',
-    #     password=get_env_value('CM_PASSWORD'),
-    #     patch_selection="2,1",
-    #     reinstall_answer="y",
-    #     live_log=False
-    # )
-    
-   
+    print("\n[LAB 1.23] Monitoring patch installation on cm")
     required_status = "DONE: Patch installation Succeeded."
-    
-    # Pętla działa dopóki NIE wszystkie patche są zainstalowane
     while True:
         result = appliance.execute_command("show system patch installed")
         # Pobierz listę numerów patchy ze zmiennej środowiskowej (np. "9997,4015")
@@ -761,7 +743,7 @@ def lab2_gim(appliance=None):
         # Sprawdź czy wszystkie wymagane patche są zainstalowane z poprawnym statusem
         all_installed = all(pid in status_by_id and status_by_id[pid] for pid in wanted)
         
-        print(result)
+        #print(result)
         
         if all_installed:
             print(f"  ✓ All required patches ({', '.join(wanted)}) are installed with status: {required_status}")
@@ -773,8 +755,6 @@ def lab2_gim(appliance=None):
 
     appliance.disconnect()
     
-    # Poczekaj chwilę po rozłączeniu przed nowym połączeniem
-    print("\n[LAB 1.21] Installing patch on CM...")
     
     
     
