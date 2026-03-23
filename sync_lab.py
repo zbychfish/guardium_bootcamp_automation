@@ -622,9 +622,17 @@ def lab1_appliance_setup(appliance=None):
         with zipfile.ZipFile(filename, "r") as zipf:
                 zipf.extractall(path=target_dir)
         print(f"  ✓ Patches extracted")
-    else:
-        print(f"  ✓ Patches already extracted")
+        with zipfile.ZipFile(filename, "r") as zipf:
+            patch_list = sorted(zipf.namelist())
 
+        patch_order = get_env_value("PATCH_NAME_LIST").split(",")
+        pos = {name: i + 1 for i, name in enumerate(patch_order)}
+        order_numbers = [str(pos[name]) for name in patch_list if name in pos]
+        patch_installation_order = ",".join(order_numbers)
+        print("Patch installationoder", patch_installation_order)
+
+        print(f"  ✓ Patches already extracted")
+    
     print("\n[LAB 1.19] Removing old patch archives on central manager and collector")
     result = api.patch_cleanup()   
     print("    ✓ OK")
