@@ -630,7 +630,7 @@ def lab1_appliance_setup(appliance=None):
     print("    ✓ OK")
 
 
-    print("\n[LAB 1.20] Copying patches to central manager")
+    print("\n[LAB 1.20] Copying patches to central manager and collector")
     patch_files = glob.glob('/root/gn-trainings/appliance-patches/patches/*.sig')
     
     if not patch_files:
@@ -639,46 +639,49 @@ def lab1_appliance_setup(appliance=None):
     
     print(f"  Found {len(patch_files)} patch files to copy")
     all_success = True
-    for patch_file in patch_files:
-        success = scp_file_as_root(
-            host='10.10.9.219',
-            root_password=get_env_value("ROOT_PASSWORD"),
-            local_path=patch_file,
-            remote_path='/var/log/guard/patches/',
-            direction='put'
-        )
-        if not success:
-            all_success = False
-            break
+    for appl in ['10.10.9.219', '10.10.9.239']:
+        for patch_file in patch_files:
+            success = scp_file_as_root(
+                host=appl,
+                root_password=get_env_value("ROOT_PASSWORD"),
+                local_path=patch_file,
+                remote_path='/var/log/guard/patches/',
+                direction='put'
+            )
+            if not success:
+                all_success = False
+                break
     if all_success:
         print(f"  ✓ All {len(patch_files)} patches copied successfully")
 
         print("\n[LAB 1.20] Changing ownership of patches to tomcat:tomcat")
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        try:
-            client.connect(
-                hostname='10.10.9.219',
-                username='root',
-                password=get_env_value("ROOT_PASSWORD"),
-                look_for_keys=False,
-                allow_agent=False
-            )
-            stdin, stdout, stderr = client.exec_command('chown tomcat:tomcat /var/log/guard/patches/*.sig')
-            exit_status = stdout.channel.recv_exit_status()
-            if exit_status == 0:
-                print(f"  ✓ Ownership changed to tomcat:tomcat")
-            else:
-                error = stderr.read().decode()
-                print(f"  ✗ Failed to change ownership: {error}")
+        for appl in ['10.10.9.219', '10.10.9.239']:
+            try:
+                client.connect(
+                    hostname=appl,
+                    username='root',
+                    password=get_env_value("ROOT_PASSWORD"),
+                    look_for_keys=False,
+                    allow_agent=False
+                )
+                stdin, stdout, stderr = client.exec_command('chown tomcat:tomcat /var/log/guard/patches/*.sig')
+                exit_status = stdout.channel.recv_exit_status()
+                if exit_status == 0:
+                    print(f"  ✓ Ownership changed to tomcat:tomcat")
+                else:
+                    error = stderr.read().decode()
+                    print(f"  ✗ Failed to change ownership: {error}")
+                    exit(1)
+                client.close()
+            except Exception as e:
+                print(f"  ✗ Error changing ownership: {e}")
                 exit(1)
-            client.close()
-        except Exception as e:
-            print(f"  ✗ Error changing ownership: {e}")
-            exit(1)
     else:
         print("  ✗ Problem with copying of patches to central manager")
         exit(1)
+    
 
     print("\n" + "=" * 60)
     print("LAB 1 - Appliance Setup completed!")
@@ -702,58 +705,58 @@ def lab2_gim(appliance=None):
     print("=" * 60)
 
         
-    print("\n[LAB 1.21] Register patches on cm")
-    appliance = create_appliance('cm')
-    if not appliance.connect():
-        print("  ✗ Failed to connect to collector")
-        return None
-    result = appliance.execute_command("show system patch available")
-    patch_order = ",".join(map(str, get_patch_line_numbers(result)))
-    print(patch_order)
+    # print("\n[LAB 1.21] Register patches on cm")
+    # appliance = create_appliance('cm')
+    # if not appliance.connect():
+    #     print("  ✗ Failed to connect to collector")
+    #     return None
+    # result = appliance.execute_command("show system patch available")
+    # patch_order = ",".join(map(str, get_patch_line_numbers(result)))
+    # print(patch_order)
    
-    print("\n[LAB 1.22] Start patch installation on cm")
-    output = install_patch(
-        host='10.10.9.219',
-        username='cli',
-        password=get_env_value('CM_PASSWORD'),
-        patch_selection=patch_order,
-        reinstall_answer="y",
-        live_log=False
-    )
+    # print("\n[LAB 1.22] Start patch installation on cm")
+    # output = install_patch(
+    #     host='10.10.9.219',
+    #     username='cli',
+    #     password=get_env_value('CM_PASSWORD'),
+    #     patch_selection=patch_order,
+    #     reinstall_answer="y",
+    #     live_log=False
+    # )
     
-    print("\n[LAB 1.23] Monitoring patch installation on cm")
-    required_status = "DONE: Patch installation Succeeded."
-    while True:
-        result = appliance.execute_command("show system patch installed")
-        # Pobierz listę numerów patchy ze zmiennej środowiskowej (np. "9997,4015")
-        wanted = set(get_env_value("PATCH_LIST").split(","))
-        status_by_id = {}
+    # print("\n[LAB 1.23] Monitoring patch installation on cm")
+    # required_status = "DONE: Patch installation Succeeded."
+    # while True:
+    #     result = appliance.execute_command("show system patch installed")
+    #     # Pobierz listę numerów patchy ze zmiennej środowiskowej (np. "9997,4015")
+    #     wanted = set(get_env_value("PATCH_LIST").split(","))
+    #     status_by_id = {}
         
-        for line in result.splitlines():
-            line = line.strip()
-            if not line or line.startswith("P#"):
-                continue
-            m = re.match(r"^(\d+)\b.*", line)
-            if not m:
-                continue
-            pid = m.group(1)
-            has_ok_status = required_status in line
-            status_by_id[pid] = has_ok_status
+    #     for line in result.splitlines():
+    #         line = line.strip()
+    #         if not line or line.startswith("P#"):
+    #             continue
+    #         m = re.match(r"^(\d+)\b.*", line)
+    #         if not m:
+    #             continue
+    #         pid = m.group(1)
+    #         has_ok_status = required_status in line
+    #         status_by_id[pid] = has_ok_status
         
-        # Sprawdź czy wszystkie wymagane patche są zainstalowane z poprawnym statusem
-        all_installed = all(pid in status_by_id and status_by_id[pid] for pid in wanted)
+    #     # Sprawdź czy wszystkie wymagane patche są zainstalowane z poprawnym statusem
+    #     all_installed = all(pid in status_by_id and status_by_id[pid] for pid in wanted)
         
-        #print(result)
+    #     #print(result)
         
-        if all_installed:
-            print(f"  ✓ All required patches ({', '.join(wanted)}) are installed with status: {required_status}")
-            break
-        else:
-            missing = [pid for pid in wanted if pid not in status_by_id or not status_by_id[pid]]
-            print(f"  ⏳ Waiting for patches: {', '.join(missing)}")
-            time.sleep(5)
+    #     if all_installed:
+    #         print(f"  ✓ All required patches ({', '.join(wanted)}) are installed with status: {required_status}")
+    #         break
+    #     else:
+    #         missing = [pid for pid in wanted if pid not in status_by_id or not status_by_id[pid]]
+    #         print(f"  ⏳ Waiting for patches: {', '.join(missing)}")
+    #         time.sleep(10)
 
-    appliance.disconnect()
+    # appliance.disconnect()
     
     
     
