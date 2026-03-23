@@ -283,6 +283,73 @@ def parse_mus_from_message_dict(dct: Dict[str, Any]) -> List[Dict[str, Any]]:
     # W tym miejscu 'mus' to już zwykła lista dictów JSON-owych
     return mus
 
+def parse_patch_list(output: str) -> dict[int, int]:
+    """
+    Parsuje output z listą patchy i zwraca mapowanie: numer_patcha -> numer_linii.
+    
+    Args:
+        output: Output z komendy 'store system patch install sys' zawierający listę patchy
+    
+    Returns:
+        Słownik mapujący numer patcha na numer linii (1-based), np. {9997: 1, 4015: 2}
+    
+    Example:
+        >>> output = '''Attempting to retrieve the patch information...
+        ... P#      Description                                   Version Md5sum
+        ... 9997    Health Check for GPU and Bundle installation  12.0    de27af692f57b738e50c829a4f1d6800
+        ... 4015    Snif Update (Nov 20 2025)                     12.0    4ff4686f434c68c261ba52933bef1d0d'''
+        >>> parse_patch_list(output)
+        {9997: 1, 4015: 2}
+    """
+    patch_map = {}
+    line_number = 0
+    
+    for line in output.splitlines():
+        # Pomiń puste linie i nagłówki
+        line = line.strip()
+        if not line or line.startswith('Attempting') or line.startswith('P#') or 'Please wait' in line:
+            continue
+        
+        # Sprawdź czy linia zaczyna się od numeru (patch number)
+        parts = line.split(None, 1)  # Split na pierwszej spacji
+        if parts and parts[0].isdigit():
+            patch_number = int(parts[0])
+            line_number += 1
+            patch_map[patch_number] = line_number
+    
+    return patch_map
+
+def get_patch_line_numbers(output: str, patch_numbers: list[int]) -> list[int]:
+    """
+    Zwraca numery linii dla podanych numerów patchy w kolejności podanej listy.
+    
+    Args:
+        output: Output z komendy 'store system patch install sys' zawierający listę patchy
+        patch_numbers: Lista numerów patchy do zainstalowania w kolejności (np. [9997, 4015])
+    
+    Returns:
+        Lista numerów linii (1-based) odpowiadających podanym patchom w tej samej kolejności
+    
+    Example:
+        >>> output = '''...
+        ... 9997    Health Check for GPU and Bundle installation  12.0    de27af692f57b738e50c829a4f1d6800
+        ... 4015    Snif Update (Nov 20 2025)                     12.0    4ff4686f434c68c261ba52933bef1d0d'''
+        >>> get_patch_line_numbers(output, [9997, 4015])
+        [1, 2]
+        >>> get_patch_line_numbers(output, [4015, 9997])
+        [2, 1]
+    """
+    patch_map = parse_patch_list(output)
+    
+    line_numbers = []
+    for patch_num in patch_numbers:
+        if patch_num in patch_map:
+            line_numbers.append(patch_map[patch_num])
+        else:
+            raise ValueError(f"Patch number {patch_num} not found in output")
+    
+    return line_numbers
+
 
 def lab1_appliance_setup(appliance=None):
     """
@@ -637,6 +704,9 @@ def lab2_gim(appliance=None):
     
     result = appliance.execute_command("show system patch available")
     print(result)
+    print(get_patch_line_numbers(result, [9997, 4015]))
+   
+    
     appliance.disconnect()
     
     # Poczekaj chwilę po rozłączeniu przed nowym połączeniem
