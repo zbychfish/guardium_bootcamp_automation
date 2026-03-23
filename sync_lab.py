@@ -625,8 +625,8 @@ def lab1_appliance_setup(appliance=None):
     else:
         print(f"  ✓ Patches already extracted")
 
-    print("\n[LAB 1.19] Removing old patch archives on central manager")
-    result = api.patch_cleanup()
+    print("\n[LAB 1.19] Removing old patch archives on central manager and collector")
+    result = api.patch_cleanup()   
     print("    ✓ OK")
 
 
@@ -668,9 +668,7 @@ def lab1_appliance_setup(appliance=None):
                 )
                 stdin, stdout, stderr = client.exec_command('chown tomcat:tomcat /var/log/guard/patches/*.sig')
                 exit_status = stdout.channel.recv_exit_status()
-                if exit_status == 0:
-                    print(f"  ✓ Ownership changed to tomcat:tomcat")
-                else:
+                if exit_status != 0:
                     error = stderr.read().decode()
                     print(f"  ✗ Failed to change ownership: {error}")
                     exit(1)
@@ -678,6 +676,7 @@ def lab1_appliance_setup(appliance=None):
             except Exception as e:
                 print(f"  ✗ Error changing ownership: {e}")
                 exit(1)
+            print(f"  ✓ Ownership changed to tomcat:tomcat")
     else:
         print("  ✗ Problem with copying of patches to central manager")
         exit(1)
@@ -705,58 +704,120 @@ def lab2_gim(appliance=None):
     print("=" * 60)
 
         
-    # print("\n[LAB 1.21] Register patches on cm")
-    # appliance = create_appliance('cm')
-    # if not appliance.connect():
-    #     print("  ✗ Failed to connect to collector")
-    #     return None
-    # result = appliance.execute_command("show system patch available")
-    # patch_order = ",".join(map(str, get_patch_line_numbers(result)))
-    # print(patch_order)
-   
-    # print("\n[LAB 1.22] Start patch installation on cm")
-    # output = install_patch(
-    #     host='10.10.9.219',
-    #     username='cli',
-    #     password=get_env_value('CM_PASSWORD'),
-    #     patch_selection=patch_order,
-    #     reinstall_answer="y",
-    #     live_log=False
-    # )
     
-    # print("\n[LAB 1.23] Monitoring patch installation on cm")
-    # required_status = "DONE: Patch installation Succeeded."
-    # while True:
-    #     result = appliance.execute_command("show system patch installed")
-    #     # Pobierz listę numerów patchy ze zmiennej środowiskowej (np. "9997,4015")
-    #     wanted = set(get_env_value("PATCH_LIST").split(","))
-    #     status_by_id = {}
-        
-    #     for line in result.splitlines():
-    #         line = line.strip()
-    #         if not line or line.startswith("P#"):
-    #             continue
-    #         m = re.match(r"^(\d+)\b.*", line)
-    #         if not m:
-    #             continue
-    #         pid = m.group(1)
-    #         has_ok_status = required_status in line
-    #         status_by_id[pid] = has_ok_status
-        
-    #     # Sprawdź czy wszystkie wymagane patche są zainstalowane z poprawnym statusem
-    #     all_installed = all(pid in status_by_id and status_by_id[pid] for pid in wanted)
-        
-    #     #print(result)
-        
-    #     if all_installed:
-    #         print(f"  ✓ All required patches ({', '.join(wanted)}) are installed with status: {required_status}")
-    #         break
-    #     else:
-    #         missing = [pid for pid in wanted if pid not in status_by_id or not status_by_id[pid]]
-    #         print(f"  ⏳ Waiting for patches: {', '.join(missing)}")
-    #         time.sleep(10)
+    appliance = create_appliance('cm')
+    if not appliance.connect():
+        print("  ✗ Failed to connect to collector")
+        return None
+    print("\n[LAB 1.21] Register patches on cm and start installation on cm")
+    result = appliance.execute_command("show system patch available")
+    patch_order = ",".join(map(str, get_patch_line_numbers(result)))
+    print(patch_order)
+   
+    output = install_patch(
+        host='10.10.9.219',
+        username='cli',
+        password=get_env_value('CM_PASSWORD'),
+        patch_selection=patch_order,
+        reinstall_answer="y",
+        live_log=False
+    )
+    appliance.disconnect()
 
-    # appliance.disconnect()
+    appliance = create_appliance('collector')
+    if not appliance.connect():
+        print("  ✗ Failed to connect to collector")
+        return None
+    print("\n[LAB 1.22] Register patches on cm and start installation on collector")
+    result = appliance.execute_command("show system patch available")
+    patch_order = ",".join(map(str, get_patch_line_numbers(result)))
+    print(patch_order)
+   
+    output = install_patch(
+        host='10.10.9.239',
+        username='cli',
+        password=get_env_value('CM_PASSWORD'),
+        patch_selection=patch_order,
+        reinstall_answer="y",
+        live_log=False
+    )
+    appliance.disconnect()
+
+    appliance = create_appliance('cm')
+    if not appliance.connect():
+        print("  ✗ Failed to connect to collector")
+        return None
+    print("\n[LAB 1.23] Monitoring patch installation on cm")
+    required_status = "DONE: Patch installation Succeeded."
+    while True:
+        result = appliance.execute_command("show system patch installed")
+        # Pobierz listę numerów patchy ze zmiennej środowiskowej (np. "9997,4015")
+        wanted = set(get_env_value("PATCH_LIST").split(","))
+        status_by_id = {}
+        
+        for line in result.splitlines():
+            line = line.strip()
+            if not line or line.startswith("P#"):
+                continue
+            m = re.match(r"^(\d+)\b.*", line)
+            if not m:
+                continue
+            pid = m.group(1)
+            has_ok_status = required_status in line
+            status_by_id[pid] = has_ok_status
+        
+        # Sprawdź czy wszystkie wymagane patche są zainstalowane z poprawnym statusem
+        all_installed = all(pid in status_by_id and status_by_id[pid] for pid in wanted)
+        
+        #print(result)
+        
+        if all_installed:
+            print(f"  ✓ All required patches ({', '.join(wanted)}) are installed with status: {required_status}")
+            break
+        else:
+            missing = [pid for pid in wanted if pid not in status_by_id or not status_by_id[pid]]
+            print(f"  ⏳ Waiting for patches: {', '.join(missing)}")
+            time.sleep(10)
+
+    appliance.disconnect()
+
+    appliance = create_appliance('cm')
+    if not appliance.connect():
+        print("  ✗ Failed to connect to collector")
+        return None
+    print("\n[LAB 1.24] Monitoring patch installation on collector")
+    required_status = "DONE: Patch installation Succeeded."
+    while True:
+        result = appliance.execute_command("show system patch installed")
+        # Pobierz listę numerów patchy ze zmiennej środowiskowej (np. "9997,4015")
+        wanted = set(get_env_value("PATCH_LIST").split(","))
+        status_by_id = {}
+        
+        for line in result.splitlines():
+            line = line.strip()
+            if not line or line.startswith("P#"):
+                continue
+            m = re.match(r"^(\d+)\b.*", line)
+            if not m:
+                continue
+            pid = m.group(1)
+            has_ok_status = required_status in line
+            status_by_id[pid] = has_ok_status
+        
+        # Sprawdź czy wszystkie wymagane patche są zainstalowane z poprawnym statusem
+        all_installed = all(pid in status_by_id and status_by_id[pid] for pid in wanted)
+        
+        #print(result)
+        
+        if all_installed:
+            print(f"  ✓ All required patches ({', '.join(wanted)}) are installed with status: {required_status}")
+            break
+        else:
+            missing = [pid for pid in wanted if pid not in status_by_id or not status_by_id[pid]]
+            print(f"  ⏳ Waiting for patches: {', '.join(missing)}")
+            time.sleep(10)
+
+    appliance.disconnect()
     
     
     
