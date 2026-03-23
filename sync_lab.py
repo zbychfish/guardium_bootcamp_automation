@@ -714,7 +714,29 @@ def lab2_gim(appliance=None):
    
     result = appliance.execute_command("show system patch installed")
     print(result)
-    print(",".join(map(str, get_patch_line_numbers(result))))
+    
+    is_patched = True
+    required_status = "DONE: Patch installation Succeeded."
+
+    while is_patched:      
+        result = appliance.execute_command("show system patch installed")
+        wanted = set(get_env_value("PATCH_LIST").split(","))
+        status_by_id = {}
+        for line in result.splitlines():
+            line = line.strip()
+            if not line or line.startswith("P#"):
+                continue
+            m = re.match(r"^(\d+)\b.*", line)
+            if not m:
+                continue
+            pid = m.group(1)
+            has_ok_status = required_status in line
+            status_by_id[pid] = has_ok_status
+
+# warunek: wszystkie podane ID muszą wystąpić i mieć poprawny status
+        is_patched = all(pid in status_by_id and status_by_id[pid] for pid in wanted)
+        print(result)
+        time.sleep(2)
 
     appliance.disconnect()
     
