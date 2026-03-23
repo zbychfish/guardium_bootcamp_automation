@@ -540,6 +540,26 @@ def lab1_appliance_setup(appliance=None):
         import traceback
         traceback.print_exc()
 
+    
+    print("\n" + "=" * 60)
+    print("LAB 2 completed!")
+    print("=" * 60)
+    
+
+def lab2_gim(appliance=None):
+    """
+    LAB 2 - Konfiguracja GIM (Group Identity Management).
+    
+    Args:
+        appliance: Opcjonalny połączony obiekt ApplianceCommand
+    
+    Returns:
+        appliance: Połączony obiekt ApplianceCommand lub None w przypadku błędu
+    """
+    print("=" * 60)
+    print("LAB 2 - GIM Setup")
+    print("=" * 60)
+
     print("\n[LAB 1.18] Download and unpack patches locally")
     target_dir = "/root/gn-trainings/appliance-patches"
     if not os.path.isdir(target_dir):
@@ -602,24 +622,6 @@ def lab1_appliance_setup(appliance=None):
         print("  ✗ Problem with copying of patches to central manager")
         exit(1)
 
-    print("\n" + "=" * 60)
-    print("LAB 2 completed!")
-    print("=" * 60)
-    
-
-def lab2_gim(appliance=None):
-    """
-    LAB 2 - Konfiguracja GIM (Group Identity Management).
-    
-    Args:
-        appliance: Opcjonalny połączony obiekt ApplianceCommand
-    
-    Returns:
-        appliance: Połączony obiekt ApplianceCommand lub None w przypadku błędu
-    """
-    print("=" * 60)
-    print("LAB 2 - GIM Setup")
-    print("=" * 60)
         
     print("\n[LAB 1.21] Register patches on cm")
     appliance = create_appliance('cm')
@@ -633,6 +635,7 @@ def lab2_gim(appliance=None):
     # Poczekaj chwilę po rozłączeniu przed nowym połączeniem
     print("\n[LAB 1.21] Installing patch on CM...")
     time.sleep(2)
+    
     
     output = install_patch(
         host='10.10.9.219',
