@@ -158,7 +158,8 @@ appliances = {
     'collector_unconfigured': {
         'host': '10.10.9.239',
         'prompt_regex': r'guard\.yourcompany\.com>',
-        'password': get_env_value('COLLECTOR_PASSWORD')
+        'password': get_env_value('COLLECTOR_PASSWORD'),
+        'initial_pattern': None  # Wyłącz initial_pattern dla unconfigured collector
     },
     'cm': {
         'host': '10.10.9.219',
@@ -199,12 +200,15 @@ def create_appliance(appliance_name: str) -> ApplianceCommand:
     """Tworzy instancję ApplianceCommand dla danego appliance"""
     appliance_config = appliances[appliance_name]
     
+    # Użyj initial_pattern z appliance_config jeśli istnieje, w przeciwnym razie z common_config
+    initial_pattern = appliance_config.get('initial_pattern', common_config['initial_pattern'])
+    
     return ApplianceCommand(
         host=appliance_config['host'],
         user=common_config['user'],
         password=appliance_config['password'],
         prompt_regex=appliance_config['prompt_regex'],
-        initial_pattern=common_config['initial_pattern'],
+        initial_pattern=initial_pattern,
         timeout=common_config['timeout']
     )
 
