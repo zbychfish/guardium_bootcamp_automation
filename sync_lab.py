@@ -715,13 +715,15 @@ def lab2_gim(appliance=None):
     result = appliance.execute_command("show system patch installed")
     print(result)
     
-    is_patched = True
     required_status = "DONE: Patch installation Succeeded."
-
-    while is_patched:      
+    
+    # Pętla działa dopóki NIE wszystkie patche są zainstalowane
+    while True:
         result = appliance.execute_command("show system patch installed")
+        # Pobierz listę numerów patchy ze zmiennej środowiskowej (np. "9997,4015")
         wanted = set(get_env_value("PATCH_LIST").split(","))
         status_by_id = {}
+        
         for line in result.splitlines():
             line = line.strip()
             if not line or line.startswith("P#"):
@@ -732,11 +734,19 @@ def lab2_gim(appliance=None):
             pid = m.group(1)
             has_ok_status = required_status in line
             status_by_id[pid] = has_ok_status
-
-# warunek: wszystkie podane ID muszą wystąpić i mieć poprawny status
-        is_patched = all(pid in status_by_id and status_by_id[pid] for pid in wanted)
+        
+        # Sprawdź czy wszystkie wymagane patche są zainstalowane z poprawnym statusem
+        all_installed = all(pid in status_by_id and status_by_id[pid] for pid in wanted)
+        
         print(result)
-        time.sleep(2)
+        
+        if all_installed:
+            print(f"  ✓ All required patches ({', '.join(wanted)}) are installed with status: {required_status}")
+            break
+        else:
+            missing = [pid for pid in wanted if pid not in status_by_id or not status_by_id[pid]]
+            print(f"  ⏳ Waiting for patches: {', '.join(missing)}")
+            time.sleep(5)
 
     appliance.disconnect()
     
