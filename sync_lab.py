@@ -707,14 +707,37 @@ def lab2_gim(appliance=None):
     if not appliance.connect():
         print("  ✗ Failed to connect to collector")
         return None
-    
     result = appliance.execute_command("show system patch available")
-    print(result)
-    print(",".join(map(str, get_patch_line_numbers(result))))
+    patch_order = ",".join(map(str, get_patch_line_numbers(result)))
+    print(patch_order)
    
-    result = appliance.execute_command("show system patch installed")
-    print(result)
+    # expected_order = get_env_value('PATCH_ORDER').split(",")
+    # found = []
     
+    # for line in result.splitlines():
+    #     m = re.match(r"^\s*(\d+)\b", line)
+    #     if m:
+    #         found.append(m.group(1))
+    # position = {pid: idx + 1 for idx, pid in enumerate(found)}    
+    # order = [str(position[pid]) for pid in expected if pid in position]
+    # result_order = ",".join(order)
+    # print(result_order)
+
+
+
+
+
+
+    # output = install_patch(
+    #     host='10.10.9.219',
+    #     username='cli',
+    #     password=get_env_value('CM_PASSWORD'),
+    #     patch_selection="2,1",
+    #     reinstall_answer="y",
+    #     live_log=False
+    # )
+    
+   
     required_status = "DONE: Patch installation Succeeded."
     
     # Pętla działa dopóki NIE wszystkie patche są zainstalowane
@@ -755,14 +778,7 @@ def lab2_gim(appliance=None):
     
     
     
-    # output = install_patch(
-    #     host='10.10.9.219',
-    #     username='cli',
-    #     password=get_env_value('CM_PASSWORD'),
-    #     patch_selection="2,1",
-    #     reinstall_answer="y",
-    #     live_log=False
-    # )
+    
     
     # if output:
     #     print("  ✓ Patch installation completed")
