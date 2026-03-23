@@ -634,7 +634,7 @@ def lab2_gim(appliance=None):
         host='10.10.9.219',
         username='cli',
         password=get_env_value('CM_PASSWORD'),
-        patch_selection="2",
+        patch_selection="2,1",
         reinstall_answer="y",
         live_log=False
     )
