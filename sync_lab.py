@@ -654,7 +654,7 @@ def lab1_appliance_setup(appliance=None):
     if all_success:
         print(f"  ✓ All {len(patch_files)} patches copied successfully")
 
-        print("\n[LAB 1.20] Changing ownership of patches to tomcat:tomcat")
+        print("\n[LAB 1.21] Changing ownership of patches to tomcat:tomcat")
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         for appl in ['10.10.9.219', '10.10.9.239']:
@@ -709,7 +709,7 @@ def lab2_gim(appliance=None):
     if not appliance.connect():
         print("  ✗ Failed to connect to collector")
         return None
-    print("\n[LAB 1.21] Register patches on cm and start installation on cm")
+    print("\n[LAB 1.22] Register patches on cm and start installation on cm")
     result = appliance.execute_command("show system patch available")
     patch_order = ",".join(map(str, get_patch_line_numbers(result)))
     print(patch_order)
@@ -728,7 +728,7 @@ def lab2_gim(appliance=None):
     if not appliance.connect():
         print("  ✗ Failed to connect to collector")
         return None
-    print("\n[LAB 1.22] Register patches on cm and start installation on collector")
+    print("\n[LAB 1.23] Register patches on cm and start installation on collector")
     result = appliance.execute_command("show system patch available")
     patch_order = ",".join(map(str, get_patch_line_numbers(result)))
     print(patch_order)
@@ -736,7 +736,7 @@ def lab2_gim(appliance=None):
     output = install_patch(
         host='10.10.9.239',
         username='cli',
-        password=get_env_value('CM_PASSWORD'),
+        password=get_env_value('COLLECTOR_PASSWORD'),
         patch_selection=patch_order,
         reinstall_answer="y",
         live_log=False
@@ -747,7 +747,7 @@ def lab2_gim(appliance=None):
     if not appliance.connect():
         print("  ✗ Failed to connect to collector")
         return None
-    print("\n[LAB 1.23] Monitoring patch installation on cm")
+    print("\n[LAB 1.24] Monitoring patch installation on cm")
     required_status = "DONE: Patch installation Succeeded."
     while True:
         result = appliance.execute_command("show system patch installed")
@@ -781,11 +781,11 @@ def lab2_gim(appliance=None):
 
     appliance.disconnect()
 
-    appliance = create_appliance('cm')
+    appliance = create_appliance('collector')
     if not appliance.connect():
         print("  ✗ Failed to connect to collector")
         return None
-    print("\n[LAB 1.24] Monitoring patch installation on collector")
+    print("\n[LAB 1.25] Monitoring patch installation on collector")
     required_status = "DONE: Patch installation Succeeded."
     while True:
         result = appliance.execute_command("show system patch installed")
