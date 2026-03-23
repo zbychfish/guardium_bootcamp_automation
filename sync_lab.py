@@ -713,6 +713,9 @@ def lab2_gim(appliance=None):
     print(",".join(map(str, get_patch_line_numbers(result))))
    
     result = appliance.execute_command("show system patch installed")
+    print(result)
+    print(",".join(map(str, get_patch_line_numbers(result))))
+
     appliance.disconnect()
     
     # Poczekaj chwilę po rozłączeniu przed nowym połączeniem
