@@ -366,6 +366,25 @@ class GuardiumRestAPI:
         response.raise_for_status()
         
         return response.json()
+    
+    def patch_cleanup(self) -> dict:
+        """
+        Czyści stare pliki patchy z systemu Guardium.
+        
+        Returns:
+            Słownik z odpowiedzią API
+        
+        Raises:
+            RuntimeError: Jeśli token nie został jeszcze pobrany
+            requests.exceptions.RequestException: W przypadku błędu HTTP
+        """
+        url = f'{self.base_url}/restAPI/patch_cleanup'
+        headers = self.get_headers()
+        
+        response = requests.put(url, headers=headers, verify=self.verify_ssl)
+        response.raise_for_status()
+        
+        return response.json()
 
 
 # Made with Bob

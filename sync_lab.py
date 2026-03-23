@@ -552,7 +552,12 @@ def lab1_appliance_setup(appliance=None):
     else:
         print(f"  ✓ Patches already extracted")
 
-    print("\n[LAB 1.19] Copying patches to central manager")
+    print("\n[LAB 1.19] Removing old patch archives on central manager")
+    result = api.patch_cleanup
+    print("    ✓ OK")
+
+
+    print("\n[LAB 1.20] Copying patches to central manager")
     patch_files = glob.glob('/root/gn-trainings/appliance-patches/patches/*.sig')
     
     if not patch_files:
@@ -629,6 +634,7 @@ def lab2_gim(appliance=None):
     if not appliance.connect():
         print("  ✗ Failed to connect to collector")
         return None
+    
     result = appliance.execute_command("show system patch available")
     print(result)
     appliance.disconnect()
@@ -647,10 +653,10 @@ def lab2_gim(appliance=None):
     #     live_log=False
     # )
     
-    if output:
-        print("  ✓ Patch installation completed")
-    else:
-        print("  ✗ Patch installation failed")
+    # if output:
+    #     print("  ✓ Patch installation completed")
+    # else:
+    #     print("  ✗ Patch installation failed")
 
     #print(output)
 
