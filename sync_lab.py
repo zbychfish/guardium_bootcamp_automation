@@ -319,27 +319,6 @@ def parse_patch_list(output: str) -> dict[int, int]:
     
     return patch_map
 
-def get_patch_line_numbers(output: str, patch_numbers: list[int]) -> list[int]:
-    """
-    Zwraca numery linii dla podanych numerów patchy w kolejności podanej listy.
-    
-    Args:
-        output: Output z komendy 'store system patch install sys' zawierający listę patchy
-        patch_numbers: Lista numerów patchy do zainstalowania w kolejności (np. [9997, 4015])
-    
-    Returns:
-        Lista numerów linii (1-based) odpowiadających podanym patchom w tej samej kolejności
-    
-    Example:
-        >>> output = '''...
-        ... 9997    Health Check for GPU and Bundle installation  12.0    de27af692f57b738e50c829a4f1d6800
-        ... 4015    Snif Update (Nov 20 2025)                     12.0    4ff4686f434c68c261ba52933bef1d0d'''
-        >>> get_patch_line_numbers(output, [9997, 4015])
-        [1, 2]
-        >>> get_patch_line_numbers(output, [4015, 9997])
-        [2, 1]
-    """
-    patch_map = parse_patch_list(output)
     
     line_numbers = []
     for patch_num in patch_numbers:
@@ -349,6 +328,33 @@ def get_patch_line_numbers(output: str, patch_numbers: list[int]) -> list[int]:
             raise ValueError(f"Patch number {patch_num} not found in output")
     
     return line_numbers
+
+def get_patch_line_numbers_from_env(output: str) -> list[int]:
+    """
+    Zwraca numery linii dla patchy zdefiniowanych w zmiennej środowiskowej PATCH_LIST.
+    
+    Args:
+        output: Output z komendy 'store system patch install sys' zawierający listę patchy
+    
+    Returns:
+        Lista numerów linii (1-based) odpowiadających patchom z PATCH_LIST w kolejności
+    
+    Example:
+        Jeśli PATCH_LIST="9997,4015" w pliku .env:
+        >>> output = '''...
+        ... 9997    Health Check for GPU and Bundle installation  12.0    de27af692f57b738e50c829a4f1d6800
+        ... 4015    Snif Update (Nov 20 2025)                     12.0    4ff4686f434c68c261ba52933bef1d0d'''
+        >>> get_patch_line_numbers_from_env(output)
+        [1, 2]
+    """
+    # Pobierz PATCH_LIST ze zmiennych środowiskowych
+    patch_list_str = get_env_value('PATCH_LIST')
+    
+    # Parsuj string na listę intów (np. "9997,4015" -> [9997, 4015])
+    patch_numbers = [int(p.strip()) for p in patch_list_str.split(',') if p.strip()]
+    
+    # Użyj istniejącej funkcji do konwersji na numery linii
+    return get_patch_line_numbers(output, patch_numbers)
 
 
 def lab1_appliance_setup(appliance=None):
@@ -704,9 +710,8 @@ def lab2_gim(appliance=None):
     
     result = appliance.execute_command("show system patch available")
     print(result)
-    print(get_patch_line_numbers(result, [9997, 4015]))
+    print(",".join(map(str, get_patch_line_numbers_from_env(result))))
    
-    
     appliance.disconnect()
     
     # Poczekaj chwilę po rozłączeniu przed nowym połączeniem
