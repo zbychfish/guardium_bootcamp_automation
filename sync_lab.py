@@ -424,7 +424,7 @@ def t_initial_collector_settings(appliance):
     appliance.execute_command("store system time_server state on")
     print(appliance.execute_command("show system time_server all"))
     print("    ✓ OK")
-    return None
+
 
 
 # tasks_order = [t_password_change_on_appliances, ]
