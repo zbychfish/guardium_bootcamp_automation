@@ -629,7 +629,7 @@ def t_preparing_appliances_for_patching(api):
     patch_order = get_env_value("PATCH_NAME_LIST").split(",")
     pos = {name: i + 1 for i, name in enumerate(patch_order)}
     order_numbers = [str(pos[name]) for name in patch_list if name in pos]
-    patch_installation_order = ",".join(order_numbers)
+    save_to_env("PATCH_ORDER", ",".join(order_numbers))
         
     print("\nRemoving old patch archives on central manager")
     result = api.patch_cleanup()   
@@ -684,9 +684,9 @@ def t_preparing_appliances_for_patching(api):
     else:
         print("  ✗ Problem with copying of patches to central manager or collector")
         exit(1)
-    return patch_installation_order
+    return None
 
-def t_registering_patches_installation(appliance_name, appliance_ip, password, patch_order):
+def t_registering_patches_installation(appliance_name, appliance_ip, password):
     appliance = create_appliance(appliance_name)
     if not appliance.connect():
         print(f"  ✗ Failed to connect to {appliance_name}")
@@ -697,7 +697,7 @@ def t_registering_patches_installation(appliance_name, appliance_ip, password, p
         host=appliance_ip,
         username='cli',
         password=password,
-        patch_selection=patch_order,
+        patch_selection=get_env_value("PATCH_ORDER"),
         reinstall_answer="y",
         live_log=False
     )
@@ -790,17 +790,16 @@ def lab1_appliance_setup(state):
 
     run_task(6, lambda: t_create_demo_user(api), state)
     run_task(7, lambda: t_register_collector(api), state)
-    patch_order = run_task(8, lambda: t_preparing_appliances_for_patching(api), state)
+    run_task(8, lambda: t_preparing_appliances_for_patching(api), state)
 
     print(f"\nRegister patches on appliances and start patching process")
     for appliance_name, appliance_ip, password, task_number in [('cm', '10.10.9.219', get_env_value('CM_PASSWORD'), 9), ('collector', '10.10.9.239', get_env_value('COLLECTOR_PASSWORD'), 10)]:
-        run_task(task_number, lambda: t_registering_patches_installation(appliance_name, appliance_ip, password, patch_order=patch_order), state)
+        run_task(task_number, lambda: t_registering_patches_installation(appliance_name, appliance_ip, password), state)
 
     print("\nMonitoring patch installation on appliances")
     for appliance_name, task_number in [('cm', 11), ('collector', 12)]:
         run_task(task_number, lambda: t_monitoring_patch_installation(appliance_name), state)
 
-    
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
     print("\nPolicy installation on collector")
     result = api.install_policy("Log Everything", api_target_host="10.10.9.239")
