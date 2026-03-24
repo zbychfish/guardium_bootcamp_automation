@@ -425,31 +425,7 @@ def t_initial_collector_settings(appliance):
     print(appliance.execute_command("show system time_server all"))
     print("    ✓ OK")
 
-
-
-# tasks_order = [t_password_change_on_appliances, ]
-
-def lab1_appliance_setup(state):
-    """
-    LAB 1 - Konfiguracja appliance (collector).
-    """
-    
-    print("=" * 60)
-    print("LAB 1 - Appliance Setup")
-    print("=" * 60)
-    
-    run_task(1, lambda: t_password_change_on_appliances, state)
-    
-    appliance = create_appliance('collector_unconfigured')
-    if not appliance.connect():
-        print("  ✗ Failed to connect to collector")
-        return None
-    else:
-        print("    ✓ OK")
-    
-
-    run_task(2, lambda: t_initial_collector_settings(appliance), state)
-    exit(0)
+def t_restart_system(appliance):
     print("\n[LAB 1.6] Restart system")
     result = appliance.execute_restart_with_check()
     print(f"  {result}")
@@ -462,8 +438,9 @@ def lab1_appliance_setup(state):
     else:
         print("  ✗ Could not restart - MYSQL is busy")
         print("  ✗ Run script again in 1 minute or restart collector manually and then start again")
-        return None
-    
+    return None
+
+def t_other_collector_settings(appliance):
     print("\n[LAB 1.8] Setup collector name and domain")
     appliance.execute_command("store system hostname coll1")
     appliance.execute_command("store system domain gdemo.com")
@@ -514,18 +491,10 @@ def lab1_appliance_setup(state):
         appliance.execute_command(command)
     print(appliance.execute_command("support show hosts"))
     print("  ✓ Hosts updated")
+    return None
 
-    appliance.disconnect
-
-    print("\n[LAB 1.13] Connect to Central Manager")
-    appliance = create_appliance('cm')
-    if not appliance.connect():
-        print("  ✗ Failed to connect to CM")
-        return None
-    else:
-        print("    ✓ OK")
-
-    print("\n[LAB 1.14] Create oauth client for bootcamp sync")
+def t_initial_cm_settings(appliance):
+    print("\n[LAB 1.13] Create oauth client for bootcamp sync")
     result = appliance.execute_command("grdapi list_oauth_clients")
     if "Client Id: BOOTCAMP" in result:
         appliance.execute_command("grdapi delete_oauth_clients client_id=BOOTCAMP")
@@ -550,98 +519,131 @@ def lab1_appliance_setup(state):
         return None
     print("  ✓ Oauth client configured")
 
-    print("\n[LAB 1.15] Set shared secret on Central Manager")
+    print("\n[LAB 1.14] Set shared secret on Central Manager")
     appliance.execute_command("store system shared secret guardium")
     print("  ✓ Shared Secret set")
+    return None
 
+def t_create_demo_user(api):
+    print("\n[LAB 1.15] Create demo user")
+    users = api.get_users()
+    print("  Current users:")
+    for u in users:
+        status = "DISABLED" if u.get("disabled") == "true" else "ACTIVE"
+        print(f"    {u['user_name']:12} | {status}")
+    
+    demo_exists = any(u.get('user_name') == 'demo' for u in users)
+    if not demo_exists:
+        print("\n  Creating demo user...")
+        demo_password = get_env_value('DEMOUSER_PASSWORD')
+        result = api.create_user(
+            username='demo',
+            password=demo_password,
+            confirm_password=demo_password,
+            first_name='User',
+            last_name='Demo',
+            email='demo@demo.training',
+            country='PL',
+            disabled=False,
+            disable_pwd_expiry=True
+        )
+        print(f"  ✓ Demo user created")
+        print("\n  Assigning roles to demo user")    
+        result = api.set_user_roles(username='demo', roles='admin,cli,user,vulnerability-assess')  
+        print(f"  ✓ Roles assigned to demo user")
+    else:
+        print("\n  Demo user already exists")
+    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
+    if not demo_exists:
+        print("\n Import Training dashboard for demo user")
+        result = api.import_definitions('guardium_definition_files/exp_dashboard_training.sql')
+        print(f"  ✓ Dashboard Training added to demo user UI")
+    return None
+
+def lab1_appliance_setup(state):
+    """
+    LAB 1 - Konfiguracja appliance (collector).
+    """
+    
+    print("=" * 60)
+    print("LAB 1 - Appliance Setup")
+    print("=" * 60)
+    
+    run_task(1, lambda: t_password_change_on_appliances, state)
+    
+    appliance = create_appliance('collector_unconfigured')
+    if not appliance.connect():
+        print("  ✗ Failed to connect to collector")
+        return None
+    else:
+        print("    ✓ Connected to collector - OK")
+    
+
+    run_task(2, lambda: t_initial_collector_settings(appliance), state)
+    run_task(3, lambda: t_restart_system(appliance), state)
+    run_task(4, lambda: t_other_collector_settings(appliance), state)
+   
+    appliance.disconnect
+
+    appliance = create_appliance('cm')
+    if not appliance.connect():
+        print("  ✗ Failed to connect to CM")
+        return None
+    else:
+        print("    ✓ Connected to CM - OK")
+    
+    run_task(5, lambda: t_initial_cm_settings(appliance), state)
+    
     appliance.disconnect
 
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443',
         client_id='BOOTCAMP'
     )
-    print("\n[LAB 1.16] Create demo user")
-    try:
-        token = api.get_token(username='accessmgr', password=get_env_value('ACCESSMGR_PASSWORD'))
-        print(f"Access token: {token}")
-  
-        users = api.get_users()
-        print("  Current users:")
-        for u in users:
-            status = "DISABLED" if u.get("disabled") == "true" else "ACTIVE"
-            print(f"    {u['user_name']:12} | {status}")
-        
-        demo_exists = any(u.get('user_name') == 'demo' for u in users)
-        if not demo_exists:
-            print("\n  Creating demo user...")
-            demo_password = get_env_value('DEMOUSER_PASSWORD')
-            result = api.create_user(
-                username='demo',
-                password=demo_password,
-                confirm_password=demo_password,
-                first_name='User',
-                last_name='Demo',
-                email='demo@demo.training',
-                country='PL',
-                disabled=False,
-                disable_pwd_expiry=True
-            )
-            print(f"  ✓ Demo user created")
-            print("\n  Assigning roles to demo user")    
-            result = api.set_user_roles(username='demo', roles='admin,cli,user,vulnerability-assess')  
-            print(f"  ✓ Roles assigned to demo user")
-        else:
-            print("\n  Demo user already exists")
-        token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
-        if not demo_exists:
-            print("\n Import Training dashboard for demo user")
-            result = api.import_definitions('guardium_definition_files/exp_dashboard_training.sql')
-            print(f"  ✓ Dashboard Training added to demo user UI")
-        print("\n[LAB 1.17] Register collector to central manager")
-        units = api.get_registered_units()
-        units = parse_mus_from_message_dict(units)
-        out: List[Dict[str, Optional[str]]] = []
-        for u in units:
-            out.append({
-                "ip": u.get("ip"),
-            })
-        if not any(d.get('ip') == '10.10.9.239' for d in out):
-            appliance = create_appliance('collector')
-            if not appliance.connect():
-                print("  ✗ Failed to connect to collector")
-                return None
+    token = api.get_token(username='accessmgr', password=get_env_value('ACCESSMGR_PASSWORD'))
 
-            print("  Unit type:")
+    run_task(6, lambda: t_create_demo_user(appliance), state)
+    exit(0)
+    print("\n[LAB 1.17] Register collector to central manager")
+    units = api.get_registered_units()
+    units = parse_mus_from_message_dict(units)
+    out: List[Dict[str, Optional[str]]] = []
+    for u in units:
+        out.append({
+            "ip": u.get("ip"),
+        })
+    if not any(d.get('ip') == '10.10.9.239' for d in out):
+        appliance = create_appliance('collector')
+        if not appliance.connect():
+            print("  ✗ Failed to connect to collector")
+            return None
+
+        print("  Unit type:")
+        result = appliance.execute_command("show unit type")
+        print(f"    {result}")
+
+        try:
+            result = appliance.execute_command("register management 10.10.9.219 8443", timeout=600)
+            print(result)
+        except TimeoutError:
+            pass  # Ignoruj timeout, kontynuuj
+        
+        unit_data = api.get_unit_data(api_target_host='10.10.9.239')
+        unit_data = parse_unit_summary(unit_data['Message'])
+        print(unit_data)
+        print("  Unit type:")
+        try:
             result = appliance.execute_command("show unit type")
             print(f"    {result}")
-
-            try:
-                result = appliance.execute_command("register management 10.10.9.219 8443", timeout=600)
-                print(result)
-            except TimeoutError:
-                pass  # Ignoruj timeout, kontynuuj
-            
-            unit_data = api.get_unit_data(api_target_host='10.10.9.239')
-            unit_data = parse_unit_summary(unit_data['Message'])
-            print(unit_data)
-            print("  Unit type:")
-            try:
-                result = appliance.execute_command("show unit type")
-                print(f"    {result}")
-            except TimeoutError:
-                pass  # Ignoruj timeout, kontynuuj
-            print(f"  ✓ Collector registered ")
-        else:
-            unit_data = api.get_unit_data(api_target_host='10.10.9.239')
-            unit_data = parse_unit_summary(unit_data['Message'])
-            print(unit_data)
-            print(f"  ✓ Collector is already registered ")
+        except TimeoutError:
+            pass  # Ignoruj timeout, kontynuuj
+        print(f"  ✓ Collector registered ")
+    else:
+        unit_data = api.get_unit_data(api_target_host='10.10.9.239')
+        unit_data = parse_unit_summary(unit_data['Message'])
+        print(unit_data)
+        print(f"  ✓ Collector is already registered ")
     
-    except Exception as e:
-        print(f"  ✗ Error: {e}")
-        import traceback
-        traceback.print_exc()
-        return None
 
     print("\n[LAB 1.18] Download and unpack patches locally")
     target_dir = "/root/gn-trainings/appliance-patches"
