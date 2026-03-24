@@ -392,26 +392,8 @@ def t_password_change_on_appliances():
         print("    ✓ OK" if ok else "    ✗ FAILED")
     return None
 
-tasks_order = [t_password_change_on_appliances,]
-
-def lab1_appliance_setup(state):
-    """
-    LAB 1 - Konfiguracja appliance (collector).
-    """
-    
-    print("=" * 60)
-    print("LAB 1 - Appliance Setup")
-    print("=" * 60)
-    
-    run_task(1, t_password_change_on_appliances, state)
-    exit(0)
+def t_initial_collector_settings(appliance):
     print("\n[LAB 1.2] Connect to collector and get network settings")
-    appliance = create_appliance('collector_unconfigured')
-    if not appliance.connect():
-        print("  ✗ Failed to connect to collector")
-        return None
-    else:
-        print("    ✓ OK")
     print(appliance.execute_command("show network interface all"))
     print(appliance.execute_command("show network route default"))
     print(appliance.execute_command("show network resolvers"))
@@ -435,7 +417,6 @@ def lab1_appliance_setup(state):
     else:
         print(f"  Time zone already set to {timezone}")
     print("    ✓ OK")
-    
     print("\n[LAB 1.5 Configure NTP servers")
     appliance.execute_command("store system time_server hostname 0.pool.ntp.org 1.pool.ntp.org 2.pool.ntp.org")
     print(appliance.execute_command("show system time_server all"))
@@ -443,7 +424,31 @@ def lab1_appliance_setup(state):
     appliance.execute_command("store system time_server state on")
     print(appliance.execute_command("show system time_server all"))
     print("    ✓ OK")
+    return None
+
+
+# tasks_order = [t_password_change_on_appliances, ]
+
+def lab1_appliance_setup(state):
+    """
+    LAB 1 - Konfiguracja appliance (collector).
+    """
     
+    print("=" * 60)
+    print("LAB 1 - Appliance Setup")
+    print("=" * 60)
+    
+    run_task(1, t_password_change_on_appliances, state)
+    
+    appliance = create_appliance('collector_unconfigured')
+    if not appliance.connect():
+        print("  ✗ Failed to connect to collector")
+        return None
+    else:
+        print("    ✓ OK")
+
+    run_task(2, t_initial_collector_settings(appliance), state)
+    exit(0)
     print("\n[LAB 1.6] Restart system")
     result = appliance.execute_restart_with_check()
     print(f"  {result}")
