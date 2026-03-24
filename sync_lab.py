@@ -651,8 +651,8 @@ def lab1_appliance_setup(state):
     )
     token = api.get_token(username='accessmgr', password=get_env_value('ACCESSMGR_PASSWORD'))
 
-    run_task(6, lambda: t_create_demo_user(appliance), state)
-    run_task(7, lambda: t_register_collector(appliance), state)
+    run_task(6, lambda: t_create_demo_user(api), state)
+    run_task(7, lambda: t_register_collector(api), state)
 
     exit(0)
     
