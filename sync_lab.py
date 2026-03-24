@@ -377,7 +377,7 @@ def run_task(task_id, task_fn, state):
     return output
 
 def t_password_change_on_appliances():
-    print("\n[LAB 1.1] Password change for cli user on appliances")
+    print("\nPassword change for cli user on appliances")
     current_appliances = appliances.copy()
     del current_appliances['collector']
     for name, cfg in current_appliances.items():
@@ -392,16 +392,16 @@ def t_password_change_on_appliances():
     return None
 
 def t_initial_collector_settings(appliance):
-    print("\n[LAB 1.2] Connect to collector and get network settings")
+    print("Connect to collector and get network settings")
     print(appliance.execute_command("show network interface all"))
     print(appliance.execute_command("show network route default"))
     print(appliance.execute_command("show network resolvers"))
     
-    print("\n[LAB 1.3] Disabling purge")
+    print("\nDisabling purge")
     output = appliance.execute_command("grdapi diable_purge")
     print("    ✓ OK")
 
-    print("\n[LAB 1.4 Set time zone to Europe/Warsaw")
+    print("\nSet time zone to Europe/Warsaw")
     output = appliance.execute_command("show system clock all")
     timezone = output.strip().splitlines()[-1]
     if timezone != "Europe/Warsaw":
@@ -416,22 +416,22 @@ def t_initial_collector_settings(appliance):
     else:
         print(f"  Time zone already set to {timezone}")
     print("    ✓ OK")
-    print("\n[LAB 1.5 Configure NTP servers")
+    print("\nConfigure NTP servers")
     appliance.execute_command("store system time_server hostname 0.pool.ntp.org 1.pool.ntp.org 2.pool.ntp.org")
     print(appliance.execute_command("show system time_server all"))
-    print("  Enabling time synchronization...")
+    print("\nEnabling time synchronization")
     appliance.execute_command("store system time_server state on")
     print(appliance.execute_command("show system time_server all"))
     print("    ✓ OK")
 
 def t_restart_system(appliance):
-    print("\n[LAB 1.6] Restart system")
+    print("\nRestart system")
     result = appliance.execute_restart_with_check()
     print(f"  {result}")
     appliance.disconnect()
     
     if "System is restarting - connection broke" in result:
-        print("\n[LAB 1.7] Waiting for system availability...")
+        print("\nWaiting for system availability...")
         appliance = wait_for_appliance('collector_unconfigured')
         print("  ✓ Appliance available")
     else:
@@ -440,17 +440,17 @@ def t_restart_system(appliance):
     return None
 
 def t_other_collector_settings(appliance):
-    print("\n[LAB 1.8] Setup collector name and domain")
+    print("\nSetup collector name and domain")
     appliance.execute_command("store system hostname coll1")
     appliance.execute_command("store system domain gdemo.com")
     print("  ✓ Collector name set")
     
-    print("\n[LAB 1.9] Configure session timeouts")
+    print("\nConfigure session timeouts")
     appliance.execute_command("store gui session_timeout 9999")
     appliance.execute_command("store timeout cli_session 600")
     print("  ✓ Timeouts configured")
    
-    print("\n[LAB 1.10] Restart GUI")
+    print("\nRestart GUI")
     appliance.execute_command_with_confirmation(
         command="restart gui",
         response="y",
@@ -458,11 +458,11 @@ def t_other_collector_settings(appliance):
     )
     print("  ✓ GUI restarted")
 
-    print("\n[LAB 1.11] Set shared secret on collector")
+    print("\nSet shared secret on collector")
     appliance.execute_command("store system shared secret guardium")
     print("  ✓ Shared Secret set")
 
-    print("\n[LAB 1.12] Set manual hosts settings")
+    print("\nSet manual hosts settings")
     output = appliance.execute_command("support show hosts")
     existing = set()
     for line in output.splitlines():
@@ -490,10 +490,15 @@ def t_other_collector_settings(appliance):
         appliance.execute_command(command)
     print(appliance.execute_command("support show hosts"))
     print("  ✓ Hosts updated")
+
+    print("\nDisabling guardcli accounts")
+    for account_number in range(2, 9):
+        appliance.execute_command(f"store guarduser_state disable guardcli{account_number}")
+    print("  ✓Accounts disabled")
     return None
 
 def t_initial_cm_settings(appliance):
-    print("\n[LAB 1.13] Create oauth client for bootcamp sync")
+    print("\nCreate oauth client for bootcamp sync")
     result = appliance.execute_command("grdapi list_oauth_clients")
     if "Client Id: BOOTCAMP" in result:
         appliance.execute_command("grdapi delete_oauth_clients client_id=BOOTCAMP")
@@ -518,13 +523,22 @@ def t_initial_cm_settings(appliance):
         return None
     print("  ✓ Oauth client configured")
 
-    print("\n[LAB 1.14] Set shared secret on Central Manager")
+    print("\nSet shared secret on Central Manager")
     appliance.execute_command("store system shared secret guardium")
     print("  ✓ Shared Secret set")
+
+    print("\nDisabling guardcli accounts")
+    for account_number in range(2, 9):
+        appliance.execute_command(f"store guarduser_state disable guardcli{account_number}")
+    print("  ✓ Accounts disabled")
+
+    print("\nSet resolving for coll1.gdemo.com")
+    appliance.execute_command(f"support store hosts 10.10.9.239 coll1.gdemo.com")
+    print("  ✓ Done")
     return None
 
 def t_create_demo_user(api):
-    print("\n[LAB 1.15] Create demo user")
+    print("\nCreate demo user")
     users = api.get_users()
     print("  Current users:")
     for u in users:
@@ -560,7 +574,7 @@ def t_create_demo_user(api):
     return None
 
 def t_register_collector(api):
-    print("\n[LAB 1.16] Register collector to central manager")
+    print("\nRegister collector to central manager")
     units = api.get_registered_units()
     units = parse_mus_from_message_dict(units)
     out: List[Dict[str, Optional[str]]] = []
@@ -602,7 +616,7 @@ def t_register_collector(api):
     return None
 
 def t_preparing_appliances_for_patching(api):
-    print("\n[LAB 1.17] Download and unpack patches locally")
+    print("\nDownload and unpack patches locally")
     target_dir = "/root/gn-trainings/appliance-patches"
     os.makedirs(target_dir, exist_ok=True)
     filename = os.path.join(target_dir, os.path.basename("patches.zip"))
@@ -617,11 +631,11 @@ def t_preparing_appliances_for_patching(api):
     order_numbers = [str(pos[name]) for name in patch_list if name in pos]
     patch_installation_order = ",".join(order_numbers)
         
-    print("\n[LAB 1.18] Removing old patch archives on central manager")
+    print("\nRemoving old patch archives on central manager")
     result = api.patch_cleanup()   
     print("    ✓ OK")
     
-    print("\n[LAB 1.19] Copying patches to central manager and collector")
+    print("\nCopying patches to central manager and collector")
     patch_files = glob.glob('/root/gn-trainings/appliance-patches/patches/*.sig')
     
     if not patch_files:
@@ -644,7 +658,7 @@ def t_preparing_appliances_for_patching(api):
     if all_success:
         print(f"  ✓ All {len(patch_files)} patches copied successfully")
 
-        print("\n[LAB 1.20] Changing ownership of patches to tomcat:tomcat")
+        print("\nChanging ownership of patches to tomcat:tomcat")
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         for appl in ['10.10.9.219', '10.10.9.239']:
@@ -778,36 +792,27 @@ def lab1_appliance_setup(state):
     run_task(7, lambda: t_register_collector(api), state)
     patch_order = run_task(8, lambda: t_preparing_appliances_for_patching(api), state)
 
-    print(f"\n[LAB 1.22] Register patches on appliances and start patching process")
+    print(f"\nRegister patches on appliances and start patching process")
     for appliance_name, appliance_ip, password, task_number in [('cm', '10.10.9.219', get_env_value('CM_PASSWORD'), 9), ('collector', '10.10.9.239', get_env_value('COLLECTOR_PASSWORD'), 10)]:
         run_task(task_number, lambda: t_registering_patches_installation(appliance_name, appliance_ip, password, patch_order=patch_order), state)
 
-    print("\n[LAB 1.23] Monitoring patch installation on appliances")
+    print("\nMonitoring patch installation on appliances")
     for appliance_name, task_number in [('cm', 11), ('collector', 12)]:
         run_task(task_number, lambda: t_monitoring_patch_installation(appliance_name), state)
 
-    api = GuardiumRestAPI(
-        base_url='https://10.10.9.219:8443',
-        client_id='BOOTCAMP'
-    )
+    
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
     print("\nPolicy installation on collector")
     result = api.install_policy("Log Everything", api_target_host="10.10.9.239")
-    exit(0)
     
-    
-
-    
-    
-
     print("\n" + "=" * 60)
     print("LAB 1 - Appliance Setup completed!")
     print("=" * 60)
     
-    return appliance
+    return None
 
 
-def lab2_gim(appliance=None):
+def lab2_gim(state):
     """
     LAB 2 - Konfiguracja GIM (Group Identity Management).
     
@@ -822,24 +827,41 @@ def lab2_gim(appliance=None):
     print("=" * 60)
 
         
+    print("\nDownload and unpack gim installers locally")
+    target_dir = "/root/gn-trainings"
+    os.makedirs(target_dir, exist_ok=True)
+    filename = os.path.join(target_dir, os.path.basename("gims.zip"))
+    urllib.request.urlretrieve(get_env_value("GIM_INSTALLERS_ARCHIVE"), filename)
+    with zipfile.ZipFile(filename, "r") as zipf:
+            zipf.extractall(path=target_dir)
+    print(f"  ✓ GIM installers extracted")
     
+    print("\nAdding execution flag to GIM installers")
+
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.connect(
+        hostname='10.10.9.219',
+        username='root',
+        password=get_env_value("ROOT_PASSWORD"),
+        look_for_keys=False,
+        allow_agent=False
+    )
+    stdin, stdout, stderr = client.exec_command('chmod 755 /root/gn-trainings/gim_installers/*.sh')
+    exit_status = stdout.channel.recv_exit_status()
+    if exit_status != 0:
+        error = stderr.read().decode()
+        print(f"  ✗ Failed to change files permisions: {error}")
+        exit(1)
+    stdin, stdout, stderr = client.exec_command('rm -f /root/gn-trainings/*.zip')
+    exit_status = stdout.channel.recv_exit_status()
+    if exit_status != 0:
+        error = stderr.read().decode()
+        print(f"  ✗ Failed to remove zip archive: {error}")
+        exit(1)   
+    client.close()
+    print(f"  ✓ Ownership changed to tomcat:tomcat")
     
-
-    
-
-    
-
-    
- 
-    # if output:
-    #     print("  ✓ Patch installation completed")
-    # else:
-    #     print("  ✗ Patch installation failed")
-
-    #print(output)
-
-    
-
 
 
     
