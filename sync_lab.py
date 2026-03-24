@@ -356,18 +356,28 @@ def get_patch_line_numbers(output: str) -> list[int]:
     
     return line_numbers
 
+def load_state():
+    if not os.path.exists(STATE_FILE):
+        return {"completed_tasks": []}
+    with open(STATE_FILE, "r") as f:
+        return json.load(f)
 
-def lab1_appliance_setup(appliance=None):
-    """
-    LAB 1 - Konfiguracja appliance (collector).
-    
-    Returns:
-        appliance: Połączony obiekt ApplianceCommand lub None w przypadku błędu
-    """
-    print("=" * 60)
-    print("LAB 1 - Appliance Setup")
-    print("=" * 60)
-    
+def save_state(state):
+    with open(STATE_FILE, "w") as f:
+        json.dump(state, f, indent=2)
+
+def run_task(task_id, task_fn, state):
+    if task_id in state["completed_tasks"]:
+        print(f"Skipping {task_id}")
+        return
+        
+    print(f"Running {task_id}")
+    task_fn()
+
+    state["completed_tasks"].append(task_id)
+    save_state(state)
+
+def t_password_change_on_appliances():
     print("\n[LAB 1.1] Password change for cli user on appliances")
     current_appliances = appliances.copy()
     del current_appliances['collector']
@@ -380,7 +390,21 @@ def lab1_appliance_setup(appliance=None):
             new_password=get_env_value("COLLECTOR_PASSWORD")
         )
         print("    ✓ OK" if ok else "    ✗ FAILED")
+    return None
+
+tasks_order = [t_password_change_on_appliances,]
+
+def lab1_appliance_setup(state):
+    """
+    LAB 1 - Konfiguracja appliance (collector).
+    """
     
+    print("=" * 60)
+    print("LAB 1 - Appliance Setup")
+    print("=" * 60)
+    
+    run_task(1, t_password_change_on_appliances, state)
+    exit(0)
     print("\n[LAB 1.2] Connect to collector and get network settings")
     appliance = create_appliance('collector_unconfigured')
     if not appliance.connect():
@@ -826,12 +850,7 @@ def lab2_gim(appliance=None):
             time.sleep(10)
 
     appliance.disconnect()
-    
-    
-    
-    
-    
-    
+ 
     # if output:
     #     print("  ✓ Patch installation completed")
     # else:
@@ -839,17 +858,13 @@ def lab2_gim(appliance=None):
 
     #print(output)
 
-    # api = GuardiumRestAPI(
-    #     base_url='https://10.10.9.219:8443',
-    #     client_id='BOOTCAMP'
-    # )
-    # token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
-    # print("\n[LAB 1.22] Patch installation on cm")
-    # result = api.install_patch(
-    #     patch_number=9997,
-    #     unit_ip_list="10.10.9.219",
-    #     mode="local_only"
-    # )
+    api = GuardiumRestAPI(
+        base_url='https://10.10.9.219:8443',
+        client_id='BOOTCAMP'
+    )
+    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
+    print("\n[LAB 1.22] Installation policy on collector")
+    result = api.install_policy("Log Everything", api_target_host="10.10.9.239")
 
 
 
@@ -859,31 +874,26 @@ def lab2_gim(appliance=None):
     print("=" * 60)
 
 
-
-def sync_lab(skip_below: int = 0):
+def sync_lab(state, skip_below: int = 0):
     """
     Główna funkcja synchronizacji laboratorium.
     
     Args:
         skip_below: Pomiń LAB-y o numerze mniejszym niż podana wartość (domyślnie 0 - wykonaj wszystkie)
     """
+
+    print(state)
     appliance = None
-    
+    parameter = 1
     # LAB 1: Appliance Setup
     if skip_below < 1:
-        appliance = lab1_appliance_setup()
-        if appliance:
-            appliance.disconnect()
-            appliance = None
+        lab1_appliance_setup(state)
     else:
         print("\n[LAB 1] SKIPPED - Appliance setup")
     
     # LAB 2: GIM Setup
     if skip_below < 2:
-        appliance = lab2_gim(appliance)
-        if appliance:
-            appliance.disconnect()
-            appliance = None
+        lab2_gim(state)
     else:
         print("\n[LAB 2] SKIPPED - GIM setup")
     
@@ -901,9 +911,17 @@ def sync_lab(skip_below: int = 0):
 
 
 
+
+
+
+
 if __name__ == "__main__":
     import argparse
-    
+
+    STATE_FILE = "state.json"
+    state = load_state()
+
+
     parser = argparse.ArgumentParser(description="Sync Lab - synchronizacja środowiska laboratoryjnego")
     parser.add_argument(
         "--skip-below",
@@ -915,10 +933,14 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     try:
-        sync_lab(skip_below=args.skip_below)
+        sync_lab(state, skip_below=args.skip_below)
     except KeyboardInterrupt:
         print("\n\n[INFO] Przerwano przez użytkownika")
     except Exception as e:
         print(f"\n[ERROR] Błąd: {e}")
         import traceback
         traceback.print_exc()
+
+
+
+

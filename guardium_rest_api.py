@@ -386,5 +386,55 @@ class GuardiumRestAPI:
         
         return response.json()
 
+    def install_policy(
+        self,
+        policy: str,
+        install_action: Optional[str] = None,
+        api_target_host: Optional[str] = None
+    ) -> dict:
+        """
+        Instaluje policy lub policies w Guardium.
+        
+        Args:
+            policy: Nazwa policy lub policies do zainstalowania (wymagane)
+                Dla wielu policies użyj znaku pipe (|), np. "policy1|policy2|policy3"
+            install_action: Akcja instalacji (opcjonalne)
+            api_target_host: Docelowy host dla API (opcjonalne)
+        
+        Returns:
+            Słownik z odpowiedzią API
+        
+        Raises:
+            RuntimeError: Jeśli token nie został jeszcze pobrany
+            requests.exceptions.RequestException: W przypadku błędu HTTP
+        
+        Example:
+            # Instalacja pojedynczej policy
+            api.install_policy("MyPolicy")
+            
+            # Instalacja wielu policies
+            api.install_policy("Policy1|Policy2|Policy3")
+            
+            # Z dodatkowym targetem
+            api.install_policy("MyPolicy", api_target_host="10.10.9.239")
+        """
+        url = f'{self.base_url}/restAPI/policy_install'
+        headers = self.get_headers()
+        
+        data = {
+            'policy': policy
+        }
+        
+        # Dodaj opcjonalne parametry
+        if install_action:
+            data['install_action'] = install_action
+        if api_target_host:
+            data['api_target_host'] = api_target_host
+        
+        response = requests.post(url, json=data, headers=headers, verify=self.verify_ssl)
+        response.raise_for_status()
+        
+        return response.json()
+
 
 # Made with Bob

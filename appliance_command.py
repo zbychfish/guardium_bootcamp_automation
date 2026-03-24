@@ -705,3 +705,4 @@ class ApplianceCommand:
             pass
 
 # Made with Bob
+
