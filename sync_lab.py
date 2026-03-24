@@ -612,27 +612,29 @@ def lab1_appliance_setup(state):
     print("=" * 60)
     
     run_task(1, lambda: t_password_change_on_appliances, state)
-    
-    appliance = create_appliance('collector_unconfigured')
-    if not appliance.connect():
-        print("  ✗ Failed to connect to collector")
-        return None
-    else:
-        print("    ✓ Connected to collector - OK")
+    if 4 not in state["completed_tasks"]:
+        appliance = create_appliance('collector_unconfigured')
+        if not appliance.connect():
+            print("  ✗ Failed to connect to collector")
+            return None
+        else:
+            print("    ✓ Connected to collector - OK")
     
     run_task(2, lambda: t_initial_collector_settings(appliance), state)
     run_task(3, lambda: t_restart_system(appliance), state)
 
-    appliance = create_appliance('collector_unconfigured')
-    if not appliance.connect():
-        print("  ✗ Failed to connect to collector")
-        return None
-    else:
-        print("    ✓ Connected to collector - OK")
+    if 4 not in state["completed_tasks"]:
+        appliance = create_appliance('collector_unconfigured')
+        if not appliance.connect():
+            print("  ✗ Failed to connect to collector")
+            return None
+        else:
+            print("    ✓ Connected to collector - OK")
 
     run_task(4, lambda: t_other_collector_settings(appliance), state)
    
-    appliance.disconnect
+    if 4 not in state["completed_tasks"]:
+        appliance.disconnect
 
     appliance = create_appliance('cm')
     if not appliance.connect():
