@@ -672,15 +672,13 @@ def t_preparing_appliances_for_patching(api):
         exit(1)
     return patch_installation_order
 
-def t_registering_patches_installation(appliance_name, appliance_ip, password):
+def t_registering_patches_installation(appliance_name, appliance_ip, password, patch_order):
     appliance = create_appliance(appliance_name)
     if not appliance.connect():
         print(f"  ✗ Failed to connect to {appliance_name}")
         return None
-    result = appliance.execute_command("show system patch available")
-    patch_order = ",".join(map(str, get_patch_line_numbers(result)))
-    print(patch_order)
-   
+    appliance.execute_command("show system patch available")
+    
     output = install_patch(
         host=appliance_ip,
         username='cli',
@@ -691,6 +689,7 @@ def t_registering_patches_installation(appliance_name, appliance_ip, password):
     )
 
     appliance.disconnect()
+    return None
 
 def t_monitoring_patch_installation(appliance_name):
     appliance = create_appliance(appliance_name)
@@ -781,7 +780,7 @@ def lab1_appliance_setup(state):
 
     print(f"\n[LAB 1.22] Register patches on appliances and start patching process")
     for appliance_name, appliance_ip, password, task_number in [('cm', '10.10.9.219', get_env_value('CM_PASSWORD'), 9), ('collector', '10.10.9.239', get_env_value('COLLECTOR_PASSWORD'), 10)]:
-        run_task(task_number, lambda: t_registering_patches_installation(appliance_name, appliance_ip, password), state)
+        run_task(task_number, lambda: t_registering_patches_installation(appliance_name, appliance_ip, password, patch_order=patch_order), state)
 
     print("\n[LAB 1.23] Monitoring patch installation on appliances")
     for appliance_name, task_number in [('cm', 11), ('collector', 12)]:
