@@ -716,7 +716,7 @@ def t_monitoring_patch_installation(appliance_name):
         # Sprawdź czy wszystkie wymagane patche są zainstalowane z poprawnym statusem
         all_installed = all(pid in status_by_id and status_by_id[pid] for pid in wanted)
         if all_installed:
-            print(f"  ✓ All required patches ({', '.join(wanted)}) are installed with status: {required_status}")
+            print(f"  ✓ All required patches ({', '.join(wanted)}) on {appliance_name} are installed with status: {required_status}")
             break
         else:
             missing = [pid for pid in wanted if pid not in status_by_id or not status_by_id[pid]]
@@ -787,7 +787,13 @@ def lab1_appliance_setup(state):
     for appliance_name, task_number in [('cm', 11), ('collector', 12)]:
         run_task(task_number, lambda: t_monitoring_patch_installation(appliance_name), state)
 
-
+    api = GuardiumRestAPI(
+        base_url='https://10.10.9.219:8443',
+        client_id='BOOTCAMP'
+    )
+    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
+    print("\nPolicy installation on collector")
+    result = api.install_policy("Log Everything", api_target_host="10.10.9.239")
     exit(0)
     
     
@@ -833,13 +839,7 @@ def lab2_gim(appliance=None):
 
     #print(output)
 
-    api = GuardiumRestAPI(
-        base_url='https://10.10.9.219:8443',
-        client_id='BOOTCAMP'
-    )
-    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
-    print("\n[LAB 1.22] Installation policy on collector")
-    result = api.install_policy("Log Everything", api_target_host="10.10.9.239")
+    
 
 
 
