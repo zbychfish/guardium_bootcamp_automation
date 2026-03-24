@@ -560,51 +560,8 @@ def t_create_demo_user(api):
         print(f"  ✓ Dashboard Training added to demo user UI")
     return None
 
-def lab1_appliance_setup(state):
-    """
-    LAB 1 - Konfiguracja appliance (collector).
-    """
-    
-    print("=" * 60)
-    print("LAB 1 - Appliance Setup")
-    print("=" * 60)
-    
-    run_task(1, lambda: t_password_change_on_appliances, state)
-    
-    appliance = create_appliance('collector_unconfigured')
-    if not appliance.connect():
-        print("  ✗ Failed to connect to collector")
-        return None
-    else:
-        print("    ✓ Connected to collector - OK")
-    
-
-    run_task(2, lambda: t_initial_collector_settings(appliance), state)
-    run_task(3, lambda: t_restart_system(appliance), state)
-    run_task(4, lambda: t_other_collector_settings(appliance), state)
-   
-    appliance.disconnect
-
-    appliance = create_appliance('cm')
-    if not appliance.connect():
-        print("  ✗ Failed to connect to CM")
-        return None
-    else:
-        print("    ✓ Connected to CM - OK")
-    
-    run_task(5, lambda: t_initial_cm_settings(appliance), state)
-    
-    appliance.disconnect
-
-    api = GuardiumRestAPI(
-        base_url='https://10.10.9.219:8443',
-        client_id='BOOTCAMP'
-    )
-    token = api.get_token(username='accessmgr', password=get_env_value('ACCESSMGR_PASSWORD'))
-
-    run_task(6, lambda: t_create_demo_user(appliance), state)
-    exit(0)
-    print("\n[LAB 1.17] Register collector to central manager")
+def t_register_collector(api):
+    print("\n[LAB 1.16] Register collector to central manager")
     units = api.get_registered_units()
     units = parse_mus_from_message_dict(units)
     out: List[Dict[str, Optional[str]]] = []
@@ -643,9 +600,65 @@ def lab1_appliance_setup(state):
         unit_data = parse_unit_summary(unit_data['Message'])
         print(unit_data)
         print(f"  ✓ Collector is already registered ")
+    return None
+
+def lab1_appliance_setup(state):
+    """
+    LAB 1 - Konfiguracja appliance (collector).
+    """
+    
+    print("=" * 60)
+    print("LAB 1 - Appliance Setup")
+    print("=" * 60)
+    
+    run_task(1, lambda: t_password_change_on_appliances, state)
+    
+    appliance = create_appliance('collector_unconfigured')
+    if not appliance.connect():
+        print("  ✗ Failed to connect to collector")
+        return None
+    else:
+        print("    ✓ Connected to collector - OK")
+    
+    run_task(2, lambda: t_initial_collector_settings(appliance), state)
+    run_task(3, lambda: t_restart_system(appliance), state)
+
+    appliance = create_appliance('collector_unconfigured')
+    if not appliance.connect():
+        print("  ✗ Failed to connect to collector")
+        return None
+    else:
+        print("    ✓ Connected to collector - OK")
+
+    run_task(4, lambda: t_other_collector_settings(appliance), state)
+   
+    appliance.disconnect
+
+    appliance = create_appliance('cm')
+    if not appliance.connect():
+        print("  ✗ Failed to connect to CM")
+        return None
+    else:
+        print("    ✓ Connected to CM - OK")
+    
+    run_task(5, lambda: t_initial_cm_settings(appliance), state)
+    
+    appliance.disconnect
+
+    api = GuardiumRestAPI(
+        base_url='https://10.10.9.219:8443',
+        client_id='BOOTCAMP'
+    )
+    token = api.get_token(username='accessmgr', password=get_env_value('ACCESSMGR_PASSWORD'))
+
+    run_task(6, lambda: t_create_demo_user(appliance), state)
+    run_task(7, lambda: t_register_collector(appliance), state)
+
+    exit(0)
+    
     
 
-    print("\n[LAB 1.18] Download and unpack patches locally")
+    print("\n[LAB 1.17] Download and unpack patches locally")
     target_dir = "/root/gn-trainings/appliance-patches"
     if not os.path.isdir(target_dir):
         os.makedirs(target_dir, exist_ok=True)
