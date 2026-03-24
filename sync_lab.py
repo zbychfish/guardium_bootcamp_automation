@@ -602,6 +602,135 @@ def t_register_collector(api):
         print(f"  ✓ Collector is already registered ")
     return None
 
+def t_preparing_appliances_for_patching(api):
+    print("\n[LAB 1.17] Download and unpack patches locally")
+    target_dir = "/root/gn-trainings/appliance-patches"
+    if not os.path.isdir(target_dir):
+        os.makedirs(target_dir, exist_ok=True)
+        filename = os.path.join(target_dir, os.path.basename("patches.zip"))
+        urllib.request.urlretrieve(get_env_value("PATCH_ARCHIVE"), filename)
+        with zipfile.ZipFile(filename, "r") as zipf:
+                zipf.extractall(path=target_dir)
+        print(f"  ✓ Patches extracted")
+        with zipfile.ZipFile(filename, "r") as zipf:
+            patch_list = sorted(zipf.namelist())
+
+        patch_order = get_env_value("PATCH_NAME_LIST").split(",")
+        pos = {name: i + 1 for i, name in enumerate(patch_order)}
+        order_numbers = [str(pos[name]) for name in patch_list if name in pos]
+        patch_installation_order = ",".join(order_numbers)
+        
+        print(f"  ✓ Patches already extracted")
+    
+    print("\n[LAB 1.18] Removing old patch archives on central manager")
+    result = api.patch_cleanup()   
+    print("    ✓ OK")
+
+
+    print("\n[LAB 1.19] Copying patches to central manager and collector")
+    patch_files = glob.glob('/root/gn-trainings/appliance-patches/patches/*.sig')
+    
+    if not patch_files:
+        print("  ✗ No patch files found in /root/gn-trainings/appliance-patches/patches/")
+        exit(1)
+    
+    print(f"  Found {len(patch_files)} patch files to copy")
+    all_success = True
+    for appl in ['10.10.9.219', '10.10.9.239']:
+        for patch_file in patch_files:
+            success = scp_file_as_root(
+                host=appl,
+                root_password=get_env_value("ROOT_PASSWORD"),
+                local_path=patch_file,
+                remote_path='/var/log/guard/patches/',
+                direction='put'
+            )
+            if not success:
+                all_success = False
+                break
+    if all_success:
+        print(f"  ✓ All {len(patch_files)} patches copied successfully")
+
+        print("\n[LAB 1.20] Changing ownership of patches to tomcat:tomcat")
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        for appl in ['10.10.9.219', '10.10.9.239']:
+            try:
+                client.connect(
+                    hostname=appl,
+                    username='root',
+                    password=get_env_value("ROOT_PASSWORD"),
+                    look_for_keys=False,
+                    allow_agent=False
+                )
+                stdin, stdout, stderr = client.exec_command('chown tomcat:tomcat /var/log/guard/patches/*.sig')
+                exit_status = stdout.channel.recv_exit_status()
+                if exit_status != 0:
+                    error = stderr.read().decode()
+                    print(f"  ✗ Failed to change ownership: {error}")
+                    exit(1)
+                client.close()
+            except Exception as e:
+                print(f"  ✗ Error changing ownership: {e}")
+                exit(1)
+        print(f"  ✓ Ownership changed to tomcat:tomcat")
+    else:
+        print("  ✗ Problem with copying of patches to central manager or collector")
+        exit(1)
+    return None
+
+def t_registering_patches_installation(appliance_name, appliance_ip, password):
+    appliance = create_appliance(appliance_name)
+    if not appliance.connect():
+        print(f"  ✗ Failed to connect to {appliance_name}")
+        return None
+    result = appliance.execute_command("show system patch available")
+    patch_order = ",".join(map(str, get_patch_line_numbers(result)))
+    print(patch_order)
+   
+    output = install_patch(
+        host=appliance_ip,
+        username='cli',
+        password=password,
+        patch_selection=patch_order,
+        reinstall_answer="y",
+        live_log=False
+    )
+
+    appliance.disconnect()
+
+def t_monitoring_patch_installation(appliance_name):
+    appliance = create_appliance(appliance_name)
+    if not appliance.connect():
+        print(f"  ✗ Failed to connect to {appliance_name}")
+        return None   
+    required_status = "DONE: Patch installation Succeeded."
+    while True:
+        result = appliance.execute_command("show system patch installed")
+        # Pobierz listę numerów patchy ze zmiennej środowiskowej (np. "9997,4015")
+        wanted = set(get_env_value("PATCH_LIST").split(","))
+        status_by_id = {}
+        for line in result.splitlines():
+            line = line.strip()
+            if not line or line.startswith("P#"):
+                continue
+            m = re.match(r"^(\d+)\b.*", line)
+            if not m:
+                continue
+            pid = m.group(1)
+            has_ok_status = required_status in line
+            status_by_id[pid] = has_ok_status        
+        # Sprawdź czy wszystkie wymagane patche są zainstalowane z poprawnym statusem
+        all_installed = all(pid in status_by_id and status_by_id[pid] for pid in wanted)
+        if all_installed:
+            print(f"  ✓ All required patches ({', '.join(wanted)}) are installed with status: {required_status}")
+            break
+        else:
+            missing = [pid for pid in wanted if pid not in status_by_id or not status_by_id[pid]]
+            print(f"  ⏳ Waiting for patches: {', '.join(missing)}")
+            time.sleep(10)
+    appliance.disconnect()
+
 def lab1_appliance_setup(state):
     """
     LAB 1 - Konfiguracja appliance (collector).
@@ -655,86 +784,22 @@ def lab1_appliance_setup(state):
 
     run_task(6, lambda: t_create_demo_user(api), state)
     run_task(7, lambda: t_register_collector(api), state)
+    run_task(8, lambda: t_preparing_appliances_for_patching(api), state)
+
+    print(f"\n[LAB 1.22] Register patches on appliances and start patching process")
+    for appliance_name, appliance_ip, password, task_number in [('cm', '10.10.9.219', get_env_value('CM_PASSWORD'), 9), ('collector', '10.10.9.239', get_env_value('COLLECTOR_PASSWORD'), 10)]:
+        run_task(task_number, lambda: t_registering_patches_installation(appliance_name, appliance_ip, password), state)
+
+    print("\n[LAB 1.23] Monitoring patch installation on appliances")
+    for appliance_name, task_number in [('cm', 11), ('collector', 12)]:
+        run_task(task_number, lambda: t_monitoring_patch_installation(appliance_name), state)
+
 
     exit(0)
     
     
 
-    print("\n[LAB 1.17] Download and unpack patches locally")
-    target_dir = "/root/gn-trainings/appliance-patches"
-    if not os.path.isdir(target_dir):
-        os.makedirs(target_dir, exist_ok=True)
-        filename = os.path.join(target_dir, os.path.basename("patches.zip"))
-        urllib.request.urlretrieve(get_env_value("PATCH_ARCHIVE"), filename)
-        with zipfile.ZipFile(filename, "r") as zipf:
-                zipf.extractall(path=target_dir)
-        print(f"  ✓ Patches extracted")
-        with zipfile.ZipFile(filename, "r") as zipf:
-            patch_list = sorted(zipf.namelist())
-
-        patch_order = get_env_value("PATCH_NAME_LIST").split(",")
-        pos = {name: i + 1 for i, name in enumerate(patch_order)}
-        order_numbers = [str(pos[name]) for name in patch_list if name in pos]
-        patch_installation_order = ",".join(order_numbers)
-        print("Patch installationoder", patch_installation_order)
-
-        print(f"  ✓ Patches already extracted")
     
-    print("\n[LAB 1.19] Removing old patch archives on central manager and collector")
-    result = api.patch_cleanup()   
-    print("    ✓ OK")
-
-
-    print("\n[LAB 1.20] Copying patches to central manager and collector")
-    patch_files = glob.glob('/root/gn-trainings/appliance-patches/patches/*.sig')
-    
-    if not patch_files:
-        print("  ✗ No patch files found in /root/gn-trainings/appliance-patches/patches/")
-        exit(1)
-    
-    print(f"  Found {len(patch_files)} patch files to copy")
-    all_success = True
-    for appl in ['10.10.9.219', '10.10.9.239']:
-        for patch_file in patch_files:
-            success = scp_file_as_root(
-                host=appl,
-                root_password=get_env_value("ROOT_PASSWORD"),
-                local_path=patch_file,
-                remote_path='/var/log/guard/patches/',
-                direction='put'
-            )
-            if not success:
-                all_success = False
-                break
-    if all_success:
-        print(f"  ✓ All {len(patch_files)} patches copied successfully")
-
-        print("\n[LAB 1.21] Changing ownership of patches to tomcat:tomcat")
-        client = paramiko.SSHClient()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        for appl in ['10.10.9.219', '10.10.9.239']:
-            try:
-                client.connect(
-                    hostname=appl,
-                    username='root',
-                    password=get_env_value("ROOT_PASSWORD"),
-                    look_for_keys=False,
-                    allow_agent=False
-                )
-                stdin, stdout, stderr = client.exec_command('chown tomcat:tomcat /var/log/guard/patches/*.sig')
-                exit_status = stdout.channel.recv_exit_status()
-                if exit_status != 0:
-                    error = stderr.read().decode()
-                    print(f"  ✗ Failed to change ownership: {error}")
-                    exit(1)
-                client.close()
-            except Exception as e:
-                print(f"  ✗ Error changing ownership: {e}")
-                exit(1)
-            print(f"  ✓ Ownership changed to tomcat:tomcat")
-    else:
-        print("  ✗ Problem with copying of patches to central manager")
-        exit(1)
     
 
     print("\n" + "=" * 60)
@@ -760,119 +825,13 @@ def lab2_gim(appliance=None):
 
         
     
-    appliance = create_appliance('cm')
-    if not appliance.connect():
-        print("  ✗ Failed to connect to collector")
-        return None
-    print("\n[LAB 1.22] Register patches on cm and start installation on cm")
-    result = appliance.execute_command("show system patch available")
-    patch_order = ",".join(map(str, get_patch_line_numbers(result)))
-    print(patch_order)
-   
-    output = install_patch(
-        host='10.10.9.219',
-        username='cli',
-        password=get_env_value('CM_PASSWORD'),
-        patch_selection=patch_order,
-        reinstall_answer="y",
-        live_log=False
-    )
-    appliance.disconnect()
+    
 
-    appliance = create_appliance('collector')
-    if not appliance.connect():
-        print("  ✗ Failed to connect to collector")
-        return None
-    print("\n[LAB 1.23] Register patches on cm and start installation on collector")
-    result = appliance.execute_command("show system patch available")
-    patch_order = ",".join(map(str, get_patch_line_numbers(result)))
-    print(patch_order)
-   
-    output = install_patch(
-        host='10.10.9.239',
-        username='cli',
-        password=get_env_value('COLLECTOR_PASSWORD'),
-        patch_selection=patch_order,
-        reinstall_answer="y",
-        live_log=False
-    )
-    appliance.disconnect()
+    
 
-    appliance = create_appliance('cm')
-    if not appliance.connect():
-        print("  ✗ Failed to connect to collector")
-        return None
-    print("\n[LAB 1.24] Monitoring patch installation on cm")
-    required_status = "DONE: Patch installation Succeeded."
-    while True:
-        result = appliance.execute_command("show system patch installed")
-        # Pobierz listę numerów patchy ze zmiennej środowiskowej (np. "9997,4015")
-        wanted = set(get_env_value("PATCH_LIST").split(","))
-        status_by_id = {}
-        
-        for line in result.splitlines():
-            line = line.strip()
-            if not line or line.startswith("P#"):
-                continue
-            m = re.match(r"^(\d+)\b.*", line)
-            if not m:
-                continue
-            pid = m.group(1)
-            has_ok_status = required_status in line
-            status_by_id[pid] = has_ok_status
-        
-        # Sprawdź czy wszystkie wymagane patche są zainstalowane z poprawnym statusem
-        all_installed = all(pid in status_by_id and status_by_id[pid] for pid in wanted)
-        
-        #print(result)
-        
-        if all_installed:
-            print(f"  ✓ All required patches ({', '.join(wanted)}) are installed with status: {required_status}")
-            break
-        else:
-            missing = [pid for pid in wanted if pid not in status_by_id or not status_by_id[pid]]
-            print(f"  ⏳ Waiting for patches: {', '.join(missing)}")
-            time.sleep(10)
+    
 
-    appliance.disconnect()
-
-    appliance = create_appliance('collector')
-    if not appliance.connect():
-        print("  ✗ Failed to connect to collector")
-        return None
-    print("\n[LAB 1.25] Monitoring patch installation on collector")
-    required_status = "DONE: Patch installation Succeeded."
-    while True:
-        result = appliance.execute_command("show system patch installed")
-        # Pobierz listę numerów patchy ze zmiennej środowiskowej (np. "9997,4015")
-        wanted = set(get_env_value("PATCH_LIST").split(","))
-        status_by_id = {}
-        
-        for line in result.splitlines():
-            line = line.strip()
-            if not line or line.startswith("P#"):
-                continue
-            m = re.match(r"^(\d+)\b.*", line)
-            if not m:
-                continue
-            pid = m.group(1)
-            has_ok_status = required_status in line
-            status_by_id[pid] = has_ok_status
-        
-        # Sprawdź czy wszystkie wymagane patche są zainstalowane z poprawnym statusem
-        all_installed = all(pid in status_by_id and status_by_id[pid] for pid in wanted)
-        
-        #print(result)
-        
-        if all_installed:
-            print(f"  ✓ All required patches ({', '.join(wanted)}) are installed with status: {required_status}")
-            break
-        else:
-            missing = [pid for pid in wanted if pid not in status_by_id or not status_by_id[pid]]
-            print(f"  ⏳ Waiting for patches: {', '.join(missing)}")
-            time.sleep(10)
-
-    appliance.disconnect()
+    
  
     # if output:
     #     print("  ✓ Patch installation completed")
