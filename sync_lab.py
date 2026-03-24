@@ -369,13 +369,12 @@ def save_state(state):
 def run_task(task_id, task_fn, state):
     if task_id in state["completed_tasks"]:
         print(f"Skipping {task_id}")
-        return
-        
+        return        
     print(f"Running {task_id}")
-    task_fn()
-
+    output = task_fn()
     state["completed_tasks"].append(task_id)
     save_state(state)
+    return output
 
 def t_password_change_on_appliances():
     print("\n[LAB 1.1] Password change for cli user on appliances")
@@ -605,35 +604,29 @@ def t_register_collector(api):
 def t_preparing_appliances_for_patching(api):
     print("\n[LAB 1.17] Download and unpack patches locally")
     target_dir = "/root/gn-trainings/appliance-patches"
-    if not os.path.isdir(target_dir):
-        os.makedirs(target_dir, exist_ok=True)
-        filename = os.path.join(target_dir, os.path.basename("patches.zip"))
-        urllib.request.urlretrieve(get_env_value("PATCH_ARCHIVE"), filename)
-        with zipfile.ZipFile(filename, "r") as zipf:
-                zipf.extractall(path=target_dir)
-        print(f"  ✓ Patches extracted")
-        with zipfile.ZipFile(filename, "r") as zipf:
-            patch_list = sorted(zipf.namelist())
-
-        patch_order = get_env_value("PATCH_NAME_LIST").split(",")
-        pos = {name: i + 1 for i, name in enumerate(patch_order)}
-        order_numbers = [str(pos[name]) for name in patch_list if name in pos]
-        patch_installation_order = ",".join(order_numbers)
+    os.makedirs(target_dir, exist_ok=True)
+    filename = os.path.join(target_dir, os.path.basename("patches.zip"))
+    urllib.request.urlretrieve(get_env_value("PATCH_ARCHIVE"), filename)
+    with zipfile.ZipFile(filename, "r") as zipf:
+            zipf.extractall(path=target_dir)
+    print(f"  ✓ Patches extracted")
+    with zipfile.ZipFile(filename, "r") as zipf:
+        patch_list = sorted(zipf.namelist())
+    patch_order = get_env_value("PATCH_NAME_LIST").split(",")
+    pos = {name: i + 1 for i, name in enumerate(patch_order)}
+    order_numbers = [str(pos[name]) for name in patch_list if name in pos]
+    patch_installation_order = ",".join(order_numbers)
         
-        print(f"  ✓ Patches already extracted")
-    
     print("\n[LAB 1.18] Removing old patch archives on central manager")
     result = api.patch_cleanup()   
     print("    ✓ OK")
-
-
+    
     print("\n[LAB 1.19] Copying patches to central manager and collector")
     patch_files = glob.glob('/root/gn-trainings/appliance-patches/patches/*.sig')
     
     if not patch_files:
         print("  ✗ No patch files found in /root/gn-trainings/appliance-patches/patches/")
-        exit(1)
-    
+        exit(1)    
     print(f"  Found {len(patch_files)} patch files to copy")
     all_success = True
     for appl in ['10.10.9.219', '10.10.9.239']:
@@ -677,7 +670,7 @@ def t_preparing_appliances_for_patching(api):
     else:
         print("  ✗ Problem with copying of patches to central manager or collector")
         exit(1)
-    return None
+    return patch_installation_order
 
 def t_registering_patches_installation(appliance_name, appliance_ip, password):
     appliance = create_appliance(appliance_name)
@@ -784,7 +777,7 @@ def lab1_appliance_setup(state):
 
     run_task(6, lambda: t_create_demo_user(api), state)
     run_task(7, lambda: t_register_collector(api), state)
-    run_task(8, lambda: t_preparing_appliances_for_patching(api), state)
+    patch_order = run_task(8, lambda: t_preparing_appliances_for_patching(api), state)
 
     print(f"\n[LAB 1.22] Register patches on appliances and start patching process")
     for appliance_name, appliance_ip, password, task_number in [('cm', '10.10.9.219', get_env_value('CM_PASSWORD'), 9), ('collector', '10.10.9.239', get_env_value('COLLECTOR_PASSWORD'), 10)]:
