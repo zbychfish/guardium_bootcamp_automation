@@ -438,7 +438,7 @@ def lab1_appliance_setup(state):
     print("LAB 1 - Appliance Setup")
     print("=" * 60)
     
-    run_task(1, t_password_change_on_appliances, state)
+    run_task(1, lambda: t_password_change_on_appliances, state)
     
     appliance = create_appliance('collector_unconfigured')
     if not appliance.connect():
@@ -446,8 +446,9 @@ def lab1_appliance_setup(state):
         return None
     else:
         print("    ✓ OK")
+    
 
-    run_task(2, t_initial_collector_settings(appliance), state)
+    run_task(2, lambda: t_initial_collector_settings(appliance), state)
     exit(0)
     print("\n[LAB 1.6] Restart system")
     result = appliance.execute_restart_with_check()
