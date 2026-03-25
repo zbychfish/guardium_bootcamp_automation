@@ -836,7 +836,7 @@ def lab2_gim(state):
             zipf.extractall(path=target_dir)
             print(f"  ✓ GIM installers extracted")
     filename = os.path.join(target_dir, os.path.basename("agents.zip"))
-    urllib.request.urlretrieve(get_env_value("https://ibm.box.com/v/gdpagentsv12"), filename)
+    urllib.request.urlretrieve(get_env_value("GIM_BUNDLES_ARCHIVE"), filename)
     with zipfile.ZipFile(filename, "r") as zipf:
             zipf.extractall(path=target_dir)
     print(f"  ✓ GIM modules extracted")
