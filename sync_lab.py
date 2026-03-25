@@ -738,6 +738,63 @@ def t_monitoring_patch_installation(appliance_name):
             time.sleep(10)
     appliance.disconnect()
 
+def t_getting_gim_files():
+    print("\nDownload and unpack gim installers and gim modules locally")
+    target_dir = "/root/gn-trainings"
+    os.makedirs(target_dir, exist_ok=True)
+    filename = os.path.join(target_dir, os.path.basename("gims.zip"))
+    urllib.request.urlretrieve(get_env_value("GIM_INSTALLERS_ARCHIVE"), filename)
+    with zipfile.ZipFile(filename, "r") as zipf:
+            zipf.extractall(path=target_dir)
+            print(f"  ✓ GIM installers extracted")
+    filename = os.path.join(target_dir, os.path.basename("agents.zip"))
+    urllib.request.urlretrieve(get_env_value("GIM_BUNDLES_ARCHIVE"), filename)
+    with zipfile.ZipFile(filename, "r") as zipf:
+            zipf.extractall(path=target_dir)
+    print(f"  ✓ GIM modules extracted")
+    
+    print("\nAdding execution flag to GIM installers")
+
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.connect(
+        hostname='10.10.9.70',
+        username='root',
+        password=get_env_value("RAPTOR_PASSWORD"),
+        look_for_keys=False,
+        allow_agent=False
+    )
+    stdin, stdout, stderr = client.exec_command('chmod 755 /root/gn-trainings/gim_installers/*.sh')
+    exit_status = stdout.channel.recv_exit_status()
+    if exit_status != 0:
+        error = stderr.read().decode()
+        print(f"  ✗ Failed to change files permisions: {error}")
+        exit(1)
+
+    print("\nRemoving zip files")
+    stdin, stdout, stderr = client.exec_command('rm -f /root/gn-trainings/*.zip')
+    exit_status = stdout.channel.recv_exit_status()
+    if exit_status != 0:
+        error = stderr.read().decode()
+        print(f"  ✗ Failed to remove zip archive: {error}")
+        exit(1)   
+    client.close()
+    return None
+
+def t_set_collector_resolving_on_raptor():
+    print("\nReslving collector on raptor")
+    HOSTS_FILE = Path("/etc/hosts")
+    old_ip = "10.10.9.239"
+    new_entry = "10.10.9.239\t coll1.gdemo.com coll1\n"
+    lines = HOSTS_FILE.read_text().splitlines(keepends=True)
+    updated = []
+    for line in lines:
+        if line.startswith(old_ip):
+            updated.append(new_entry)
+        else:
+            updated.append(line)
+    HOSTS_FILE.write_text("".join(updated))
+
 def lab1_appliance_setup(state):
     """
     LAB 1 - Konfiguracja appliance (collector).
@@ -811,7 +868,6 @@ def lab1_appliance_setup(state):
     
     return None
 
-
 def lab2_gim(state):
     """
     LAB 2 - Konfiguracja GIM (Group Identity Management).
@@ -826,72 +882,17 @@ def lab2_gim(state):
     print("LAB 2 - GIM Setup")
     print("=" * 60)
 
-        
-    print("\nDownload and unpack gim installers and gim modules locally")
-    target_dir = "/root/gn-trainings"
-    os.makedirs(target_dir, exist_ok=True)
-    filename = os.path.join(target_dir, os.path.basename("gims.zip"))
-    urllib.request.urlretrieve(get_env_value("GIM_INSTALLERS_ARCHIVE"), filename)
-    with zipfile.ZipFile(filename, "r") as zipf:
-            zipf.extractall(path=target_dir)
-            print(f"  ✓ GIM installers extracted")
-    filename = os.path.join(target_dir, os.path.basename("agents.zip"))
-    urllib.request.urlretrieve(get_env_value("GIM_BUNDLES_ARCHIVE"), filename)
-    with zipfile.ZipFile(filename, "r") as zipf:
-            zipf.extractall(path=target_dir)
-    print(f"  ✓ GIM modules extracted")
+    run_task(9, lambda: t_getting_gim_files(), state)
+
+    run_task(10, lambda: t_set_collector_resolving_on_raptor(), state)    
     
-    print("\nAdding execution flag to GIM installers")
-
-    client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    client.connect(
-        hostname='10.10.9.70',
-        username='root',
-        password=get_env_value("RAPTOR_PASSWORD"),
-        look_for_keys=False,
-        allow_agent=False
-    )
-    stdin, stdout, stderr = client.exec_command('chmod 755 /root/gn-trainings/gim_installers/*.sh')
-    exit_status = stdout.channel.recv_exit_status()
-    if exit_status != 0:
-        error = stderr.read().decode()
-        print(f"  ✗ Failed to change files permisions: {error}")
-        exit(1)
-
-    print("\nRemoving zip files")
-    stdin, stdout, stderr = client.exec_command('rm -f /root/gn-trainings/*.zip')
-    exit_status = stdout.channel.recv_exit_status()
-    if exit_status != 0:
-        error = stderr.read().decode()
-        print(f"  ✗ Failed to remove zip archive: {error}")
-        exit(1)   
-    client.close()
-    print(f"  ✓ Ownership changed to tomcat:tomcat")
     
-    print("\nReslving collector on raptor")
-    
-    HOSTS_FILE = Path("/etc/hosts")
-
-    old_ip = "10.10.9.239"
-    new_entry = "10.10.9.239\t coll1.gdemo.com coll1\n"
-
-    lines = HOSTS_FILE.read_text().splitlines(keepends=True)
-
-    updated = []
-    for line in lines:
-        if line.startswith(old_ip):
-            updated.append(new_entry)
-        else:
-            updated.append(line)
-
-    HOSTS_FILE.write_text("".join(updated))
 
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443',
         client_id='BOOTCAMP'
     )
-    token = api.get_token(username='demo', password=get_env_value('DEMO_PASSWORD'))
+    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
     api.get_gim_package(filename="/root/gn-trainings/*.gim")
 
     print("\n" + "=" * 60)
