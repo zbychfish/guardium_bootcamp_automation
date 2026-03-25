@@ -540,6 +540,7 @@ def t_initial_cm_settings(appliance):
 
 def t_create_demo_user(api):
     print("\nCreate demo user")
+    token = api.get_token(username='accessmgr', password=get_env_value('ACCESSMGR_PASSWORD'))
     users = api.get_users()
     print("  Current users:")
     for u in users:
@@ -576,6 +577,7 @@ def t_create_demo_user(api):
 
 def t_register_collector(api):
     print("\nRegister collector to central manager")
+    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
     units = api.get_registered_units()
     units = parse_mus_from_message_dict(units)
     out: List[Dict[str, Optional[str]]] = []
@@ -618,6 +620,7 @@ def t_register_collector(api):
 
 def t_preparing_appliances_for_patching(api):
     print("\nDownload and unpack patches locally")
+    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
     target_dir = "/root/gn-trainings/appliance-patches"
     os.makedirs(target_dir, exist_ok=True)
     filename = os.path.join(target_dir, os.path.basename("patches.zip"))
@@ -795,6 +798,11 @@ def t_set_collector_resolving_on_raptor():
             updated.append(line)
     HOSTS_FILE.write_text("".join(updated))
 
+def t_install_policy_on_collector(api):
+    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
+    print("\nPolicy installation on collector")
+    result = api.install_policy("Log Everything", api_target_host="10.10.9.239")
+
 def lab1_appliance_setup(state):
     """
     LAB 1 - Konfiguracja appliance (collector).
@@ -858,9 +866,7 @@ def lab1_appliance_setup(state):
     for appliance_name, task_number in [('cm', 11), ('collector', 12)]:
         run_task(task_number, lambda: t_monitoring_patch_installation(appliance_name), state)
 
-    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
-    print("\nPolicy installation on collector")
-    result = api.install_policy("Log Everything", api_target_host="10.10.9.239")
+    run_task(13, lambda: t_install_policy_on_collector(api), state)
     
     print("\n" + "=" * 60)
     print("LAB 1 - Appliance Setup completed!")
@@ -882,9 +888,9 @@ def lab2_gim(state):
     print("LAB 2 - GIM Setup")
     print("=" * 60)
 
-    run_task(9, lambda: t_getting_gim_files(), state)
+    run_task(14, lambda: t_getting_gim_files(), state)
 
-    run_task(10, lambda: t_set_collector_resolving_on_raptor(), state)    
+    run_task(15, lambda: t_set_collector_resolving_on_raptor(), state)    
     
     
 
