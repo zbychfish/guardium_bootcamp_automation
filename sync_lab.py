@@ -778,7 +778,7 @@ def t_getting_gim_files():
     patch_files = glob.glob('/root/gn-trainings/*.gim')
     
     if not patch_files:
-        print("  ✗ No patch files found in /root/gn-trainings/appliance-patches/patches/")
+        print("  ✗ gim files found in /root/gn-trainings/")
         exit(1)    
     print(f"  Found {len(patch_files)} patch files to copy")
     all_success = True
@@ -802,14 +802,14 @@ def t_getting_gim_files():
     exit_status = stdout.channel.recv_exit_status()
     if exit_status != 0:
         error = stderr.read().decode()
-        print(f"  ✗ Failed to remove zip archive: {error}")
+        print(f"  ✗ Failed to remove zip archives: {error}")
         exit(1)
     print("\nRemoving gim files")
     stdin, stdout, stderr = client.exec_command('rm -f /root/gn-trainings/*.gim')
     exit_status = stdout.channel.recv_exit_status()
     if exit_status != 0:
         error = stderr.read().decode()
-        print(f"  ✗ Failed to remove zip archive: {error}")
+        print(f"  ✗ Failed to remove gim files: {error}")
         exit(1) 
     client.close()
     return None
@@ -832,6 +832,10 @@ def t_install_policy_on_collector(api):
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
     print("\nPolicy installation on collector")
     result = api.install_policy("Log Everything", api_target_host="10.10.9.239")
+
+def t_import_gim_modules(api):
+    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
+    api.get_gim_package(filename="/root/gn-trainings/*.gim")
 
 def lab1_appliance_setup(state):
     """
@@ -904,6 +908,8 @@ def lab1_appliance_setup(state):
     
     return None
 
+
+
 def lab2_gim(state):
     """
     LAB 2 - Konfiguracja GIM (Group Identity Management).
@@ -918,20 +924,22 @@ def lab2_gim(state):
     print("LAB 2 - GIM Setup")
     print("=" * 60)
 
+    api = GuardiumRestAPI(
+        base_url='https://10.10.9.219:8443',
+        client_id='BOOTCAMP'
+    )
+
     run_task(14, lambda: t_set_collector_resolving_on_raptor(), state)
 
     run_task(15, lambda: t_getting_gim_files(), state)
+
+    run_task('import_gim_files_on_cm', lambda: t_import_gim_modules(api), state)
 
         
     
     
 
-    # api = GuardiumRestAPI(
-    #     base_url='https://10.10.9.219:8443',
-    #     client_id='BOOTCAMP'
-    # )
-    # token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
-    # api.get_gim_package(filename="/root/gn-trainings/*.gim")
+    
 
     # print("\n" + "=" * 60)
     # print("All labs completed!")
