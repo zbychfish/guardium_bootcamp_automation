@@ -827,14 +827,19 @@ def lab2_gim(state):
     print("=" * 60)
 
         
-    print("\nDownload and unpack gim installers locally")
+    print("\nDownload and unpack gim installers and gim modules locally")
     target_dir = "/root/gn-trainings"
     os.makedirs(target_dir, exist_ok=True)
     filename = os.path.join(target_dir, os.path.basename("gims.zip"))
     urllib.request.urlretrieve(get_env_value("GIM_INSTALLERS_ARCHIVE"), filename)
     with zipfile.ZipFile(filename, "r") as zipf:
             zipf.extractall(path=target_dir)
-    print(f"  ✓ GIM installers extracted")
+            print(f"  ✓ GIM installers extracted")
+    filename = os.path.join(target_dir, os.path.basename("agents.zip"))
+    urllib.request.urlretrieve(get_env_value("https://ibm.box.com/v/gdpagentsv12"), filename)
+    with zipfile.ZipFile(filename, "r") as zipf:
+            zipf.extractall(path=target_dir)
+    print(f"  ✓ GIM modules extracted")
     
     print("\nAdding execution flag to GIM installers")
 
@@ -853,6 +858,8 @@ def lab2_gim(state):
         error = stderr.read().decode()
         print(f"  ✗ Failed to change files permisions: {error}")
         exit(1)
+
+    print("\nRemoving zip files")
     stdin, stdout, stderr = client.exec_command('rm -f /root/gn-trainings/*.zip')
     exit_status = stdout.channel.recv_exit_status()
     if exit_status != 0:
@@ -862,6 +869,7 @@ def lab2_gim(state):
     client.close()
     print(f"  ✓ Ownership changed to tomcat:tomcat")
     
+    print("\nReslving collector on raptor")
     
     HOSTS_FILE = Path("/etc/hosts")
 
