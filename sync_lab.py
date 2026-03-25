@@ -835,7 +835,7 @@ def t_install_policy_on_collector(api):
 
 def t_import_gim_modules(api):
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
-    api.get_gim_package(filename="/root/gn-trainings/*.gim")
+    api.get_gim_package(filename="*.gim")
 
 def lab1_appliance_setup(state):
     """
