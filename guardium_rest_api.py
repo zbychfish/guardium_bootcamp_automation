@@ -435,6 +435,35 @@ class GuardiumRestAPI:
         response.raise_for_status()
         
         return response.json()
+    
+    def get_gim_package(self, filename: str) -> dict:
+        """
+        Pobiera pakiet GIM (Group Identity Management) z Guardium.
+        
+        Args:
+            filename: Nazwa pliku pakietu GIM (wymagane)
+        
+        Returns:
+            Słownik z odpowiedzią API zawierający informacje o pakiecie GIM
+        
+        Raises:
+            RuntimeError: Jeśli token nie został jeszcze pobrany
+            requests.exceptions.RequestException: W przypadku błędu HTTP
+        
+        Example:
+            api.get_gim_package("gim_package_name.tar.gz")
+        """
+        url = f'{self.base_url}/restAPI/gim_package'
+        headers = self.get_headers()
+        
+        params = {
+            'filename': filename
+        }
+        
+        response = requests.get(url, headers=headers, params=params, verify=self.verify_ssl)
+        response.raise_for_status()
+        
+        return response.json()
 
 
 # Made with Bob

@@ -874,7 +874,7 @@ def lab2_gim(state):
     HOSTS_FILE = Path("/etc/hosts")
 
     old_ip = "10.10.9.239"
-    new_entry = "10.10.9.239 raptor.gdemo.com raptor\n"
+    new_entry = "10.10.9.239\t coll1.gdemo.com coll1\n"
 
     lines = HOSTS_FILE.read_text().splitlines(keepends=True)
 
@@ -887,8 +887,13 @@ def lab2_gim(state):
 
     HOSTS_FILE.write_text("".join(updated))
 
+    api = GuardiumRestAPI(
+        base_url='https://10.10.9.219:8443',
+        client_id='BOOTCAMP'
+    )
+    token = api.get_token(username='demo', password=get_env_value('DEMO_PASSWORD'))
+    api.get_gim_package(filename="/root/gn-trainings/*.gim")
 
-    
     print("\n" + "=" * 60)
     print("All labs completed!")
     print("=" * 60)
