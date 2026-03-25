@@ -20,6 +20,7 @@ import sys
 import traceback
 import zipfile
 import glob
+from pathlib import Path
 
 
 
@@ -861,6 +862,22 @@ def lab2_gim(state):
     client.close()
     print(f"  ✓ Ownership changed to tomcat:tomcat")
     
+    
+    HOSTS_FILE = Path("/etc/hosts")
+
+    old_ip = "10.10.9.239"
+    new_entry = "10.10.9.239 raptor.gdemo.com raptor\n"
+
+    lines = HOSTS_FILE.read_text().splitlines(keepends=True)
+
+    updated = []
+    for line in lines:
+        if line.startswith(old_ip):
+            updated.append(new_entry)
+        else:
+            updated.append(line)
+
+    HOSTS_FILE.write_text("".join(updated))
 
 
     
