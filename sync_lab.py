@@ -846,7 +846,7 @@ def lab1_appliance_setup(state):
     print("LAB 1 - Appliance Setup")
     print("=" * 60)
     
-    run_task(1, lambda: t_password_change_on_appliances, state)
+    run_task('cli_users_password_change_on_appliances', lambda: t_password_change_on_appliances, state)
     if 4 not in state["completed_tasks"]:
         appliance = create_appliance('collector_unconfigured')
         if not appliance.connect():
@@ -855,10 +855,10 @@ def lab1_appliance_setup(state):
         else:
             print("    ✓ Connected to collector - OK")
     
-    run_task(2, lambda: t_initial_collector_settings(appliance), state)
-    run_task(3, lambda: t_restart_system(appliance), state)
+    run_task('initial_collector_settings', lambda: t_initial_collector_settings(appliance), state)
+    run_task('restart_collector', lambda: t_restart_system(appliance), state)
 
-    if 4 not in state["completed_tasks"]:
+    if 'other_collector_settings' not in state["completed_tasks"]:
         appliance = create_appliance('collector_unconfigured')
         if not appliance.connect():
             print("  ✗ Failed to connect to collector")
@@ -866,9 +866,9 @@ def lab1_appliance_setup(state):
         else:
             print("    ✓ Connected to collector - OK")
 
-    run_task(4, lambda: t_other_collector_settings(appliance), state)
+    run_task('other_collector_settings', lambda: t_other_collector_settings(appliance), state)
    
-    if 4 not in state["completed_tasks"]:
+    if 'other_collector_settings' not in state["completed_tasks"]:
         appliance.disconnect
 
     appliance = create_appliance('cm')
@@ -878,7 +878,7 @@ def lab1_appliance_setup(state):
     else:
         print("    ✓ Connected to CM - OK")
     
-    run_task(5, lambda: t_initial_cm_settings(appliance), state)
+    run_task('initial_cm_settings', lambda: t_initial_cm_settings(appliance), state)
     
     appliance.disconnect
 
@@ -886,29 +886,26 @@ def lab1_appliance_setup(state):
         base_url='https://10.10.9.219:8443',
         client_id='BOOTCAMP'
     )
-    token = api.get_token(username='accessmgr', password=get_env_value('ACCESSMGR_PASSWORD'))
-
-    run_task(6, lambda: t_create_demo_user(api), state)
-    run_task(7, lambda: t_register_collector(api), state)
-    run_task(8, lambda: t_preparing_appliances_for_patching(api), state)
+    
+    run_task('create_demo_user', lambda: t_create_demo_user(api), state)
+    run_task('register_collector', lambda: t_register_collector(api), state)
+    run_task('prepare_appliances_for_patching', lambda: t_preparing_appliances_for_patching(api), state)
 
     print(f"\nRegister patches on appliances and start patching process")
-    for appliance_name, appliance_ip, password, task_number in [('cm', '10.10.9.219', get_env_value('CM_PASSWORD'), 9), ('collector', '10.10.9.239', get_env_value('COLLECTOR_PASSWORD'), 10)]:
+    for appliance_name, appliance_ip, password, task_number in [('cm', '10.10.9.219', get_env_value('CM_PASSWORD'), 'register_patches_on_cm'), ('collector', '10.10.9.239', get_env_value('COLLECTOR_PASSWORD'), 'register_patches_on_collector')]:
         run_task(task_number, lambda: t_registering_patches_installation(appliance_name, appliance_ip, password), state)
 
     print("\nMonitoring patch installation on appliances")
-    for appliance_name, task_number in [('cm', 11), ('collector', 12)]:
+    for appliance_name, task_number in [('cm', 'monitor_patch_installation_on_cm'), ('collector', 'monitor_patch_installation_on_collector')]:
         run_task(task_number, lambda: t_monitoring_patch_installation(appliance_name), state)
 
-    run_task(13, lambda: t_install_policy_on_collector(api), state)
+    run_task('policy_installation_on_collector', lambda: t_install_policy_on_collector(api), state)
     
     print("\n" + "=" * 60)
     print("LAB 1 - Appliance Setup completed!")
     print("=" * 60)
     
     return None
-
-
 
 def lab2_gim(state):
     """
@@ -929,21 +926,15 @@ def lab2_gim(state):
         client_id='BOOTCAMP'
     )
 
-    run_task(14, lambda: t_set_collector_resolving_on_raptor(), state)
+    run_task('resolving_collector_on_raptor', lambda: t_set_collector_resolving_on_raptor(), state)
 
-    run_task(15, lambda: t_getting_gim_files(), state)
+    run_task('getting_gim_files', lambda: t_getting_gim_files(), state)
 
-    run_task('import_gim_files_on_cm', lambda: t_import_gim_modules(api), state)
+    run_task('import_gim_files_on_cm', lambda: t_import_gim_modules(api), state) 
 
-        
-    
-    
-
-    
-
-    # print("\n" + "=" * 60)
-    # print("All labs completed!")
-    # print("=" * 60)
+    print("\n" + "=" * 60)
+    print("All labs completed!")
+    print("=" * 60)
 
 
 def sync_lab(state, skip_below: int = 0):
@@ -960,12 +951,18 @@ def sync_lab(state, skip_below: int = 0):
     # LAB 1: Appliance Setup
     if skip_below < 1:
         lab1_appliance_setup(state)
+        print("\n" + "=" * 60)
+        print("LAB 1 completed!")
+        print("=" * 60)
     else:
         print("\n[LAB 1] SKIPPED - Appliance setup")
     
     # LAB 2: GIM Setup
     if skip_below < 2:
         lab2_gim(state)
+        print("\n" + "=" * 60)
+        print("LAB 2 completed!")
+        print("=" * 60)
     else:
         print("\n[LAB 2] SKIPPED - GIM setup")
     
@@ -976,15 +973,6 @@ def sync_lab(state, skip_below: int = 0):
     else:
         print("\n[LAB 3] SKIPPED")
     
-    print("\n" + "=" * 60)
-    print("LAB 1 completed!")
-    print("=" * 60)
-    
-
-
-
-
-
 
 
 if __name__ == "__main__":
