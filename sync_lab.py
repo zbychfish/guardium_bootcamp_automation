@@ -774,13 +774,43 @@ def t_getting_gim_files():
         print(f"  ✗ Failed to change files permisions: {error}")
         exit(1)
 
+    print("\nCopying gim modules to central manager")
+    patch_files = glob.glob('/root/gn-trainings/*.gim')
+    
+    if not patch_files:
+        print("  ✗ No patch files found in /root/gn-trainings/appliance-patches/patches/")
+        exit(1)    
+    print(f"  Found {len(patch_files)} patch files to copy")
+    all_success = True
+
+    for patch_file in patch_files:
+        success = scp_file_as_root(
+            host='10.10.9.219',
+            root_password=get_env_value("ROOT_PASSWORD"),
+            local_path=patch_file,
+            remote_path='/var/dump/',
+            direction='put'
+        )
+        if not success:
+            all_success = False
+            break
+    if all_success:
+        print(f"  ✓ All {len(patch_files)} patches copied successfully")
+
     print("\nRemoving zip files")
     stdin, stdout, stderr = client.exec_command('rm -f /root/gn-trainings/*.zip')
     exit_status = stdout.channel.recv_exit_status()
     if exit_status != 0:
         error = stderr.read().decode()
         print(f"  ✗ Failed to remove zip archive: {error}")
-        exit(1)   
+        exit(1)
+    print("\nRemoving gim files")
+    stdin, stdout, stderr = client.exec_command('rm -f /root/gn-trainings/*.gim')
+    exit_status = stdout.channel.recv_exit_status()
+    if exit_status != 0:
+        error = stderr.read().decode()
+        print(f"  ✗ Failed to remove zip archive: {error}")
+        exit(1) 
     client.close()
     return None
 
@@ -888,22 +918,24 @@ def lab2_gim(state):
     print("LAB 2 - GIM Setup")
     print("=" * 60)
 
-    run_task(14, lambda: t_getting_gim_files(), state)
+    run_task(14, lambda: t_set_collector_resolving_on_raptor(), state)
 
-    run_task(15, lambda: t_set_collector_resolving_on_raptor(), state)    
+    run_task(15, lambda: t_getting_gim_files(), state)
+
+        
     
     
 
-    api = GuardiumRestAPI(
-        base_url='https://10.10.9.219:8443',
-        client_id='BOOTCAMP'
-    )
-    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
-    api.get_gim_package(filename="/root/gn-trainings/*.gim")
+    # api = GuardiumRestAPI(
+    #     base_url='https://10.10.9.219:8443',
+    #     client_id='BOOTCAMP'
+    # )
+    # token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
+    # api.get_gim_package(filename="/root/gn-trainings/*.gim")
 
-    print("\n" + "=" * 60)
-    print("All labs completed!")
-    print("=" * 60)
+    # print("\n" + "=" * 60)
+    # print("All labs completed!")
+    # print("=" * 60)
 
 
 def sync_lab(state, skip_below: int = 0):
