@@ -840,9 +840,9 @@ def lab2_gim(state):
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     client.connect(
-        hostname='10.10.9.219',
+        hostname='10.10.9.70',
         username='root',
-        password=get_env_value("ROOT_PASSWORD"),
+        password=get_env_value("RAPTOR_PASSWORD"),
         look_for_keys=False,
         allow_agent=False
     )
