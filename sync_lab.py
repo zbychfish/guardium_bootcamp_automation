@@ -999,7 +999,11 @@ def lab4_atap(state):
     print("\n Create postgres admin users")
     conn = psycopg2.connect(dbname="postgres", user= "postgres", password="guardium", host="localhost", port=5432)
     cur = conn.cursor()
-    print(cur.execute("SELECT version();"))
+    cur.execute(f"CREATE ROLE tom PASSWORD '{get_env_value('DEFAULT_SERVICE_PASSWORD')}' SUPERUSER CREATEDB CREATEROLE INHERIT LOGIN;")
+    cur.execute(f"CREATE ROLE jerry PASSWORD '{get_env_value('DEFAULT_SERVICE_PASSWORD')}' SUPERUSER CREATEDB CREATEROLE INHERIT LOGIN;")
+    cur.execute("SELECT version();")
+    print(cur.fetchone())
+
 
 
 
