@@ -957,19 +957,19 @@ def lab4_atap(state):
     files = glob.glob("/var/lib/pgsql/data/pgsql.*")
     subprocess.run(["chown", "postgres:postgres"] + files, check=True)
     print("\n Change postgres configuration")
-    conf = Path("/var/lib/pgsql/data/postgresql.conf")
-    lines = []
-    with conf.open() as f:
-        for line in f:
-            if re.match(r"^\s*#?\s*ssl = off\s*$", line):
-                line = "ssl = on\n"
-            elif re.match(r"^\s*#?\s*ssl_cert_file\s*$", line):
-                line = "ssl_cert_file = '/var/lib/pgsql/data/pgsql.crt'\n"
-            elif re.match(r"^\s*#?\s*ssl_key_file\s*$", line):
-                line = "ssl_key_file = '/var/lib/pgsql/data/pgsql.key'\n"
-            else:
-                lines.append(line)
-    conf.write_text("".join(lines))
+    # conf = Path("/var/lib/pgsql/data/postgresql.conf")
+    # lines = []
+    # with conf.open() as f:
+    #     for line in f:
+    #         if re.match(r"^\s*#?\s*ssl = off\s*$", line):
+    #             line = "ssl = on\n"
+    #         elif re.match(r"^\s*#?\s*ssl_cert_file\s*$", line):
+    #             line = "ssl_cert_file = '/var/lib/pgsql/data/pgsql.crt'\n"
+    #         elif re.match(r"^\s*#?\s*ssl_key_file\s*$", line):
+    #             line = "ssl_key_file = '/var/lib/pgsql/data/pgsql.key'\n"
+    #         else:
+    #             lines.append(line)
+    # conf.write_text("".join(lines))
 
     conf = Path("/var/lib/pgsql/data/pg_hba.conf")
     lines = []
