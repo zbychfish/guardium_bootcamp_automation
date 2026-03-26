@@ -1022,6 +1022,11 @@ def lab4_atap(state):
         module="BUNDLE-STAP",
         module_version="12.2.0.0_r121306_5"
     )
+    api.gim_client_params(
+        client_ip="10.10.9.70",
+        param_name="STAP_SQLGUARD_IP",
+        param_value="10.10.9.239"
+    )
     api.gim_schedule_install(
         client_ip="10.10.9.70",
         date="now",
@@ -1054,7 +1059,11 @@ def lab4_atap(state):
             "schedule_time": g(r"IS_SCHEDULED:\s+[NY]\s+\(([^)]+)\)")
         })
 
-    return result
+    print(result)
+    
+    pending = [m for m in modules if m["state"] != "INSTALLED"]
+    print(pending)
+
 
     print("\n" + "=" * 60)
     print("All labs completed!")

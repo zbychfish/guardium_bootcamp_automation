@@ -586,6 +586,58 @@ class GuardiumRestAPI:
         response.raise_for_status()
         
         return response.json()
+    def gim_client_params(
+        self,
+        client_ip: str,
+        param_name: str,
+        param_value: Optional[str] = None
+    ) -> dict:
+        """
+        Ustawia parametry klienta GIM.
+        
+        Args:
+            client_ip: Adres IP klienta docelowego (wymagane)
+            param_name: Nazwa parametru (wymagane)
+            param_value: Wartość parametru (opcjonalne)
+        
+        Returns:
+            Słownik z odpowiedzią API
+        
+        Raises:
+            RuntimeError: Jeśli token nie został jeszcze pobrany
+            requests.exceptions.RequestException: W przypadku błędu HTTP
+        
+        Example:
+            # Ustaw parametr z wartością
+            api.gim_client_params(
+                client_ip="10.10.9.100",
+                param_name="connection_timeout",
+                param_value="30"
+            )
+            
+            # Ustaw parametr bez wartości
+            api.gim_client_params(
+                client_ip="10.10.9.100",
+                param_name="enable_ssl"
+            )
+        """
+        url = f'{self.base_url}/restAPI/gim_client_params'
+        headers = self.get_headers()
+        
+        data = {
+            'clientIP': client_ip,
+            'paramName': param_name
+        }
+        
+        # Dodaj opcjonalny parametr paramValue
+        if param_value is not None:
+            data['paramValue'] = param_value
+        
+        response = requests.put(url, json=data, headers=headers, verify=self.verify_ssl)
+        response.raise_for_status()
+        
+        return response.json()
+
 
 
 
