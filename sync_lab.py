@@ -844,6 +844,50 @@ def t_import_gim_modules(api):
 def t_postgres_installation():
     print("\n Postgres 16 installation")
     subprocess.run(["dnf", "-y", "install", "@postgresql:16"], check=True)
+    print("\n Postgres database initialization")
+    subprocess.run(["postgresql-setup", "--initdb", '--unit', 'postgresql'], check=True)
+    print("\n Set postgres user password")
+    subprocess.run(["chpasswd"], input=f"postgres:{get_env_value('DEFAULT_SERVICE_PASSWORD')}", text=True, check=True)
+    print("\n Create certificate for postgres")
+    subprocess.run(["openssl", "req", "-new", "-x509", "-days", "365", "-nodes", "-text", "-out", "/var/lib/pgsql/data/pgsql.crt", "-keyout", "/var/lib/pgsql/data/pgsql.key", "-subj", "/CN=raptor.demo.com"], check=True)
+    files = glob.glob("/var/lib/pgsql/data/pgsql.*")
+    subprocess.run(["chown", "postgres:postgres"] + files, check=True)
+    print("\n Change postgres configuration")
+    conf = Path("/var/lib/pgsql/data/postgresql.conf")
+    lines = []
+    with conf.open() as f:
+        for line in f:
+            if re.match(r"^\s*#\s*ssl\s*=\s*off\s*$", line):
+                line = "ssl = on\n"
+            elif re.match(r"^\s*#?\s*ssl_cert_file\s*=\s*'[^']+'\s*$", line):
+                line = "ssl_cert_file = '/var/lib/pgsql/data/pgsql.crt'\n"
+            elif re.match(r"^\s*#?\s*ssl_key_file\s*=\s*'[^']+'\s*$", line):
+                line = "ssl_key_file = '/var/lib/pgsql/data/pgsql.key'\n"
+            lines.append(line)
+    conf.write_text("".join(lines))
+
+    conf = Path("/var/lib/pgsql/data/pg_hba.conf")
+    lines = []
+    with conf.open() as f:
+        for line in f:
+            if re.match(r"^\s*local\s+all\s+all\s+peer\s*$", line):
+                line = "local   all             all                                     ident\n"
+            elif re.match(r"^\s*host\s+all\s+all\s+127\.0\.0\.1/32\s+ident\s*$", line):
+                lines.append("host    all             all             127.0.0.1/32            scram-sha-256\n")
+                line = "host    all             all             10.10.9.0/24            scram-sha-256\n"
+            elif re.match(r"^\s*#\s*listen_addresses\s*=\s*'localhost'\s*$", line):
+                line = "listen_addresses = '*'\n"
+            lines.append(line)
+    conf.write_text("".join(lines))
+    print("\n Start postgres service")
+    subprocess.run(["systemctl", "start", 'postgresql.service'], check=True)
+    print("\n Enable postgres service")
+    subprocess.run(["systemctl", "enable", 'postgresql.service'], check=True)
+
+    print("\n Set postgres user password in database")
+    sql = "ALTER USER postgres WITH PASSWORD '{}';".format(get_env_value("DEFAULT_SERVICE_PASSWORD"))
+    subprocess.run(["sudo", "-u", "postgres", "psql", "-d", "postgres", "-U", "postgres", "-c",  sql], check=True)
+
     
 def lab1_appliance_setup(state):
     """
@@ -949,56 +993,13 @@ def lab4_atap(state):
     print("LAB 2 - GIM Setup")
     print("=" * 60)
 
+    run_task('installin psql on raptor', lambda: t_postgres_installation(), state)
 
     
-    print("\n Postgres database initialization")
-    subprocess.run(["postgresql-setup", "--initdb", '--unit', 'postgresql'], check=True)
-    print("\n Set postgres user password")
-    subprocess.run(["chpasswd"], input=f"postgres:{get_env_value('DEFAULT_SERVICE_PASSWORD')}", text=True, check=True)
-    print("\n Create certificate for postgres")
-    subprocess.run(["openssl", "req", "-new", "-x509", "-days", "365", "-nodes", "-text", "-out", "/var/lib/pgsql/data/pgsql.crt", "-keyout", "/var/lib/pgsql/data/pgsql.key", "-subj", "/CN=raptor.demo.com"], check=True)
-    files = glob.glob("/var/lib/pgsql/data/pgsql.*")
-    subprocess.run(["chown", "postgres:postgres"] + files, check=True)
-    print("\n Change postgres configuration")
-    conf = Path("/var/lib/pgsql/data/postgresql.conf")
-    lines = []
-    with conf.open() as f:
-        for line in f:
-            if re.match(r"^\s*#\s*ssl\s*=\s*off\s*$", line):
-                line = "ssl = on\n"
-            elif re.match(r"^\s*#?\s*ssl_cert_file\s*=\s*'[^']+'\s*$", line):
-                line = "ssl_cert_file = '/var/lib/pgsql/data/pgsql.crt'\n"
-            elif re.match(r"^\s*#?\s*ssl_key_file\s*=\s*'[^']+'\s*$", line):
-                line = "ssl_key_file = '/var/lib/pgsql/data/pgsql.key'\n"
-            lines.append(line)
-    conf.write_text("".join(lines))
-
-    conf = Path("/var/lib/pgsql/data/pg_hba.conf")
-    lines = []
-    with conf.open() as f:
-        for line in f:
-            if re.match(r"^\s*local\s+all\s+all\s+peer\s*$", line):
-                line = "local   all             all                                     ident\n"
-            elif re.match(r"^\s*host\s+all\s+all\s+127\.0\.0\.1/32\s+ident\s*$", line):
-                lines.append("host    all             all             127.0.0.1/32            scram-sha-256\n")
-                line = "host    all             all             10.10.9.0/24            scram-sha-256\n"
-            elif re.match(r"^\s*#\s*listen_addresses\s*=\s*'localhost'\s*$", line):
-                line = "listen_addresses = '*'\n"
-            lines.append(line)
-    conf.write_text("".join(lines))
-    print("\n Start postgres service")
-    subprocess.run(["systemctl", "start", 'postgresql.service'], check=True)
-    print("\n Enable postgres service")
-    subprocess.run(["systemctl", "enable", 'postgresql.service'], check=True)
-
-    print("\n Set postgres user password in database")
-    sql = "ALTER USER postgres WITH PASSWORD '{}';".format(get_env_value("DEFAULT_SERVICE_PASSWORD"))
-    subprocess.run(["sudo", "-u", "postgres", "psql", "-d", "postgres", "-U", "postgres", "-c",  sql], check=True)
-
     print("\n Create postgres admin users")
     conn = psycopg2.connect(dbname="postgres", user= "postgres", password="guardium", host="localhost", port=5432)
     cur = conn.cursor()
-    cur.execute("SELECT version();")
+    print(cur.execute("SELECT version();"))
 
 
 
