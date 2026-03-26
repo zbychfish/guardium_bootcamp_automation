@@ -1072,9 +1072,14 @@ def lab4_atap(state):
     )
 
     run_task('install_stap_on_raptor', lambda: t_install_stap_on_raptor(api), state)
-
     
-
+    print("\n ATAP setup for postgres on raptor")
+    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "--db-user=postgres", "--db-home=/usr", "--db-user-dir=/var/lib/pgsql", "--db-type=postgres", "--db-instance=postgres", "--db-version=16", "store-conf"], check=True)
+    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "authorize-user", "postgres"], check=True)
+    subprocess.run(["systemctl", "stop", "postgresql"], check=True)
+    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "--db-instance=postgres", "activate"], check=True)
+    subprocess.run(["systemctl", "start", "postgresql"], check=True)
+    
 
     print("\n" + "=" * 60)
     print("All labs completed!")
