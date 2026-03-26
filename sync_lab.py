@@ -948,19 +948,18 @@ def lab4_atap(state):
     subprocess.run(["dnf", "-y", "install", "@postgresql:16"], check=True)
     print("\n Postgres database initialization")
     subprocess.run(["postgresql-setup", "--initdb", '--unit', 'postgresql'], check=True)
-    print("\n Enable postgres service")
-    subprocess.run(["systemctl", "enable", 'postgresql.service'], check=True)
     print("\n Set postgres user password")
     subprocess.run(["chpasswd"], input=f"postgres:{get_env_value('DEFAULT_SERVICE_PASSWORD')}", text=True, check=True)
     print("\n Create certificate for postgres")
     subprocess.run(["openssl", "req", "-new", "-x509", "-days", "365", "-nodes", "-text", "-out", "/var/lib/pgsql/data/pgsql.crt", "-keyout", "/var/lib/pgsql/data/pgsql.key", "-subj", "/CN=raptor.demo.com"], check=True)
     files = glob.glob("/var/lib/pgsql/data/pgsql.*")
     subprocess.run(["chown", "postgres:postgres"] + files, check=True)
-
+    print("\n Change postgres configuration")
     conf = Path("/var/lib/pgsql/data/postgresql.conf")
     lines = []
     with conf.open() as f:
         for line in f:
+
             if re.match(r"^\s*#?\s*ssl\s*=", line):
                 lines.append("ssl = on\n")
             elif re.match(r"^\s*#?\s*ssl_cert_file\s*=", line):
@@ -978,11 +977,17 @@ def lab4_atap(state):
             if re.match(r"^\s*local\s+all\s+all\s+peer\s*$", line):
                 lines.append("local   all             all                                     ident")
             if re.match(r"^\s*host\s+all\s+all\s+127\.0\.0\.1/32\s+ident\s*$", line):
-                lines.append("host    all             all             127.0.0.1/32            scram-sha-256\nhost    all             all             10.10.9.0/24            scram-sha-256")
+                lines.append("host    all             all             127.0.0.1/32            scram-sha-256\n")
+                lines.append("host    all             all             10.10.9.0/24            scram-sha-256\n")
+            if re.match(r"^\s*#\s*listen_addresses\s*=\s*'localhost'\s*$", line):
+                lines.append("listen_addresses = '*'\n")
             else:
                 lines.append(line)
     conf.write_text("".join(lines))
-
+    print("\n Start postgres service")
+    subprocess.run(["systemctl", "start", 'postgresql.service'], check=True)
+    print("\n Enable postgres service")
+    subprocess.run(["systemctl", "enable", 'postgresql.service'], check=True)
 
     print("\n" + "=" * 60)
     print("All labs completed!")
