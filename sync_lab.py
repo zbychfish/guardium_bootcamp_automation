@@ -961,11 +961,11 @@ def lab4_atap(state):
     lines = []
     with conf.open() as f:
         for line in f:
-            if re.match(r"^\s*#?\s*ssl\s*=", line):
+            if re.match(r"^\s*#?\s*ssl = off\s*$", line):
                 line = "ssl = on\n"
-            elif re.match(r"^\s*#?\s*ssl_cert_file\s*=", line):
+            elif re.match(r"^\s*#?\s*ssl_cert_file\s*$", line):
                 line = "ssl_cert_file = '/var/lib/pgsql/data/pgsql.crt'\n"
-            elif re.match(r"^\s*#?\s*ssl_key_file\s*=", line):
+            elif re.match(r"^\s*#?\s*ssl_key_file\s*$", line):
                 line = "ssl_key_file = '/var/lib/pgsql/data/pgsql.key'\n"
             else:
                 lines.append(line)
