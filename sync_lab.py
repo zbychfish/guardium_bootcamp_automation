@@ -4,6 +4,7 @@
 Sync Lab - orkiestracja synchronizacji środowiska laboratoryjnego
 """
 
+import psycopg2
 from paramiko.proxy import subprocess
 import os
 import re
@@ -23,6 +24,7 @@ import zipfile
 import glob
 from pathlib import Path
 import subprocess
+import psycopg2 
 
 
 
@@ -988,6 +990,17 @@ def lab4_atap(state):
     subprocess.run(["systemctl", "start", 'postgresql.service'], check=True)
     print("\n Enable postgres service")
     subprocess.run(["systemctl", "enable", 'postgresql.service'], check=True)
+
+    print("\n Set postgres user password in database")
+    sql = "ALTER USER postgres WITH PASSWORD '{}';".format(get_env_value("DEFAULT_SERVICE_PASSWORD"))
+    subprocess.run(["sudo", "-u", "postgres", "psql", "-d", "postgres",  sql], check=True)
+
+    print("\n Create postgres admin users")
+    conn = psycopg2.connect(dbname="postgres", user= "postgres", password="guardium", host="localhost", port=5432)
+    cur = conn.cursor()
+    cur.execute("SELECT version();")
+
+
 
     print("\n" + "=" * 60)
     print("All labs completed!")
