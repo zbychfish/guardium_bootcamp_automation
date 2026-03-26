@@ -899,6 +899,63 @@ def t_install_gim_on_raptor():
     print("\n GIM client installation on raptor")
     subprocess.run(["/root/gn-trainings/gim_installers/guard-bundle-GIM-12.2.0.0_r121306_v12_2_1-rhel-8-linux-x86_64.gim.sh", "--", "--dir", "/opt/guardium", "--tapip", "10.10.9.70", "--sqlguardip", "10.10.9.219"], check=True)
 
+def t_install_stap_on_raptor(api):
+    print("\n S-TAP installation schedule")
+    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
+    api.gim_client_assign(
+        client_ip="10.10.9.70",
+        module="BUNDLE-STAP",
+        module_version="12.2.0.0_r121306_5"
+    )
+    api.gim_client_params(
+        client_ip="10.10.9.70",
+        param_name="STAP_SQLGUARD_IP",
+        param_value="10.10.9.239"
+    )
+    api.gim_schedule_install(
+        client_ip="10.10.9.70",
+        date="now",
+    )
+
+    print("\n S-TAP installation monitoring")
+    # Pętla sprawdzająca status instalacji modułów co 10 sekund
+    pending = ["initial"]  # Inicjalizacja aby wejść do pętli
+    
+    while pending:
+        modules = api.gim_list_client_modules(client_ip="10.10.9.70")
+        msg = modules["Message"]
+
+        entries = [
+            e.strip()
+            for e in re.split(r"#+\s*ENTRY\s+\d+\s*#+", msg)
+            if e.strip()
+        ]
+
+        result = []
+
+        for e in entries:
+            def g(p):
+                m = re.search(p, e)
+                return m.group(1) if m else None
+
+            result.append({
+                "module_id": g(r"MODULE_ID:\s+(-?\d+)"),
+                "name": g(r"NAME:\s+([A-Z0-9\-]+)"),
+                "installed_version": g(r"INSTALLED_VERSION\s+([0-9][^\s]+)"),
+                "scheduled_version": g(r"SCHEDULED_VERSION\s+([0-9][^\s]+)"),
+                "state": g(r"STATE:\s+([A-Z\-]+)"),
+                "is_scheduled": g(r"IS_SCHEDULED:\s+([NY])"),
+                "schedule_time": g(r"IS_SCHEDULED:\s+[NY]\s+\(([^)]+)\)")
+            })
+        
+        pending = [m for m in result if m["state"] != "INSTALLED"]
+        
+        if pending:
+            print("Waiting 30 seconds before next check...")
+            time.sleep(30)
+        else:
+            print("All modules installed successfully!")
+
 def lab1_appliance_setup(state):
     """
     LAB 1 - Konfiguracja appliance (collector).
@@ -1008,67 +1065,15 @@ def lab4_atap(state):
     run_task('create postgres admin users', lambda: t_create_postgres_admin_users(), state)
 
     run_task('install gim client on raptor', lambda: t_install_gim_on_raptor(), state)
-    
 
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443',
         client_id='BOOTCAMP'
     )
 
-    print("\n S-TAP installation")
-    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
-    api.gim_client_assign(
-        client_ip="10.10.9.70",
-        module="BUNDLE-STAP",
-        module_version="12.2.0.0_r121306_5"
-    )
-    api.gim_client_params(
-        client_ip="10.10.9.70",
-        param_name="STAP_SQLGUARD_IP",
-        param_value="10.10.9.239"
-    )
-    api.gim_schedule_install(
-        client_ip="10.10.9.70",
-        date="now",
-    )
+    run_task('install_stap_on_raptor', lambda: t_install_stap_on_raptor(api), state)
 
-    # Pętla sprawdzająca status instalacji modułów co 10 sekund
-    pending = ["initial"]  # Inicjalizacja aby wejść do pętli
     
-    while pending:
-        modules = api.gim_list_client_modules(client_ip="10.10.9.70")
-        msg = modules["Message"]
-
-        entries = [
-            e.strip()
-            for e in re.split(r"#+\s*ENTRY\s+\d+\s*#+", msg)
-            if e.strip()
-        ]
-
-        result = []
-
-        for e in entries:
-            def g(p):
-                m = re.search(p, e)
-                return m.group(1) if m else None
-
-            result.append({
-                "module_id": g(r"MODULE_ID:\s+(-?\d+)"),
-                "name": g(r"NAME:\s+([A-Z0-9\-]+)"),
-                "installed_version": g(r"INSTALLED_VERSION\s+([0-9][^\s]+)"),
-                "scheduled_version": g(r"SCHEDULED_VERSION\s+([0-9][^\s]+)"),
-                "state": g(r"STATE:\s+([A-Z\-]+)"),
-                "is_scheduled": g(r"IS_SCHEDULED:\s+([NY])"),
-                "schedule_time": g(r"IS_SCHEDULED:\s+[NY]\s+\(([^)]+)\)")
-            })
-        
-        pending = [m for m in result if m["state"] != "INSTALLED"]
-        
-        if pending:
-            print("Waiting 15 seconds before next check...")
-            time.sleep(15)
-        else:
-            print("All modules installed successfully!")
 
 
     print("\n" + "=" * 60)
@@ -1111,7 +1116,7 @@ def sync_lab(state, skip_below: int = 0):
     if skip_below < 4:
         lab4_atap(state)
         print("\n" + "=" * 60)
-        print("LAB 2 completed!")
+        print("LAB 4 completed!")
         print("=" * 60)
     else:
         print("\n[LAB 4] SKIPPED")
