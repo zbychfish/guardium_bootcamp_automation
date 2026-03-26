@@ -1029,6 +1029,32 @@ def lab4_atap(state):
     modules = api.gim_list_client_modules(client_ip="10.10.9.70")
     print(modules)
 
+    msg = modules["Message"]
+
+    entries = [
+        e.strip()
+        for e in re.split(r"#+\s*ENTRY\s+\d+\s*#+", msg)
+        if e.strip()
+    ]
+
+    result = []
+
+    for e in entries:
+        def g(pattern):
+            m = re.search(pattern, e)
+            return m.group(1) if m else None
+
+        result.append({
+            "module_id": g(r"MODULE_ID:\s+(-?\d+)"),
+            "name": g(r"NAME:\s+([A-Z0-9\-]+)"),
+            "installed_version": g(r"INSTALLED_VERSION\s+([^\s]+)"),
+            "scheduled_version": g(r"SCHEDULED_VERSION\s+([^\s]+)"),
+            "state": g(r"STATE:\s+([A-Z\-]+)"),
+            "is_scheduled": g(r"IS_SCHEDULED:\s+([NY])"),
+            "schedule_time": g(r"IS_SCHEDULED:\s+[NY]\s+\(([^)]+)\)")
+        })
+
+    return result
 
     print("\n" + "=" * 60)
     print("All labs completed!")
