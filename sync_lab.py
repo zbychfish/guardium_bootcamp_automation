@@ -633,7 +633,7 @@ def t_preparing_appliances_for_patching(api):
         patch_list = sorted(zipf.namelist())
     patch_order = get_env_value("PATCH_NAME_LIST").split(",")
     sorted_patch_list = sorted(patch_order)
-    order_numbers = ",".join(str(sorted_patch_list.index(item) + 1) for item in items)
+    order_numbers = ",".join(str(sorted_patch_list.index(item) + 1) for item in patch_order)
     print(order_numbers)
     save_to_env("PATCH_ORDER", ",".join(order_numbers))
     exit(0)
