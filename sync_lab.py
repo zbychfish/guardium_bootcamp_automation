@@ -919,6 +919,21 @@ def t_install_stap_on_raptor(api):
         param_name="STAP_SQLGUARD_IP",
         param_value="10.10.9.239"
     )
+    api.gim_client_params(
+        client_ip="10.10.9.70",
+        param_name="STAP_USE_TLS",
+        param_value="1"
+    )
+    api.gim_client_params(
+        client_ip="10.10.9.70",
+        param_name="STAP_STATISTICS",
+        param_value="-3"
+    )
+    api.gim_client_params(
+        client_ip="10.10.9.70",
+        param_name="STAP_CONNECTION_POOL_SIZE",
+        param_value="2"
+    )
     api.gim_schedule_install(
         client_ip="10.10.9.70",
         date="now",
