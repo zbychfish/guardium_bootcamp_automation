@@ -1191,10 +1191,11 @@ def lab4_atap(state):
         for line in f:
             if re.match(r"^\s*bindIp\s*:", line):
                 line = "  bindIp: 0.0.0.0  # Enter 0.0.0.0,:: to bind to all IPv4 and IPv6 addresses or, alternatively, use the net.bindIpAll setting.\n"
-                lines.append("  tls:")
-                lines.append("    mode: requireTLS")
-                lines.append("    certificateKeyFile: /var/lib/mongo/cert/both.pem")
-            lines.append(line)
+                lines.append("  tls:\n")
+                lines.append("    mode: requireTLS\n")
+                lines.append("    certificateKeyFile: /var/lib/mongo/cert/both.pem\n")
+            else:
+                lines.append(line)
     conf.write_text("".join(lines))
     subprocess.run(["systemctl", "restart", "mongod"], check=True)
 
