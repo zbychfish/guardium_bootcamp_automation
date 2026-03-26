@@ -961,7 +961,6 @@ def lab4_atap(state):
     lines = []
     with conf.open() as f:
         for line in f:
-
             if re.match(r"^\s*#?\s*ssl\s*=", line):
                 line = "ssl = on\n"
             elif re.match(r"^\s*#?\s*ssl_cert_file\s*=", line):
