@@ -4,6 +4,7 @@
 Sync Lab - orkiestracja synchronizacji środowiska laboratoryjnego
 """
 
+from paramiko.proxy import subprocess
 import os
 import re
 import time
@@ -21,6 +22,7 @@ import traceback
 import zipfile
 import glob
 from pathlib import Path
+import subprocess
 
 
 
@@ -936,6 +938,26 @@ def lab2_gim(state):
     print("All labs completed!")
     print("=" * 60)
 
+def lab4_atap(state):
+    print("=" * 60)
+    print("LAB 2 - GIM Setup")
+    print("=" * 60)
+
+    print("\n Postgres 16 installation")
+    subprocess.run(["dnf", "-y", "install", "@postgresql:16"], check=True)
+    print("\n Postgres database initialization")
+    subprocess.run(["postgresql-setup", "initdb"], check=True)
+    print("\n Set postgres user password")
+    subprocess.run(["chpasswd"], input=f"postgres:{get_env_value('DEFAULT_SERVICE_PASSWORD')}", text=True, check=True)
+
+
+
+
+
+
+    print("\n" + "=" * 60)
+    print("All labs completed!")
+    print("=" * 60)
 
 def sync_lab(state, skip_below: int = 0):
     """
@@ -968,10 +990,16 @@ def sync_lab(state, skip_below: int = 0):
     
     # LAB 3: Tutaj dodasz kolejny lab
     if skip_below < 3:
-        # print("\n[LAB 3] ...")
-        pass
-    else:
         print("\n[LAB 3] SKIPPED")
+
+    if skip_below < 4:
+        lab4_atap(state)
+        print("\n" + "=" * 60)
+        print("LAB 2 completed!")
+        print("=" * 60)
+    else:
+        print("\n[LAB 4] SKIPPED")
+
     
 
 
