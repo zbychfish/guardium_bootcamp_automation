@@ -986,6 +986,73 @@ def t_enable_atap_for_postgres_on_raptor():
     subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "--db-instance=postgres", "activate"], check=True)
     subprocess.run(["systemctl", "start", "postgresql"], check=True)
 
+def t_correct_mysql_ie(api):
+    print("\n Correcting mysql Inspection Engine definition")
+    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
+    api.delete_inspection_engine(
+        stap_host="10.10.9.70",
+        type="mysql",
+        wait_for_response="1",
+        api_target_host="10.10.9.239"
+    )
+    api.create_inspection_engine(
+        stap_host="10.10.9.70",
+        protocol="mysql",
+        port_min="3306",
+        port_max="3306",
+        ktap_db_port="3306",
+        db_user="mysqld",
+        db_version="8",
+        client="0.0.0.0/0.0.0.0",
+        proc_name="/usr/sbin/mysqld",
+        db_install_dir="/var/lib/mysql",
+        unix_socket_marker="mysql.sock",
+        api_target_host="10.10.9.239"
+    )
+    api.create_inspection_engine(
+        stap_host="10.10.9.70",
+        protocol="mysql",
+        port_min="33060",
+        port_max="33060",
+        ktap_db_port="33060",
+        db_user="mysqld",
+        db_version="8",
+        client="0.0.0.0/0.0.0.0",
+        proc_name="/usr/sbin/mysqld",
+        db_install_dir="/var/lib/mysql",
+        unix_socket_marker="mysql.sock",
+        api_target_host="10.10.9.239"
+    )
+    api.create_inspection_engine(
+        stap_host="10.10.9.70",
+        protocol="mysql",
+        port_min="3306",
+        port_max="3306",
+        ktap_db_port="3306",
+        db_user="mysqld",
+        db_version="8",
+        client="0.0.0.0/0.0.0.0",
+        proc_name="/usr/sbin/mysqld",
+        db_install_dir="/var/lib/mysql",
+        unix_socket_marker="mysqlx.sock",
+        api_target_host="10.10.9.239"
+    )
+    api.create_inspection_engine(
+        stap_host="10.10.9.70",
+        protocol="mysql",
+        port_min="33060",
+        port_max="33060",
+        ktap_db_port="33060",
+        db_user="mysqld",
+        db_version="8",
+        client="0.0.0.0/0.0.0.0",
+        proc_name="/usr/sbin/mysqld",
+        db_install_dir="/var/lib/mysql",
+        unix_socket_marker="mysqlx.sock",
+        api_target_host="10.10.9.239"
+    )
+    return None
+
 def lab1_appliance_setup(state):
     """
     LAB 1 - Konfiguracja appliance (collector).
@@ -1110,71 +1177,27 @@ def lab4_atap(state):
         client_id='BOOTCAMP'
     )
 
-    print("\n Correcting mysql Inspection Engine definition")
-    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
-    api.delete_inspection_engine(
-        stap_host="10.10.9.70",
-        type="mysql",
-        wait_for_response="1",
-        api_target_host="10.10.9.239"
-    )
-    api.create_inspection_engine(
-        stap_host="10.10.9.70",
-        protocol="mysql",
-        port_min="3306",
-        port_max="3306",
-        ktap_db_port="3306",
-        db_user="mysqld",
-        db_version="8",
-        client="0.0.0.0/0.0.0.0",
-        proc_name="/usr/sbin/mysqld",
-        db_install_dir="/var/lib/mysql",
-        unix_socket_marker="mysql.sock",
-        api_target_host="10.10.9.239"
-    )
-    api.create_inspection_engine(
-        stap_host="10.10.9.70",
-        protocol="mysql",
-        port_min="33060",
-        port_max="33060",
-        ktap_db_port="33060",
-        db_user="mysqld",
-        db_version="8",
-        client="0.0.0.0/0.0.0.0",
-        proc_name="/usr/sbin/mysqld",
-        db_install_dir="/var/lib/mysql",
-        unix_socket_marker="mysql.sock",
-        api_target_host="10.10.9.239"
-    )
-    api.create_inspection_engine(
-        stap_host="10.10.9.70",
-        protocol="mysql",
-        port_min="3306",
-        port_max="3306",
-        ktap_db_port="3306",
-        db_user="mysqld",
-        db_version="8",
-        client="0.0.0.0/0.0.0.0",
-        proc_name="/usr/sbin/mysqld",
-        db_install_dir="/var/lib/mysql",
-        unix_socket_marker="mysqlx.sock",
-        api_target_host="10.10.9.239"
-    )
-    api.create_inspection_engine(
-        stap_host="10.10.9.70",
-        protocol="mysql",
-        port_min="33060",
-        port_max="33060",
-        ktap_db_port="33060",
-        db_user="mysqld",
-        db_version="8",
-        client="0.0.0.0/0.0.0.0",
-        proc_name="/usr/sbin/mysqld",
-        db_install_dir="/var/lib/mysql",
-        unix_socket_marker="mysqlx.sock",
-        api_target_host="10.10.9.239"
-    )
-    
+    run_task('configure_atap_for_postgres_on_raptor', lambda: t_correct_mysql_ie(api), state)
+
+    print("\n Mongo SSL configuration")
+    subprocess.run(["mkdir", "-p", "/var/lib/mongo/cert"], check=True)
+    subprocess.run(["openssl", "req", '-x509', '-newkey', "rsa:4096", "-keyout", "/var/lib/mongo/cert/key.pem", "-out", "/var/lib/mongo/cert/cert.pem", "-sha256", "-days", "3650", "-nodes", "-subj", "/C=PL/ST=Lubuskie/L=Nowa Sol/O=Training/OU=Demo/CN=mongod"], check=True)
+    subprocess.run(["cat", "/var/lib/mongo/cert/key.pem", "/var/lib/mongo/cert/cert.pem", ">", "/var/lib/mongo/cert/both.pem"], check=True)
+    subprocess.run(["chown", "-R", "mongod:mongod", "/var/lib/mongo/cert"], check=True)
+    conf = Path("/etc/mongod.conf")
+    lines = []
+    with conf.open() as f:
+        for line in f:
+            if re.match(r"^\s*bindIp\s*:\s*127\.0\.0\.1\s*$", line):
+                line = "  bindIp: 0.0.0.0  # Enter 0.0.0.0,:: to bind to all IPv4 and IPv6 addresses or, alternatively, use the net.bindIpAll setting.\n"
+                lines.append("  tls:")
+                lines.append("    mode: requireTLS")
+                lines.append("    certificateKeyFile: /var/lib/mongo/cert/both.pem")
+            lines.append(line)
+    conf.write_text("".join(lines))
+    subprocess.run(["systemctl", "restart", "mongod"], check=True)
+
+
     print("\n" + "=" * 60)
     print("All labs completed!")
     print("=" * 60)
