@@ -894,6 +894,13 @@ def t_create_postgres_admin_users():
     cur = conn.cursor()
     cur.execute(f"CREATE ROLE tom PASSWORD '{get_env_value('DEFAULT_SERVICE_PASSWORD')}' SUPERUSER CREATEDB CREATEROLE INHERIT LOGIN;")
     cur.execute(f"CREATE ROLE jerry PASSWORD '{get_env_value('DEFAULT_SERVICE_PASSWORD')}' SUPERUSER CREATEDB CREATEROLE INHERIT LOGIN;")
+    cur.execute("SELECT 1;")
+    print(cur.fetchone())
+    cur.close()
+    conn.close()
+
+
+
 
 def t_install_gim_on_raptor():
     print("\n GIM client installation on raptor")
@@ -955,6 +962,16 @@ def t_install_stap_on_raptor(api):
             time.sleep(30)
         else:
             print("All modules installed successfully!")
+
+def t_enable_atap_for_postgres_on_raptor():
+    print("\n ATAP setup for postgres on raptor")
+    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "--db-user=postgres", "--db-home=/usr", "--db-user-dir=/var/lib/pgsql", "--db-type=postgres", "--db-instance=postgres", "--db-version=16", "store-conf"], check=True)
+    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "authorize-user", "postgres"], check=True)
+    subprocess.run(["systemctl", "stop", "postgresql"], check=True)
+    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "--db-instance=postgres", "activate"], check=True)
+    subprocess.run(["systemctl", "start", "postgresql"], check=True)
+
+
 
 def lab1_appliance_setup(state):
     """
@@ -1071,14 +1088,9 @@ def lab4_atap(state):
         client_id='BOOTCAMP'
     )
 
-    run_task('install_stap_on_raptor', lambda: t_install_stap_on_raptor(api), state)
+    #run_task('install_stap_on_raptor', lambda: t_install_stap_on_raptor(api), state)
     
-    print("\n ATAP setup for postgres on raptor")
-    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "--db-user=postgres", "--db-home=/usr", "--db-user-dir=/var/lib/pgsql", "--db-type=postgres", "--db-instance=postgres", "--db-version=16", "store-conf"], check=True)
-    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "authorize-user", "postgres"], check=True)
-    subprocess.run(["systemctl", "stop", "postgresql"], check=True)
-    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "--db-instance=postgres", "activate"], check=True)
-    subprocess.run(["systemctl", "start", "postgresql"], check=True)
+    
     
 
     print("\n" + "=" * 60)
