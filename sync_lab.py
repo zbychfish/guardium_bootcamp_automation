@@ -963,11 +963,11 @@ def lab4_atap(state):
         for line in f:
 
             if re.match(r"^\s*#?\s*ssl\s*=", line):
-                lines.append("ssl = on\n")
+                line = "ssl = on\n"
             elif re.match(r"^\s*#?\s*ssl_cert_file\s*=", line):
-                lines.append("ssl_cert_file = '/var/lib/pgsql/data/pgsql.crt'\n")
+                line = "ssl_cert_file = '/var/lib/pgsql/data/pgsql.crt'\n"
             elif re.match(r"^\s*#?\s*ssl_key_file\s*=", line):
-                lines.append("ssl_key_file = '/var/lib/pgsql/data/pgsql.key'\n")
+                line = "ssl_key_file = '/var/lib/pgsql/data/pgsql.key'\n"
             else:
                 lines.append(line)
     conf.write_text("".join(lines))
@@ -977,12 +977,12 @@ def lab4_atap(state):
     with conf.open() as f:
         for line in f:
             if re.match(r"^\s*local\s+all\s+all\s+peer\s*$", line):
-                lines.append("local   all             all                                     ident\n")
+                line = "local   all             all                                     ident\n"
             if re.match(r"^\s*host\s+all\s+all\s+127\.0\.0\.1/32\s+ident\s*$", line):
-                lines.append("host    all             all             127.0.0.1/32            scram-sha-256\n")
+                line = "host    all             all             127.0.0.1/32            scram-sha-256\n"
                 lines.append("host    all             all             10.10.9.0/24            scram-sha-256\n")
             if re.match(r"^\s*#\s*listen_addresses\s*=\s*'localhost'\s*$", line):
-                lines.append("listen_addresses = '*'\n")
+                line = "listen_addresses = '*'\n"
             else:
                 lines.append(line)
     conf.write_text("".join(lines))
