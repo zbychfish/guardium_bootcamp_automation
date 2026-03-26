@@ -1189,7 +1189,7 @@ def lab4_atap(state):
     lines = []
     with conf.open() as f:
         for line in f:
-            if re.match(r"^\s*bindIp\s*:\s*127\.0\.0\.1\s*$", line):
+            if re.match(r"^\s*bindIp\s*:", line):
                 line = "  bindIp: 0.0.0.0  # Enter 0.0.0.0,:: to bind to all IPv4 and IPv6 addresses or, alternatively, use the net.bindIpAll setting.\n"
                 lines.append("  tls:")
                 lines.append("    mode: requireTLS")
