@@ -1022,7 +1022,12 @@ def lab4_atap(state):
         module="BUNDLE-STAP",
         module_version="12.2.0.0_r121306_5"
     )
-
+    api.gim_schedule_install(
+        client_ip="10.10.9.70",
+        date="now",
+    )
+    modules = api.gim_list_client_modules(client_ip="10.10.9.70")
+    print(modules)
 
 
     print("\n" + "=" * 60)

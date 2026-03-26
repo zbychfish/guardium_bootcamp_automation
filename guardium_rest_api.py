@@ -505,6 +505,88 @@ class GuardiumRestAPI:
         response.raise_for_status()
         
         return response.json()
+    def gim_schedule_install(
+        self,
+        client_ip: str,
+        date: str,
+        module: Optional[str] = None
+    ) -> dict:
+        """
+        Planuje instalację modułu/modułów GIM na kliencie.
+        
+        Args:
+            client_ip: Adres IP klienta (wymagane)
+            date: Data instalacji w formacie "now" lub "yyyy-MM-dd HH:mm" (wymagane)
+            module: Nazwa modułu GIM (opcjonalne). Jeśli nie podano, wszystkie moduły
+                   dla danego klienta zostaną zaplanowane do instalacji.
+        
+        Returns:
+            Słownik z odpowiedzią API
+        
+        Raises:
+            RuntimeError: Jeśli token nie został jeszcze pobrany
+            requests.exceptions.RequestException: W przypadku błędu HTTP
+        
+        Example:
+            # Zaplanuj instalację natychmiast
+            api.gim_schedule_install(
+                client_ip="10.10.9.100",
+                date="now",
+                module="PostgreSQL"
+            )
+            
+            # Zaplanuj instalację na konkretną datę
+            api.gim_schedule_install(
+                client_ip="10.10.9.100",
+                date="2026-03-27 14:30"
+            )
+        """
+        url = f'{self.base_url}/restAPI/gim_schedule_install'
+        headers = self.get_headers()
+        
+        data = {
+            'clientIP': client_ip,
+            'date': date
+        }
+        
+        # Dodaj opcjonalny parametr module
+        if module:
+            data['module'] = module
+        
+        response = requests.put(url, json=data, headers=headers, verify=self.verify_ssl)
+        response.raise_for_status()
+        
+        return response.json()
+    
+    def gim_list_client_modules(self, client_ip: str) -> dict:
+        """
+        Pobiera listę modułów GIM przypisanych do klienta.
+        
+        Args:
+            client_ip: Adres IP klienta (wymagane)
+        
+        Returns:
+            Słownik z listą modułów GIM dla danego klienta
+        
+        Raises:
+            RuntimeError: Jeśli token nie został jeszcze pobrany
+            requests.exceptions.RequestException: W przypadku błędu HTTP
+        
+        Example:
+            modules = api.gim_list_client_modules(client_ip="10.10.9.100")
+        """
+        url = f'{self.base_url}/restAPI/gim_list_client_modules'
+        headers = self.get_headers()
+        
+        params = {
+            'clientIP': client_ip
+        }
+        
+        response = requests.get(url, headers=headers, params=params, verify=self.verify_ssl)
+        response.raise_for_status()
+        
+        return response.json()
+
 
 
 
