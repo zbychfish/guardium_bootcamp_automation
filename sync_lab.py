@@ -993,7 +993,7 @@ def lab4_atap(state):
 
     print("\n Set postgres user password in database")
     sql = "ALTER USER postgres WITH PASSWORD '{}';".format(get_env_value("DEFAULT_SERVICE_PASSWORD"))
-    subprocess.run(["sudo", "-u", "postgres", "psql", "-d", "postgres",  sql], check=True)
+    subprocess.run(["sudo", "-u", "postgres", "psql", "-d", "postgres", "-U", "postgres", "-c",  sql], check=True)
 
     print("\n Create postgres admin users")
     conn = psycopg2.connect(dbname="postgres", user= "postgres", password="guardium", host="localhost", port=5432)
