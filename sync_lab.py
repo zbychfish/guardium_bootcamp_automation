@@ -632,13 +632,11 @@ def t_preparing_appliances_for_patching(api):
     with zipfile.ZipFile(filename, "r") as zipf:
         patch_list = sorted(zipf.namelist())
     patch_order = get_env_value("PATCH_NAME_LIST").split(",")
-    print(patch_order)
-    pos = {name: i + 1 for i, name in enumerate(patch_order)}
-    print(pos)
-    order_numbers = [str(pos[name]) for name in patch_list if name in pos]
+    sorted_patch_list = sorted(patch_order)
+    order_numbers = ",".join(str(sorted_patch_list.index(item) + 1) for item in items)
     print(order_numbers)
     save_to_env("PATCH_ORDER", ",".join(order_numbers))
-        
+    exit(0)
     print("\nRemoving old patch archives on central manager")
     result = api.patch_cleanup()   
     print("    ✓ OK")
