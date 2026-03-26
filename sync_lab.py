@@ -1065,7 +1065,7 @@ def lab4_atap(state):
 
     print(result)
     
-    pending = [m for m in modules if m["state"] != "INSTALLED"]
+    pending = [m for m in result if m["state"] != "INSTALLED"]
     print(pending)
 
 
