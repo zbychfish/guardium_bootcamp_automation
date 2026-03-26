@@ -1032,41 +1032,46 @@ def lab4_atap(state):
     #     date="now",
     # )
 
-    modules = api.gim_list_client_modules(client_ip="10.10.9.70")
-    print(modules)
-
-    msg = modules["Message"]
-
+    # Pętla sprawdzająca status instalacji modułów co 10 sekund
+    pending = ["initial"]  # Inicjalizacja aby wejść do pętli
     
-    entries = [
-        e.strip()
-        for e in re.split(r"#+\s*ENTRY\s+\d+\s*#+", msg)
-        if e.strip()
-    ]
+    while pending:
+        modules = api.gim_list_client_modules(client_ip="10.10.9.70")
+        print(modules)
 
+        msg = modules["Message"]
 
-    result = []
+        entries = [
+            e.strip()
+            for e in re.split(r"#+\s*ENTRY\s+\d+\s*#+", msg)
+            if e.strip()
+        ]
 
-    for e in entries:
-        def g(p):
-            m = re.search(p, e)
-            return m.group(1) if m else None
+        result = []
 
-        result.append({
-            "module_id": g(r"MODULE_ID:\s+(-?\d+)"),
-            "name": g(r"NAME:\s+([A-Z0-9\-]+)"),
-            "installed_version": g(r"INSTALLED_VERSION\s+([0-9][^\s]+)"),
-            "scheduled_version": g(r"SCHEDULED_VERSION\s+([0-9][^\s]+)"),
-            "state": g(r"STATE:\s+([A-Z\-]+)"),
-            "is_scheduled": g(r"IS_SCHEDULED:\s+([NY])"),
-            "schedule_time": g(r"IS_SCHEDULED:\s+[NY]\s+\(([^)]+)\)")
-        })
+        for e in entries:
+            def g(p):
+                m = re.search(p, e)
+                return m.group(1) if m else None
 
-
-    print(result)
-    
-    pending = [m for m in result if m["state"] != "INSTALLED"]
-    print(pending)
+            result.append({
+                "module_id": g(r"MODULE_ID:\s+(-?\d+)"),
+                "name": g(r"NAME:\s+([A-Z0-9\-]+)"),
+                "installed_version": g(r"INSTALLED_VERSION\s+([0-9][^\s]+)"),
+                "scheduled_version": g(r"SCHEDULED_VERSION\s+([0-9][^\s]+)"),
+                "state": g(r"STATE:\s+([A-Z\-]+)"),
+                "is_scheduled": g(r"IS_SCHEDULED:\s+([NY])"),
+                "schedule_time": g(r"IS_SCHEDULED:\s+[NY]\s+\(([^)]+)\)")
+            })
+        
+        pending = [m for m in result if m["state"] != "INSTALLED"]
+        print(f"Pending modules: {pending}")
+        
+        if pending:
+            print("Waiting 10 seconds before next check...")
+            time.sleep(10)
+        else:
+            print("All modules installed successfully!")
 
 
     print("\n" + "=" * 60)
