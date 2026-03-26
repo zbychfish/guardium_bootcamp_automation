@@ -1105,7 +1105,63 @@ def lab4_atap(state):
 
     run_task('configure_atap_for_postgres_on_raptor', lambda: t_enable_atap_for_postgres_on_raptor(), state)
     
-
+    api.delete_inspection_engine(
+        stap_host="10.10.9.70",
+        type="mysql"
+    )
+    api.create_inspection_engine(
+        stap_host="10.10.9.70",
+        protocol="mysql",
+        port_min="3306",
+        port_max="3306",
+        ktap_db_port="3306",
+        db_user="mysqld",
+        db_version="8",
+        client="0.0.0.0/0.0.0.0",
+        proc_name="/usr/sbin/mysqld",
+        db_install_dir="/var/lib/mysql",
+        unix_socket_marker="mysql.sock"
+    )
+    api.create_inspection_engine(
+        stap_host="10.10.9.70",
+        protocol="mysql",
+        port_min="33060",
+        port_max="33060",
+        ktap_db_port="33060",
+        db_user="mysqld",
+        db_version="8",
+        client="0.0.0.0/0.0.0.0",
+        proc_name="/usr/sbin/mysqld",
+        db_install_dir="/var/lib/mysql",
+        unix_socket_marker="mysql.sock"
+    )
+    api.create_inspection_engine(
+        stap_host="10.10.9.70",
+        protocol="mysql",
+        port_min="3306",
+        port_max="3306",
+        ktap_db_port="3306",
+        db_user="mysqld",
+        db_version="8",
+        client="0.0.0.0/0.0.0.0",
+        proc_name="/usr/sbin/mysqld",
+        db_install_dir="/var/lib/mysql",
+        unix_socket_marker="mysqlx.sock"
+    )
+    api.create_inspection_engine(
+        stap_host="10.10.9.70",
+        protocol="mysql",
+        port_min="33060",
+        port_max="33060",
+        ktap_db_port="33060",
+        db_user="mysqld",
+        db_version="8",
+        client="0.0.0.0/0.0.0.0",
+        proc_name="/usr/sbin/mysqld",
+        db_install_dir="/var/lib/mysql",
+        unix_socket_marker="mysqlx.sock"
+    )
+    
     print("\n" + "=" * 60)
     print("All labs completed!")
     print("=" * 60)

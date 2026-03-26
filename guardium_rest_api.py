@@ -6,7 +6,7 @@ Guardium REST API - klasa do komunikacji z Guardium przez REST API
 
 import os
 import requests
-from typing import Optional
+from typing import Optional, Any
 from dotenv import load_dotenv
 
 # Wyłącz ostrzeżenia o niezweryfikowanych certyfikatach SSL
@@ -637,6 +637,205 @@ class GuardiumRestAPI:
         response.raise_for_status()
         
         return response.json()
+    def delete_inspection_engine(
+        self,
+        stap_host: str,
+        type: str,
+        sequence: Optional[int] = None,
+        wait_for_response: Optional[int] = None,
+        api_target_host: Optional[str] = None
+    ) -> dict:
+        """
+        Usuwa inspection engine z Guardium.
+        
+        Args:
+            stap_host: Host S-TAP inspection engine (wymagane)
+            type: Typ monitorowanego repozytorium danych (wymagane)
+                  Przykłady: PostgreSQL, Oracle, MSSQL, MongoDB, MySQL, itp.
+            sequence: Numer sekwencyjny inspection engine do usunięcia (opcjonalne)
+            wait_for_response: Czy czekać na odpowiedź z S-TAP (opcjonalne)
+                              0 = nie czekaj, 1 = czekaj
+            api_target_host: Docelowy host dla API (opcjonalne)
+        
+        Returns:
+            Słownik z odpowiedzią API
+        
+        Raises:
+            RuntimeError: Jeśli token nie został jeszcze pobrany
+            requests.exceptions.RequestException: W przypadku błędu HTTP
+        
+        Example:
+            api.delete_inspection_engine(
+                stap_host="10.10.9.70",
+                type="PostgreSQL",
+                sequence=1
+            )
+        """
+        url = f'{self.base_url}/restAPI/inspection_engine'
+        headers = self.get_headers()
+        
+        data: dict[str, Any] = {
+            'stapHost': stap_host,
+            'type': type
+        }
+        
+        # Dodaj opcjonalne parametry
+        if sequence is not None:
+            data['sequence'] = sequence
+        if wait_for_response is not None:
+            data['waitForResponse'] = wait_for_response
+        if api_target_host:
+            data['api_target_host'] = api_target_host
+        
+        response = requests.delete(url, json=data, headers=headers, verify=self.verify_ssl)
+        response.raise_for_status()
+        
+        return response.json()
+    
+    def create_inspection_engine(
+        self,
+        stap_host: str,
+        protocol: str,
+        client: Optional[str] = None,
+        connect_to_ip: Optional[str] = None,
+        db2_shared_mem_adjustment: Optional[int] = None,
+        db2_shared_mem_client_position: Optional[int] = None,
+        db2_shared_mem_size: Optional[int] = None,
+        db_install_dir: Optional[str] = None,
+        db_user: Optional[str] = None,
+        db_version: Optional[str] = None,
+        encryption: Optional[bool] = None,
+        exclude_client: Optional[str] = None,
+        ie_identifier: Optional[str] = None,
+        informix_version: Optional[int] = None,
+        instance_name: Optional[str] = None,
+        intercept_types: Optional[str] = None,
+        ktap_db_port: Optional[str] = None,
+        named_pipe: Optional[str] = None,
+        port_max: Optional[str] = None,
+        port_min: Optional[str] = None,
+        priority_count: Optional[int] = None,
+        proc_name: Optional[str] = None,
+        proc_names: Optional[str] = None,
+        tee_listen_port: Optional[str] = None,
+        tee_real_port: Optional[str] = None,
+        unix_socket_marker: Optional[str] = None,
+        api_target_host: Optional[str] = None
+    ) -> dict:
+        """
+        Tworzy nowy inspection engine w Guardium.
+        
+        Args:
+            stap_host: Host S-TAP (wymagane)
+            protocol: Typ monitorowanego repozytorium danych (wymagane)
+                     Przykłady: PostgreSQL, Oracle, MSSQL, MongoDB, MySQL, itp.
+            client: Lista adresów IP klientów w formacie IP/maska (opcjonalne)
+            connect_to_ip: Adres IP do połączenia z bazą danych (opcjonalne)
+            db2_shared_mem_adjustment: Offset dla Db2 shared memory (opcjonalne)
+            db2_shared_mem_client_position: Offset klienta dla Db2 shared memory (opcjonalne)
+            db2_shared_mem_size: Rozmiar segmentu Db2 shared memory (opcjonalne)
+            db_install_dir: Pełna ścieżka do katalogu instalacji bazy danych (opcjonalne, Linux)
+            db_user: Nazwa użytkownika OS właściciela procesu DB (opcjonalne)
+            db_version: Wersja bazy danych (opcjonalne)
+            encryption: Czy włączyć szyfrowanie ASO/SSL (opcjonalne, Linux)
+            exclude_client: Lista wykluczonych adresów IP klientów (opcjonalne)
+            ie_identifier: Identyfikator inspection engine (opcjonalne)
+            informix_version: Wersja Informix (opcjonalne)
+            instance_name: Nazwa instancji bazy danych (opcjonalne, Windows)
+            intercept_types: Typy protokołów do przechwytywania (opcjonalne, Linux)
+            ktap_db_port: Port bazy danych dla K-TAP (opcjonalne, Linux)
+            named_pipe: Named pipe dla MS SQL Server (opcjonalne, Windows)
+            port_max: Najwyższy numer portu do monitorowania (opcjonalne)
+            port_min: Najniższy numer portu do monitorowania (opcjonalne)
+            priority_count: Liczba pakietów z wysokim priorytetem (opcjonalne)
+            proc_name: Pełna ścieżka do pliku wykonywalnego bazy danych (opcjonalne, Linux)
+            proc_names: Pliki wykonywalne usługi bazy danych (opcjonalne, Windows)
+            tee_listen_port: Deprecated, użyj ktap_db_port (opcjonalne)
+            tee_real_port: Deprecated (opcjonalne)
+            unix_socket_marker: Marker UNIX domain socket (opcjonalne, Linux)
+            api_target_host: Docelowy host dla API (opcjonalne)
+        
+        Returns:
+            Słownik z odpowiedzią API
+        
+        Raises:
+            RuntimeError: Jeśli token nie został jeszcze pobrany
+            requests.exceptions.RequestException: W przypadku błędu HTTP
+        
+        Example:
+            api.create_inspection_engine(
+                stap_host="10.10.9.70",
+                protocol="PostgreSQL",
+                port_min="5432",
+                port_max="5432",
+                db_user="postgres"
+            )
+        """
+        url = f'{self.base_url}/restAPI/inspection_engine'
+        headers = self.get_headers()
+        
+        data: dict[str, Any] = {
+            'stapHost': stap_host,
+            'protocol': protocol
+        }
+        
+        # Dodaj opcjonalne parametry
+        if client:
+            data['client'] = client
+        if connect_to_ip:
+            data['connectToIp'] = connect_to_ip
+        if db2_shared_mem_adjustment is not None:
+            data['db2SharedMemAdjustment'] = db2_shared_mem_adjustment
+        if db2_shared_mem_client_position is not None:
+            data['db2SharedMemClientPosition'] = db2_shared_mem_client_position
+        if db2_shared_mem_size is not None:
+            data['db2SharedMemSize'] = db2_shared_mem_size
+        if db_install_dir:
+            data['dbInstallDir'] = db_install_dir
+        if db_user:
+            data['dbUser'] = db_user
+        if db_version:
+            data['dbVersion'] = db_version
+        if encryption is not None:
+            data['encryption'] = 1 if encryption else 0
+        if exclude_client:
+            data['excludeClient'] = exclude_client
+        if ie_identifier:
+            data['ieIdentifier'] = ie_identifier
+        if informix_version is not None:
+            data['informixVersion'] = informix_version
+        if instance_name:
+            data['instanceName'] = instance_name
+        if intercept_types:
+            data['interceptTypes'] = intercept_types
+        if ktap_db_port:
+            data['ktapDbPort'] = ktap_db_port
+        if named_pipe:
+            data['namedPipe'] = named_pipe
+        if port_max:
+            data['portMax'] = port_max
+        if port_min:
+            data['portMin'] = port_min
+        if priority_count is not None:
+            data['priorityCount'] = priority_count
+        if proc_name:
+            data['procName'] = proc_name
+        if proc_names:
+            data['procNames'] = proc_names
+        if tee_listen_port:
+            data['teeListenPort'] = tee_listen_port
+        if tee_real_port:
+            data['teeRealPort'] = tee_real_port
+        if unix_socket_marker:
+            data['unixSocketMarker'] = unix_socket_marker
+        if api_target_host:
+            data['api_target_host'] = api_target_host
+        
+        response = requests.post(url, json=data, headers=headers, verify=self.verify_ssl)
+        response.raise_for_status()
+        
+        return response.json()
+
 
 
 
