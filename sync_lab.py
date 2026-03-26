@@ -863,6 +863,8 @@ def t_postgres_installation():
                 line = "ssl_cert_file = '/var/lib/pgsql/data/pgsql.crt'\n"
             elif re.match(r"^\s*#?\s*ssl_key_file\s*=\s*'[^']+'\s*$", line):
                 line = "ssl_key_file = '/var/lib/pgsql/data/pgsql.key'\n"
+            elif re.match(r"^\s*#?\s*listen_addresses\s*=\s*'[^']+'\s*(#.*)?$", line):
+                line = "listen_addresses = '*'                  # what IP address(es) to listen on;\n"
             lines.append(line)
     conf.write_text("".join(lines))
 
@@ -899,9 +901,6 @@ def t_create_postgres_admin_users():
     print(cur.fetchone())
     cur.close()
     conn.close()
-
-
-
 
 def t_install_gim_on_raptor():
     print("\n GIM client installation on raptor")
@@ -971,8 +970,6 @@ def t_enable_atap_for_postgres_on_raptor():
     subprocess.run(["systemctl", "stop", "postgresql"], check=True)
     subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "--db-instance=postgres", "activate"], check=True)
     subprocess.run(["systemctl", "start", "postgresql"], check=True)
-
-
 
 def lab1_appliance_setup(state):
     """
@@ -1089,9 +1086,9 @@ def lab4_atap(state):
         client_id='BOOTCAMP'
     )
 
-    #run_task('install_stap_on_raptor', lambda: t_install_stap_on_raptor(api), state)
-    
-    
+    run_task('install_stap_on_raptor', lambda: t_install_stap_on_raptor(api), state)
+
+    run_task('configure_atap_for_postgres_on_raptor', lambda: t_enable_atap_for_postgres_on_raptor(), state)
     
 
     print("\n" + "=" * 60)
