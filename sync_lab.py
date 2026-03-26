@@ -5,7 +5,7 @@ Sync Lab - orkiestracja synchronizacji środowiska laboratoryjnego
 """
 
 import psycopg2
-from paramiko.proxy import subprocess
+#from paramiko.proxy import subprocess
 import os
 import re
 import time
@@ -24,7 +24,7 @@ import zipfile
 import glob
 from pathlib import Path
 import subprocess
-import psycopg2 
+
 
 
 
@@ -1027,37 +1027,41 @@ def lab4_atap(state):
         param_name="STAP_SQLGUARD_IP",
         param_value="10.10.9.239"
     )
-    api.gim_schedule_install(
-        client_ip="10.10.9.70",
-        date="now",
-    )
+    # api.gim_schedule_install(
+    #     client_ip="10.10.9.70",
+    #     date="now",
+    # )
+
     modules = api.gim_list_client_modules(client_ip="10.10.9.70")
     print(modules)
 
     msg = modules["Message"]
 
+    
     entries = [
         e.strip()
         for e in re.split(r"#+\s*ENTRY\s+\d+\s*#+", msg)
         if e.strip()
     ]
 
+
     result = []
 
     for e in entries:
-        def g(pattern):
-            m = re.search(pattern, e)
+        def g(p):
+            m = re.search(p, e)
             return m.group(1) if m else None
 
         result.append({
             "module_id": g(r"MODULE_ID:\s+(-?\d+)"),
             "name": g(r"NAME:\s+([A-Z0-9\-]+)"),
-            "installed_version": g(r"INSTALLED_VERSION\s+([^\s]+)"),
-            "scheduled_version": g(r"SCHEDULED_VERSION\s+([^\s]+)"),
+            "installed_version": g(r"INSTALLED_VERSION\s+([0-9][^\s]+)"),
+            "scheduled_version": g(r"SCHEDULED_VERSION\s+([0-9][^\s]+)"),
             "state": g(r"STATE:\s+([A-Z\-]+)"),
             "is_scheduled": g(r"IS_SCHEDULED:\s+([NY])"),
             "schedule_time": g(r"IS_SCHEDULED:\s+[NY]\s+\(([^)]+)\)")
         })
+
 
     print(result)
     
