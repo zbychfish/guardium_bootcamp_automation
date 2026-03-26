@@ -1004,7 +1004,7 @@ def lab4_atap(state):
     run_task('create postgres admin users', lambda: t_create_postgres_admin_users(), state)
     
     print("\n GIM client installation on raptor")
-    subprocess.run(["/root/gn-trainings/gim_installers/guard-bundle-GIM-12.2.0.0_r121306_v12_2_1-rhel-8-linux-x86_64.gim.sh", "--", "--dir", "/opt/guardium", "--tapip", "10.10.9.70", "--sqlguard_ip", "10.10.9.219"], check=True)
+    subprocess.run(["/root/gn-trainings/gim_installers/guard-bundle-GIM-12.2.0.0_r121306_v12_2_1-rhel-8-linux-x86_64.gim.sh", "--", "--dir", "/opt/guardium", "--tapip", "10.10.9.70", "--sqlguardip", "10.10.9.219"], check=True)
 
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443',
