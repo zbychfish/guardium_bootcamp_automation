@@ -894,6 +894,7 @@ def t_create_postgres_admin_users():
     cur = conn.cursor()
     cur.execute(f"CREATE ROLE tom PASSWORD '{get_env_value('DEFAULT_SERVICE_PASSWORD')}' SUPERUSER CREATEDB CREATEROLE INHERIT LOGIN;")
     cur.execute(f"CREATE ROLE jerry PASSWORD '{get_env_value('DEFAULT_SERVICE_PASSWORD')}' SUPERUSER CREATEDB CREATEROLE INHERIT LOGIN;")
+    conn.commit()
     cur.execute("SELECT 1;")
     print(cur.fetchone())
     cur.close()
