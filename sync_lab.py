@@ -957,6 +957,31 @@ def lab4_atap(state):
     files = glob.glob("/var/lib/pgsql/data/pgsql.*")
     subprocess.run(["chown", "postgres:postgres"] + files, check=True)
 
+    conf = Path("/var/lib/pgsql/data/postgresql.conf")
+    lines = []
+    with conf.open() as f:
+        for line in f:
+            if re.match(r"^\s*#?\s*ssl\s*=", line):
+                lines.append("ssl = on\n")
+            elif re.match(r"^\s*#?\s*ssl_cert_file\s*=", line):
+                lines.append("ssl_cert_file = '/var/lib/pgsql/data/pgsql.crt'\n")
+            elif re.match(r"^\s*#?\s*ssl_key_file\s*=", line):
+                lines.append("ssl_key_file = '/var/lib/pgsql/data/pgsql.key'\n")
+            else:
+                lines.append(line)
+    conf.write_text("".join(lines))
+
+    conf = Path("/var/lib/pgsql/data/pg_hba.conf")
+    lines = []
+    with conf.open() as f:
+        for line in f:
+            if re.match(r"^\s*local\s+all\s+all\s+peer\s*$", line):
+                lines.append("local   all             all                                     ident")
+            if re.match(r"^\s*host\s+all\s+all\s+127\.0\.0\.1/32\s+ident\s*$", line):
+                lines.append("host    all             all             127.0.0.1/32            scram-sha-256\nhost    all             all             10.10.9.0/24            scram-sha-256")
+            else:
+                lines.append(line)
+    conf.write_text("".join(lines))
 
 
     print("\n" + "=" * 60)
