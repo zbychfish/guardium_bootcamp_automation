@@ -1027,18 +1027,16 @@ def lab4_atap(state):
         param_name="STAP_SQLGUARD_IP",
         param_value="10.10.9.239"
     )
-    # api.gim_schedule_install(
-    #     client_ip="10.10.9.70",
-    #     date="now",
-    # )
+    api.gim_schedule_install(
+        client_ip="10.10.9.70",
+        date="now",
+    )
 
     # Pętla sprawdzająca status instalacji modułów co 10 sekund
     pending = ["initial"]  # Inicjalizacja aby wejść do pętli
     
     while pending:
         modules = api.gim_list_client_modules(client_ip="10.10.9.70")
-        print(modules)
-
         msg = modules["Message"]
 
         entries = [
@@ -1065,7 +1063,6 @@ def lab4_atap(state):
             })
         
         pending = [m for m in result if m["state"] != "INSTALLED"]
-        print(f"Pending modules: {pending}")
         
         if pending:
             print("Waiting 10 seconds before next check...")
