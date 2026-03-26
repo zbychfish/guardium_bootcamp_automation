@@ -895,6 +895,10 @@ def t_create_postgres_admin_users():
     cur.execute(f"CREATE ROLE tom PASSWORD '{get_env_value('DEFAULT_SERVICE_PASSWORD')}' SUPERUSER CREATEDB CREATEROLE INHERIT LOGIN;")
     cur.execute(f"CREATE ROLE jerry PASSWORD '{get_env_value('DEFAULT_SERVICE_PASSWORD')}' SUPERUSER CREATEDB CREATEROLE INHERIT LOGIN;")
 
+def t_install_gim_on_raptor():
+    print("\n GIM client installation on raptor")
+    subprocess.run(["/root/gn-trainings/gim_installers/guard-bundle-GIM-12.2.0.0_r121306_v12_2_1-rhel-8-linux-x86_64.gim.sh", "--", "--dir", "/opt/guardium", "--tapip", "10.10.9.70", "--sqlguardip", "10.10.9.219"], check=True)
+
 def lab1_appliance_setup(state):
     """
     LAB 1 - Konfiguracja appliance (collector).
@@ -1002,9 +1006,9 @@ def lab4_atap(state):
     run_task('installing psql on raptor', lambda: t_postgres_installation(), state)
 
     run_task('create postgres admin users', lambda: t_create_postgres_admin_users(), state)
+
+    run_task('install gim client on raptor', lambda: t_install_gim_on_raptor(), state)
     
-    print("\n GIM client installation on raptor")
-    subprocess.run(["/root/gn-trainings/gim_installers/guard-bundle-GIM-12.2.0.0_r121306_v12_2_1-rhel-8-linux-x86_64.gim.sh", "--", "--dir", "/opt/guardium", "--tapip", "10.10.9.70", "--sqlguardip", "10.10.9.219"], check=True)
 
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443',
@@ -1013,6 +1017,11 @@ def lab4_atap(state):
 
     print("\n S-TAP installation")
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
+    api.gim_client_assign(
+        client_ip="10.10.9.70",
+        module="BUNDLE-STAP",
+        module_version="12.2.0.0_r121306_5"
+    )
 
 
 

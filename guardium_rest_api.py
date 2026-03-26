@@ -464,6 +464,48 @@ class GuardiumRestAPI:
         response.raise_for_status()
         
         return response.json()
+    def gim_client_assign(
+        self,
+        client_ip: str,
+        module: str,
+        module_version: str
+    ) -> dict:
+        """
+        Przypisuje moduł GIM do klienta.
+        
+        Args:
+            client_ip: Adres IP klienta (wymagane)
+            module: Nazwa modułu GIM (wymagane)
+            module_version: Wersja modułu (wymagane)
+        
+        Returns:
+            Słownik z odpowiedzią API
+        
+        Raises:
+            RuntimeError: Jeśli token nie został jeszcze pobrany
+            requests.exceptions.RequestException: W przypadku błędu HTTP
+        
+        Example:
+            api.gim_client_assign(
+                client_ip="10.10.9.100",
+                module="PostgreSQL",
+                module_version="1.0.0"
+            )
+        """
+        url = f'{self.base_url}/restAPI/gim_client_assign'
+        headers = self.get_headers()
+        
+        data = {
+            'clientIP': client_ip,
+            'module': module,
+            'moduleVersion': module_version
+        }
+        
+        response = requests.put(url, json=data, headers=headers, verify=self.verify_ssl)
+        response.raise_for_status()
+        
+        return response.json()
+
 
 
 # Made with Bob
