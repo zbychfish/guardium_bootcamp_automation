@@ -641,8 +641,8 @@ class GuardiumRestAPI:
         self,
         stap_host: str,
         type: str,
-        sequence: Optional[int] = None,
-        wait_for_response: Optional[int] = None,
+        sequence: Optional[str] = None,
+        wait_for_response: Optional[str] = None,
         api_target_host: Optional[str] = None
     ) -> dict:
         """

@@ -1109,7 +1109,8 @@ def lab4_atap(state):
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
     api.delete_inspection_engine(
         stap_host="10.10.9.70",
-        type="mysql"
+        type="mysql",
+        wait_for_response="1"
     )
     api.create_inspection_engine(
         stap_host="10.10.9.70",
