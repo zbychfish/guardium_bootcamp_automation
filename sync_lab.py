@@ -1105,6 +1105,8 @@ def lab4_atap(state):
 
     run_task('configure_atap_for_postgres_on_raptor', lambda: t_enable_atap_for_postgres_on_raptor(), state)
     
+    print("\n Correcting mysql Inspection Engine definition")
+    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
     api.delete_inspection_engine(
         stap_host="10.10.9.70",
         type="mysql"
