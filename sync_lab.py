@@ -1001,7 +1001,7 @@ def lab4_atap(state):
     cur = conn.cursor()
     cur.execute(f"CREATE ROLE tom PASSWORD '{get_env_value('DEFAULT_SERVICE_PASSWORD')}' SUPERUSER CREATEDB CREATEROLE INHERIT LOGIN;")
     cur.execute(f"CREATE ROLE jerry PASSWORD '{get_env_value('DEFAULT_SERVICE_PASSWORD')}' SUPERUSER CREATEDB CREATEROLE INHERIT LOGIN;")
-    cur.execute("SELECT version();")
+    cur.execute("SELECT 1")
     print(cur.fetchone())
 
 
