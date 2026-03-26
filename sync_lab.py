@@ -1065,8 +1065,8 @@ def lab4_atap(state):
         pending = [m for m in result if m["state"] != "INSTALLED"]
         
         if pending:
-            print("Waiting 10 seconds before next check...")
-            time.sleep(10)
+            print("Waiting 15 seconds before next check...")
+            time.sleep(15)
         else:
             print("All modules installed successfully!")
 
