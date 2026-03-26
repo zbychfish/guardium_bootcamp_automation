@@ -688,7 +688,6 @@ class GuardiumRestAPI:
             data['api_target_host'] = api_target_host
         
         response = requests.delete(url, json=data, headers=headers, verify=self.verify_ssl)
-        print(response.json)
         response.raise_for_status()
         
         return response.json()

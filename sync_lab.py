@@ -1105,12 +1105,18 @@ def lab4_atap(state):
 
     run_task('configure_atap_for_postgres_on_raptor', lambda: t_enable_atap_for_postgres_on_raptor(), state)
     
+    api = GuardiumRestAPI(
+        base_url='https://10.10.9.219:8443',
+        client_id='BOOTCAMP'
+    )
+
     print("\n Correcting mysql Inspection Engine definition")
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
     api.delete_inspection_engine(
         stap_host="10.10.9.70",
         type="mysql",
-        wait_for_response="1"
+        wait_for_response="1",
+        api_target_host="10.10.9.239"
     )
     api.create_inspection_engine(
         stap_host="10.10.9.70",
@@ -1123,7 +1129,8 @@ def lab4_atap(state):
         client="0.0.0.0/0.0.0.0",
         proc_name="/usr/sbin/mysqld",
         db_install_dir="/var/lib/mysql",
-        unix_socket_marker="mysql.sock"
+        unix_socket_marker="mysql.sock",
+        api_target_host="10.10.9.239"
     )
     api.create_inspection_engine(
         stap_host="10.10.9.70",
@@ -1136,7 +1143,8 @@ def lab4_atap(state):
         client="0.0.0.0/0.0.0.0",
         proc_name="/usr/sbin/mysqld",
         db_install_dir="/var/lib/mysql",
-        unix_socket_marker="mysql.sock"
+        unix_socket_marker="mysql.sock",
+        api_target_host="10.10.9.239"
     )
     api.create_inspection_engine(
         stap_host="10.10.9.70",
@@ -1149,7 +1157,8 @@ def lab4_atap(state):
         client="0.0.0.0/0.0.0.0",
         proc_name="/usr/sbin/mysqld",
         db_install_dir="/var/lib/mysql",
-        unix_socket_marker="mysqlx.sock"
+        unix_socket_marker="mysqlx.sock",
+        api_target_host="10.10.9.239"
     )
     api.create_inspection_engine(
         stap_host="10.10.9.70",
@@ -1162,7 +1171,8 @@ def lab4_atap(state):
         client="0.0.0.0/0.0.0.0",
         proc_name="/usr/sbin/mysqld",
         db_install_dir="/var/lib/mysql",
-        unix_socket_marker="mysqlx.sock"
+        unix_socket_marker="mysqlx.sock",
+        api_target_host="10.10.9.239"
     )
     
     print("\n" + "=" * 60)
