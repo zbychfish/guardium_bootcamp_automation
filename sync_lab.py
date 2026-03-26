@@ -943,15 +943,18 @@ def lab4_atap(state):
     print("LAB 2 - GIM Setup")
     print("=" * 60)
 
+
     print("\n Postgres 16 installation")
     subprocess.run(["dnf", "-y", "install", "@postgresql:16"], check=True)
     print("\n Postgres database initialization")
-    subprocess.run(["postgresql-setup", "initdb"], check=True)
+    subprocess.run(["postgresql-setup", "--initdb", '--unit', 'postgresql'], check=True)
+    print("\n Enable postgres service")
+    subprocess.run(["systemctl", "enable", 'postgresql.service'], check=True)
     print("\n Set postgres user password")
     subprocess.run(["chpasswd"], input=f"postgres:{get_env_value('DEFAULT_SERVICE_PASSWORD')}", text=True, check=True)
-
-
-
+    print("\n Create certificate for postgres")
+    subprocess.run(["openssl", "req", "-new", "-x509", "-days", "365", "-nodes", "-text", "-out", "/var/lib/pgsql/data/pgsql.crt", "-keyout", "/var/lib/pgsql/data/pgsql.key", "-subj", '"/CN=raptor.demo.com"'], check=True)
+    subprocess.run(["chown", "postgres:postgres", "/var/lib/pgsql/data/pgsql.*"], check=True)
 
 
 
