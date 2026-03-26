@@ -1182,7 +1182,8 @@ def lab4_atap(state):
     print("\n Mongo SSL configuration")
     subprocess.run(["mkdir", "-p", "/var/lib/mongo/cert"], check=True)
     subprocess.run(["openssl", "req", '-x509', '-newkey', "rsa:4096", "-keyout", "/var/lib/mongo/cert/key.pem", "-out", "/var/lib/mongo/cert/cert.pem", "-sha256", "-days", "3650", "-nodes", "-subj", "/C=PL/ST=Lubuskie/L=Nowa Sol/O=Training/OU=Demo/CN=mongod"], check=True)
-    subprocess.run(["cat", "/var/lib/mongo/cert/key.pem", "/var/lib/mongo/cert/cert.pem", ">", "/var/lib/mongo/cert/both.pem"], check=True)
+    with open("/var/lib/mongo/cert/both.pem", "w") as f:
+        subprocess.run(["cat", "/var/lib/mongo/cert/key.pem", "/var/lib/mongo/cert/cert.pem"], stdout=f, stderr=subprocess.STDOUT, check=True)
     subprocess.run(["chown", "-R", "mongod:mongod", "/var/lib/mongo/cert"], check=True)
     conf = Path("/etc/mongod.conf")
     lines = []
