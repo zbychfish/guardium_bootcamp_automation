@@ -975,7 +975,7 @@ def lab4_atap(state):
     with conf.open() as f:
         for line in f:
             if re.match(r"^\s*local\s+all\s+all\s+peer\s*$", line):
-                lines.append("local   all             all                                     ident")
+                lines.append("local   all             all                                     ident\n")
             if re.match(r"^\s*host\s+all\s+all\s+127\.0\.0\.1/32\s+ident\s*$", line):
                 lines.append("host    all             all             127.0.0.1/32            scram-sha-256\n")
                 lines.append("host    all             all             10.10.9.0/24            scram-sha-256\n")
