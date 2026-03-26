@@ -580,6 +580,7 @@ def t_register_collector(api):
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
     units = api.get_registered_units()
     units = parse_mus_from_message_dict(units)
+    print(units)
     out: List[Dict[str, Optional[str]]] = []
     for u in units:
         out.append({
