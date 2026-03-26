@@ -953,7 +953,7 @@ def lab4_atap(state):
     print("\n Set postgres user password")
     subprocess.run(["chpasswd"], input=f"postgres:{get_env_value('DEFAULT_SERVICE_PASSWORD')}", text=True, check=True)
     print("\n Create certificate for postgres")
-    subprocess.run(["openssl", "req", "-new", "-x509", "-days", "365", "-nodes", "-text", "-out", "/var/lib/pgsql/data/pgsql.crt", "-keyout", "/var/lib/pgsql/data/pgsql.key", "-subj", '"/CN=raptor.demo.com"'], check=True)
+    subprocess.run(["openssl", "req", "-new", "-x509", "-days", "365", "-nodes", "-text", "-out", "/var/lib/pgsql/data/pgsql.crt", "-keyout", "/var/lib/pgsql/data/pgsql.key", "-subj", "/CN=raptor.demo.com"], check=True)
     subprocess.run(["chown", "postgres:postgres", "/var/lib/pgsql/data/pgsql.*"], check=True)
 
 
