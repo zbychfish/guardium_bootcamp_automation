@@ -888,7 +888,13 @@ def t_postgres_installation():
     sql = "ALTER USER postgres WITH PASSWORD '{}';".format(get_env_value("DEFAULT_SERVICE_PASSWORD"))
     subprocess.run(["sudo", "-u", "postgres", "psql", "-d", "postgres", "-U", "postgres", "-c",  sql], check=True)
 
-    
+def t_create_postgres_admin_users():
+    print("\n Create postgres admin users")
+    conn = psycopg2.connect(dbname="postgres", user= "postgres", password="guardium", host="localhost", port=5432)
+    cur = conn.cursor()
+    cur.execute(f"CREATE ROLE tom PASSWORD '{get_env_value('DEFAULT_SERVICE_PASSWORD')}' SUPERUSER CREATEDB CREATEROLE INHERIT LOGIN;")
+    cur.execute(f"CREATE ROLE jerry PASSWORD '{get_env_value('DEFAULT_SERVICE_PASSWORD')}' SUPERUSER CREATEDB CREATEROLE INHERIT LOGIN;")
+
 def lab1_appliance_setup(state):
     """
     LAB 1 - Konfiguracja appliance (collector).
@@ -993,17 +999,20 @@ def lab4_atap(state):
     print("LAB 2 - GIM Setup")
     print("=" * 60)
 
-    run_task('installin psql on raptor', lambda: t_postgres_installation(), state)
+    run_task('installing psql on raptor', lambda: t_postgres_installation(), state)
 
+    run_task('create postgres admin users', lambda: t_create_postgres_admin_users(), state)
     
-    print("\n Create postgres admin users")
-    conn = psycopg2.connect(dbname="postgres", user= "postgres", password="guardium", host="localhost", port=5432)
-    cur = conn.cursor()
-    cur.execute(f"CREATE ROLE tom PASSWORD '{get_env_value('DEFAULT_SERVICE_PASSWORD')}' SUPERUSER CREATEDB CREATEROLE INHERIT LOGIN;")
-    cur.execute(f"CREATE ROLE jerry PASSWORD '{get_env_value('DEFAULT_SERVICE_PASSWORD')}' SUPERUSER CREATEDB CREATEROLE INHERIT LOGIN;")
-    cur.execute("SELECT 1")
-    print(cur.fetchone())
+    print("\n GIM client installation on raptor")
+    subprocess.run(["/root/gn-trainings/gim_installers/guard-bundle-GIM-12.2.0.0_r121306_v12_2_1-rhel-8-linux-x86_64.gim.sh", "--", "--dir", "/opt/guardium", "--tapip", "10.10.9.70", "--sqlguard_ip", "10.10.9.219"], check=True)
 
+    api = GuardiumRestAPI(
+        base_url='https://10.10.9.219:8443',
+        client_id='BOOTCAMP'
+    )
+
+    print("\n S-TAP installation")
+    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
 
 
 
