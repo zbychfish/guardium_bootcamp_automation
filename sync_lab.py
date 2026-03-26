@@ -580,7 +580,7 @@ def t_register_collector(api):
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
     units = api.get_registered_units()
     units = parse_mus_from_message_dict(units)
-    print(units)
+    # print(units)
     out: List[Dict[str, Optional[str]]] = []
     for u in units:
         out.append({
@@ -632,8 +632,11 @@ def t_preparing_appliances_for_patching(api):
     with zipfile.ZipFile(filename, "r") as zipf:
         patch_list = sorted(zipf.namelist())
     patch_order = get_env_value("PATCH_NAME_LIST").split(",")
+    print(patch_order)
     pos = {name: i + 1 for i, name in enumerate(patch_order)}
+    print(pos)
     order_numbers = [str(pos[name]) for name in patch_list if name in pos]
+    print(order_numbers)
     save_to_env("PATCH_ORDER", ",".join(order_numbers))
         
     print("\nRemoving old patch archives on central manager")
