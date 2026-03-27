@@ -1149,6 +1149,28 @@ def t_deploy_ca_on_raptor():
     subprocess.run(["openssl", "req", "-x509", "-sha256", "-new", "-key", "/root/gn-trainings/ETAP/ca/ca.key", "-days", "3650", "-out", "/root/gn-trainings/ETAP/ca/ca.crt", "-subj", "/C=PL/O=Demo/OU=Training/CN=Demo Root CA"], check=True)
     return None
 
+def t_create_mysql_csr_for_etap():
+    appliance = ApplianceCommand(
+        host="10.10.9.239",
+        user="cli",
+        password="Guardium123!",
+        prompt_regex=r">",
+        debug=True
+    )
+    if appliance.connect():
+        csr, token, line_above = appliance.generate_external_stap_csr(
+        alias="mysql-etap",
+        common_name="mysql-etap",
+        san1="coll1.gdemo.com"
+    )
+        file_path = "/root/gn-trainings/ETAP/ca/etap.csr"
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(csr)
+        save_to_env("ETAP_CSR_ID", line_above)
+        save_to_env("ETAP_TOKEN", token)
+    appliance.disconnect()
+    return None
+
 def lab1_appliance_setup(state):
     """
     LAB 1 - Konfiguracja appliance (collector).
@@ -1218,7 +1240,7 @@ def lab1_appliance_setup(state):
     print("=" * 60)
     
     return None
-
+    
 def lab2_gim(state):
     """
     LAB 2 - Konfiguracja GIM (Group Identity Management).
@@ -1313,26 +1335,10 @@ def lab7_etap(state):
 
     run_task('Deploy CA on raptor', lambda: t_deploy_ca_on_raptor(), state)
 
+    run_task('Create CSR for ETAP for mysql', lambda: t_create_mysql_csr_for_etap(), state)
+
     
-    # appliance = ApplianceCommand(
-    #     host="10.10.9.239",
-    #     user="cli",
-    #     password="Guardium123!",
-    #     prompt_regex=r">",
-    #     debug=True
-    # )
-    # if appliance.connect():
-    #     csr, token, line_above = appliance.generate_external_stap_csr(
-    #     alias="mysql-etap",
-    #     common_name="mysql-etap",
-    #     san1="coll1.gdemo.com"
-    # )
-    #     file_path = "/root/gn-trainings/ETAP/ca/etap.csr"
-    #     with open(file_path, "w", encoding="utf-8") as f:
-    #         f.write(csr)
-    #     save_to_env("ETAP_CSR_ID", line_above)
-    #     save_to_env("ETAP_TOKEN", token)
-    # appliance.disconnect()
+    
 
     print("\n" + "=" * 60)
     print("Lab 7 completed!")
