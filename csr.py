@@ -9,6 +9,10 @@ def generate_external_stap_csr(
     host: str,
     username: str,
     password: str,
+    *,
+    alias: str,
+    common_name: str,
+    san1: str,
     log_file: str = "external_stap_csr.log",
     cli_prompt: str = ">",
     timeout_sec: int = 180,
@@ -17,12 +21,15 @@ def generate_external_stap_csr(
     """
     Automatycznie generuje CSR dla Guardium External S-TAP.
 
+    Parametry biznesowe:
+      - alias        → alias CSR (np. mysql-etap)
+      - common_name  → CN certyfikatu
+      - san1         → pierwsza wartość SAN
+
     Zwraca:
       - csr_pem (str)
       - deployment_token (str)
       - line_above_token (str)
-
-    Rzuca RuntimeError w przypadku timeoutu lub nieoczekiwanego outputu.
     """
 
     # ------------------------------------------------------------------
@@ -50,13 +57,14 @@ def generate_external_stap_csr(
 
     logger.info("Starting External S-TAP CSR generation")
     logger.debug(f"Target host: {host}")
+    logger.debug(f"Alias={alias}, CN={common_name}, SAN1={san1}")
 
     # ------------------------------------------------------------------
-    # MASZYNA STANÓW – GŁÓWNE KROKI WIZARDA
+    # MASKZYNA STANÓW – KROKI WIZARDA
     # ------------------------------------------------------------------
     steps = [
-        ("alias", "Please enter the hostname as the alias", "mysql-etap"),
-        ("CN", "What is the Common Name", "mysqletap.gdemo.com"),
+        ("alias", "Please enter the hostname as the alias", alias),
+        ("CN", "What is the Common Name", common_name),
         ("OU", "organizational unit", "Training"),
         ("OU-confirm", "another organizational unit", "n"),
         ("O", "organization (O=", "Demo"),
@@ -69,7 +77,7 @@ def generate_external_stap_csr(
         ("email-skip", "skip 'emailAddress'", "y"),
         ("crypto", "encryption algorithm", "2"),
         ("keysize", "keysize", "2"),
-        ("SAN1", "What is the name of SAN #1", "coll1.gdemo.com"),
+        ("SAN1", "What is the name of SAN #1", san1),
         ("SAN2", "What is the name of SAN #2", ""),   # ENTER
     ]
 
@@ -98,7 +106,7 @@ def generate_external_stap_csr(
         return buf
 
     # ------------------------------------------------------------------
-    # CZEKAJ NA PROMPT GUARDIUM
+    # CZEKAJ NA PROMPT CLI
     # ------------------------------------------------------------------
     logger.info("Waiting for Guardium CLI prompt")
 
@@ -133,7 +141,7 @@ def generate_external_stap_csr(
     last_activity = time.time()
 
     # ------------------------------------------------------------------
-    # GŁÓWNA PĘTLA MASZYNY STANÓW
+    # GŁÓWNA PĘTLA
     # ------------------------------------------------------------------
     while True:
         if time.time() - start_time > timeout_sec:
@@ -145,30 +153,22 @@ def generate_external_stap_csr(
             full_output += out
             last_activity = time.time()
 
-        # --------------------------------------------------------------
-        # OBSŁUGA SYTUACJI: CSR JUŻ ISTNIEJE
-        # --------------------------------------------------------------
+        # CSR już istnieje → wybór opcji [2]
         if (
             "CSR for this alias already exists" in full_output
             or "How would you like to proceed?" in full_output
         ):
-            logger.warning(
-                "Existing CSR detected – selecting option [2] Create new CSR"
-            )
+            logger.warning("Existing CSR detected – selecting option [2]")
             send("2")
             full_output = ""
             continue
 
-        # --------------------------------------------------------------
-        # ZAKOŃCZENIE – TOKEN
-        # --------------------------------------------------------------
+        # koniec – token
         if "To deploy the external_stap, use the following token:" in full_output:
-            logger.info("Wizard finished – deployment token detected")
+            logger.info("Wizard completed – token detected")
             break
 
-        # --------------------------------------------------------------
-        # STANDARDOWE KROKI WIZARDA
-        # --------------------------------------------------------------
+        # standardowy flow
         if step_idx < len(steps):
             step_name, expected_prompt, answer = steps[step_idx]
 
@@ -196,7 +196,7 @@ def generate_external_stap_csr(
     logger.info("SSH session closed")
 
     # ------------------------------------------------------------------
-    # PARSOWANIE CSR
+    # CSR
     # ------------------------------------------------------------------
     csr_match = re.search(
         r"-----BEGIN NEW CERTIFICATE REQUEST-----(.*?)-----END NEW CERTIFICATE REQUEST-----",
@@ -211,8 +211,6 @@ def generate_external_stap_csr(
         + csr_match.group(1)
         + "-----END NEW CERTIFICATE REQUEST-----"
     )
-
-    logger.info("CSR extracted successfully")
 
     # ------------------------------------------------------------------
     # TOKEN + LINIA POWYŻEJ
@@ -231,11 +229,10 @@ def generate_external_stap_csr(
     if token is None:
         raise RuntimeError("Deployment token not found")
     if line_above is None:
-        raise RuntimeError("Line above token not found – unexpected Guardium output")
+        raise RuntimeError("Line above token not found")
 
     logger.info(f"Deployment token extracted: {token}")
 
     return csr, token, line_above
 
-
-generate_external_stap_csr(host="10.10.9.239", username="cli", password="Guardium123!")  
+generate_external_stap_csr(host="10.10.9.239", username="cli", password="Guardium123!", alias="mysql-etap", common_name="mysql-etap", san1="coll1.gdemo.com")  
