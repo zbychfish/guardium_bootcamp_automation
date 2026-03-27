@@ -1132,7 +1132,7 @@ def t_setup_raptor_to_deploy_etap():
         if re.match(r"^v\d+\.\d+\.\d+$", t):
             m, n, p = t[1:].split(".")
             k=f"{m}.{n}"
-            latest[k]=max(latest.get(k, Version(get_env_value("GUARDIUM_MINOR_VERSION"))), Version(t[1:]))
+            latest[k]=max(latest.get(k, Version("0.0.0")), Version(t[1:]))
     print(latest)
     exit(0)
 
