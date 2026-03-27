@@ -52,7 +52,7 @@ def generate_external_stap_csr(
     logger.debug(f"Target host: {host}")
 
     # ------------------------------------------------------------------
-    # DEFINICJA MASZYNY STANÓW
+    # MASZYNA STANÓW – GŁÓWNE KROKI WIZARDA
     # ------------------------------------------------------------------
     steps = [
         ("alias", "Please enter the hostname as the alias", "mysql-etap"),
@@ -60,17 +60,17 @@ def generate_external_stap_csr(
         ("OU", "organizational unit", "Training"),
         ("OU-confirm", "another organizational unit", "n"),
         ("O", "organization (O=", "Demo"),
-        ("L", "city or locality", ""),            # ENTER
+        ("L", "city or locality", ""),               # ENTER
         ("L-skip", "skip 'L'", "y"),
-        ("ST", "state or province", ""),           # ENTER
+        ("ST", "state or province", ""),              # ENTER
         ("ST-skip", "skip 'ST'", "y"),
         ("C", "two-letter country code", "PL"),
-        ("email", "email address", ""),            # ENTER
+        ("email", "email address", ""),               # ENTER
         ("email-skip", "skip 'emailAddress'", "y"),
         ("crypto", "encryption algorithm", "2"),
         ("keysize", "keysize", "2"),
         ("SAN1", "What is the name of SAN #1", "coll1.gdemo.com"),
-        ("SAN2", "What is the name of SAN #2", ""),  # ENTER
+        ("SAN2", "What is the name of SAN #2", ""),   # ENTER
     ]
 
     # ------------------------------------------------------------------
@@ -145,10 +145,30 @@ def generate_external_stap_csr(
             full_output += out
             last_activity = time.time()
 
+        # --------------------------------------------------------------
+        # OBSŁUGA SYTUACJI: CSR JUŻ ISTNIEJE
+        # --------------------------------------------------------------
+        if (
+            "CSR for this alias already exists" in full_output
+            or "How would you like to proceed?" in full_output
+        ):
+            logger.warning(
+                "Existing CSR detected – selecting option [2] Create new CSR"
+            )
+            send("2")
+            full_output = ""
+            continue
+
+        # --------------------------------------------------------------
+        # ZAKOŃCZENIE – TOKEN
+        # --------------------------------------------------------------
         if "To deploy the external_stap, use the following token:" in full_output:
             logger.info("Wizard finished – deployment token detected")
             break
 
+        # --------------------------------------------------------------
+        # STANDARDOWE KROKI WIZARDA
+        # --------------------------------------------------------------
         if step_idx < len(steps):
             step_name, expected_prompt, answer = steps[step_idx]
 
@@ -215,7 +235,7 @@ def generate_external_stap_csr(
 
     logger.info(f"Deployment token extracted: {token}")
 
-    return csr, token, line_above    
+    return csr, token, line_above
 
 
 generate_external_stap_csr(host="10.10.9.239", username="cli", password="Guardium123!")  
