@@ -1122,8 +1122,8 @@ def t_exit_for_db2_setup(api):
     return None
 
 def t_setup_raptor_to_deploy_etap():
-    # print("\n Installing package requirements")
-    # subprocess.run(["dnf", "-y", "install", "podman-docker", "skopeo"], check=True)
+    print("\n Installing package requirements")
+    subprocess.run(["dnf", "-y", "install", "podman-docker", "skopeo"], check=True)
     print("\n Determine the latest ETAP version")
     result = subprocess.run(["skopeo", "list-tags", "docker://icr.io/guardium/guardium_external_s-tap"], check=True, text=True, capture_output=True)
     etap_versions = json.loads(result.stdout)
@@ -1137,8 +1137,10 @@ def t_setup_raptor_to_deploy_etap():
         key = f"{major}.{minor}"
         v = Version(version_str)
         latest[key] = max(latest.get(key, v), v)
-    print(latest[get_env_value("GUARDIUM_MINOR_VERSION")])
-    exit(0)
+    print("ETAP version:", latest[get_env_value("GUARDIUM_MINOR_VERSION")])
+
+    print("\n Create CA directory")
+    subprocess.run(["mkdir", "-p", "/root/gn-trainings/ETAP/ca"], check=True)
 
 
 def lab1_appliance_setup(state):
@@ -1303,6 +1305,8 @@ def lab7_etap(state):
     )
 
     run_task('Setup EXIT for DB2 on raptor', lambda: t_setup_raptor_to_deploy_etap(), state)
+
+    
 
     print("\n" + "=" * 60)
     print("Lab 7 completed!")
