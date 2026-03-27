@@ -1303,7 +1303,6 @@ def lab7_etap(state):
         base_url='https://10.10.9.219:8443',
         client_id='BOOTCAMP'
     )
-
     run_task('Setup EXIT for DB2 on raptor', lambda: t_setup_raptor_to_deploy_etap(), state)
     
     appliance = ApplianceCommand(
@@ -1319,10 +1318,13 @@ def lab7_etap(state):
         common_name="mysql-etap",
         san1="coll1.gdemo.com"
     )
-        print(f"Token: {token}", line_above)
-        print(csr)
+        file_path = "/root/gn-trainings/ETAP/ca/etap.csr"
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(csr)
+        save_to_env("ETAP_CSR_ID", line_above)
+        save_to_env("ETAP_TOKEN", token)
     appliance.disconnect()
-    
+
     print("\n" + "=" * 60)
     print("Lab 7 completed!")
     print("=" * 60)
