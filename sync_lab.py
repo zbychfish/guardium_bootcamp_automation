@@ -1141,7 +1141,7 @@ def t_setup_raptor_to_deploy_etap():
 
     print("\n Create CA directory")
     subprocess.run(["mkdir", "-p", "/root/gn-trainings/ETAP/ca"], check=True)
-
+    return latest[get_env_value("GUARDIUM_MINOR_VERSION")]
 
 def lab1_appliance_setup(state):
     """
@@ -1294,6 +1294,150 @@ def lab5_exit(state):
     print("Lab 5 completed!")
     print("=" * 60)
 
+
+def generate_external_stap_csr(
+    host: str,
+    username: str,
+    password: str,
+    timeout_sec: int = 180,
+    prompt_timeout_sec: int = 20,
+):
+    """
+    Automatycznie generuje CSR dla Guardium External S-TAP
+    i zwraca: (csr_pem, token, line_above_token)
+
+    Raises RuntimeError on timeout or unexpected output.
+    """
+
+    # ----- DEFINICJA MASZYNY STANÓW -----
+
+    steps = [
+        # alias
+        ("Please enter the hostname as the alias", "mysql-etap"),
+        # CN
+        ("What is the Common Name", "mysqletap.gdemo.com"),
+        # OU
+        ("organizational unit", "Training"),
+        ("another organizational unit", "n"),
+        # O
+        ("organization (O=", "Demo"),
+        # L (ENTER)
+        ("city or locality", ""),
+        ("skip 'L'", "y"),
+        # ST (ENTER)
+        ("state or province", ""),
+        ("skip 'ST'", "y"),
+        # C
+        ("two-letter country code", "PL"),
+        # email (ENTER)
+        ("email address", ""),
+        ("skip 'emailAddress'", "y"),
+        # crypto
+        ("encryption algorithm", "2"),
+        ("keysize", "2"),
+        # SAN
+        ("What is the name of SAN #1", "coll1.gdemo.com"),
+        ("What is the name of SAN #2", ""),
+    ]
+
+    # ----- POŁĄCZENIE SSH -----
+
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh.connect(host, username=username, password=password)
+
+    chan = ssh.invoke_shell()
+    chan.settimeout(2)
+
+    def read_output():
+        data = ""
+        while chan.recv_ready():
+            data += chan.recv(65535).decode("utf-8", errors="ignore")
+        return data
+
+    # ----- START KOMENDY -----
+
+    chan.send(b"create csr external_stap\n")
+
+    full_output = ""
+    step_idx = 0
+    start_time = time.time()
+    last_prompt_time = time.time()
+
+    # ----- GŁÓWNA PĘTLA MASZYNY STANÓW -----
+
+    while True:
+        if time.time() - start_time > timeout_sec:
+            ssh.close()
+            raise RuntimeError("Global timeout waiting for CSR generation")
+
+        out = read_output()
+        if out:
+            full_output += out
+            last_prompt_time = time.time()
+        else:
+            time.sleep(0.3)
+
+        # zakończenie – token już się pojawił
+        if "To deploy the external_stap, use the following token:" in full_output:
+            break
+
+        # wszystkie kroki wykonane, tylko czekamy
+        if step_idx >= len(steps):
+            continue
+
+        expected_prompt, answer = steps[step_idx]
+
+        if expected_prompt in full_output:
+            chan.send((answer + "\n").encode("utf-8"))
+            step_idx += 1
+            full_output = ""  # czyścimy bufor, żeby nie matchować starego promptu
+            continue
+
+        # timeout per-prompt
+        if time.time() - last_prompt_time > prompt_timeout_sec:
+            ssh.close()
+            raise RuntimeError(
+                f"Timeout waiting for prompt: '{expected_prompt}'"
+            )
+
+    ssh.close()
+
+    # ----- PARSOWANIE CSR -----
+
+    csr_match = re.search(
+        r"-----BEGIN NEW CERTIFICATE REQUEST-----(.*?)-----END NEW CERTIFICATE REQUEST-----",
+        full_output,
+        re.S,
+    )
+    if not csr_match:
+        raise RuntimeError("CSR not found in output")
+
+    csr = (
+        "-----BEGIN NEW CERTIFICATE REQUEST-----"
+        + csr_match.group(1)
+        + "-----END NEW CERTIFICATE REQUEST-----"
+    )
+
+    # ----- PARSOWANIE TOKENA + LINII POWYŻEJ -----
+
+    lines = full_output.splitlines()
+    token = None
+    line_above = None
+
+    for i, line in enumerate(lines):
+        if "To deploy the external_stap, use the following token:" in line:
+            token = line.split(":")[-1].strip()
+            if i > 0:
+                line_above = lines[i - 1].strip()
+            break
+
+    if not token:
+        raise RuntimeError("Deployment token not found")
+
+    return csr, token, line_above
+
+
 def lab7_etap(state):
     print("=" * 60)
     print("LAB 7 - ETAP")
@@ -1305,8 +1449,7 @@ def lab7_etap(state):
     )
 
     run_task('Setup EXIT for DB2 on raptor', lambda: t_setup_raptor_to_deploy_etap(), state)
-
-    
+    generate_external_stap_csr(host="10.10.9.239", username="cli", password="Guardium123!")
 
     print("\n" + "=" * 60)
     print("Lab 7 completed!")
