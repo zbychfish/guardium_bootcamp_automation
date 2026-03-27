@@ -1077,7 +1077,7 @@ def t_configure_ssl_for_mongo():
 
 def t_enable_atap_for_mongo():
     print("\n ATAP setup for postgres on raptor")
-    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "--db-user=mongod", "--db-home=/usr", "--db-base=/var/lib/mongo", "--db-type=", "--db-instance=mongo4", "store-conf"], check=True)
+    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "--db-user=mongod", "--db-home=/usr", "--db-base=/var/lib/mongo", "--db-type=", "mongodb",     "--db-instance=mongo4", "store-conf"], check=True)
     subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "authorize-user", "mongod"], check=True)
     subprocess.run(["systemctl", "stop", "mongod"], check=True)
     subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "--db-instance=mongo4", "activate"], check=True)
