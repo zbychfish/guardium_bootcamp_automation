@@ -1084,6 +1084,16 @@ def t_enable_atap_for_mongo():
     subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "--db-instance=mongo4", "activate"], check=True)
     subprocess.run(["systemctl", "start", "mongod"], check=True)
     subprocess.run(["mv", "/opt/guardium/etc/guard/postgres.conf", "/opt/guardium/etc/guard/root"], check=True)
+    return None
+
+def t_exit_for_db2_setup():
+    print("\n Registering db2inst1 user")
+    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "authorize-user", "db2inst1"], check=True)
+    print("\n Stop DB2")
+    subprocess.run(["sudo", "-u", "db2inst1", "db2stop"], check=True)
+    exit(0)
+
+    return None
 
 def lab1_appliance_setup(state):
     """
@@ -1181,12 +1191,12 @@ def lab2_gim(state):
     run_task('import_gim_files_on_cm', lambda: t_import_gim_modules(api), state) 
 
     print("\n" + "=" * 60)
-    print("All labs completed!")
+    print("Lab 2 completed!")
     print("=" * 60)
 
 def lab4_atap(state):
     print("=" * 60)
-    print("LAB 2 - GIM Setup")
+    print("LAB 4 - ATAP")
     print("=" * 60)
 
     run_task('installing psql on raptor', lambda: t_postgres_installation(), state)
@@ -1217,8 +1227,20 @@ def lab4_atap(state):
 
 
     print("\n" + "=" * 60)
-    print("All labs completed!")
+    print("Lab 4 completed!")
     print("=" * 60)
+
+def lab5_exit(state):
+    print("=" * 60)
+    print("LAB 5 - EXIT")
+    print("=" * 60)
+
+    run_task('Setup EXIT for DB2 on raptor', lambda: t_exit_for_db2_setup(), state)
+
+    print("\n" + "=" * 60)
+    print("Lab 5 completed!")
+    print("=" * 60)
+
 
 def sync_lab(state, skip_below: int = 0, stop_at: int = 999):
     """
@@ -1282,7 +1304,19 @@ def sync_lab(state, skip_below: int = 0, stop_at: int = 999):
     else:
         print("\n[LAB 4] SKIPPED - ATAP (--stop-at)")
 
-    
+    # LAB 5: EXIT
+    if skip_below < 5 and stop_at >= 5:
+        lab5_exit(state)
+        print("\n" + "=" * 60)
+        print("LAB 5 completed!")
+        print("=" * 60)
+        if stop_at == 4:
+            print("\n[INFO] Stopped after LAB 5 (--stop-at=5)")
+            return
+    elif skip_below >= 5:
+        print("\n[LAB 4] SKIPPED - EXIT (--skip-below)")
+    else:
+        print("\n[LAB 4] SKIPPED - EXIT (--stop-at)")
 
 
 if __name__ == "__main__":
