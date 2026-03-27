@@ -1086,7 +1086,7 @@ def t_enable_atap_for_mongo():
     subprocess.run(["mv", "/opt/guardium/etc/guard/postgres.conf", "/opt/guardium/etc/guard/root"], check=True)
     return None
 
-def t_exit_for_db2_setup():
+def t_exit_for_db2_setup(api):
     print("\n Registering db2inst1 user")
     subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "authorize-user", "db2inst1"], check=True)
     print("\n Stop DB2")
@@ -1098,8 +1098,29 @@ def t_exit_for_db2_setup():
     subprocess.run(["sudo", "-iu", "db2inst1", "db2", "get", "database", "manager", "configuration"], check=True)
     print("\n Start DB2")
     subprocess.run(["sudo", "-iu", "db2inst1", "db2start"], check=True)
-    print("\n Configure DB2 IE for EXIT")
-    subprocess.run(["/opt/guardium/modules/STAP/current/setup_exit.sh", "db2"], check=True)
+    # print("\n Configure DB2 IE for EXIT")
+    # subprocess.run(["/opt/guardium/modules/STAP/current/setup_exit.sh", "db2"], check=True)
+    print("\n Correcting DB2 Inspection Engine definition")
+    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
+    api.delete_inspection_engine(
+        stap_host="10.10.9.70",
+        type="db2",
+        wait_for_response="1",
+        api_target_host="10.10.9.239"
+    )
+    api.create_inspection_engine(
+        stap_host="10.10.9.70",
+        protocol="db2_exit",
+        port_min="50000",
+        port_max="50000",
+        ktap_db_port="50000",
+        db_user="db2inst1",
+        db_version="11",
+        client="0.0.0.0/0.0.0.0",
+        proc_name="/home/db2inst1/sqllib/adm/db2sysc",
+        db_install_dir="/home/db2inst1",
+        api_target_host="10.10.9.239"
+    )
     exit(0)
 
     return None
@@ -1244,7 +1265,12 @@ def lab5_exit(state):
     print("LAB 5 - EXIT")
     print("=" * 60)
 
-    run_task('Setup EXIT for DB2 on raptor', lambda: t_exit_for_db2_setup(), state)
+    api = GuardiumRestAPI(
+        base_url='https://10.10.9.219:8443',
+        client_id='BOOTCAMP'
+    )
+
+    run_task('Setup EXIT for DB2 on raptor', lambda: t_exit_for_db2_setup(api), state)
 
     print("\n" + "=" * 60)
     print("Lab 5 completed!")
