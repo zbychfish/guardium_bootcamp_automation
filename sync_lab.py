@@ -1090,7 +1090,7 @@ def t_exit_for_db2_setup():
     print("\n Registering db2inst1 user")
     subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "authorize-user", "db2inst1"], check=True)
     print("\n Stop DB2")
-    subprocess.run(["sudo", "-u", "db2inst1", "db2stop"], check=True)
+    subprocess.run(["sudo", "-u", "db2inst1", "-c","db2stop"], check=True)
     exit(0)
 
     return None
