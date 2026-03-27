@@ -1104,23 +1104,20 @@ def t_exit_for_db2_setup(api):
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
     api.delete_inspection_engine(
         stap_host="10.10.9.70",
-        type="db2",
+        type="Db2",
         wait_for_response="1",
         api_target_host="10.10.9.239"
     )
-    api.create_inspection_engine(
-        stap_host="10.10.9.70",
-        protocol="db2_exit",
-        port_min="50000",
-        port_max="50000",
-        ktap_db_port="50000",
-        db_user="db2inst1",
-        db_version="11",
-        client="0.0.0.0/0.0.0.0",
-        proc_name="/home/db2inst1/sqllib/adm/db2sysc",
-        db_install_dir="/home/db2inst1",
-        api_target_host="10.10.9.239"
-    )
+    # api.create_inspection_engine(
+    #     stap_host="10.10.9.70",
+    #     protocol="Db2 Exit",
+    #     db_user="db2inst1",
+    #     db_version="11",
+    #     client="0.0.0.0/0.0.0.0",
+    #     proc_name="/home/db2inst1/sqllib/adm/db2sysc",
+    #     db_install_dir="/home/db2inst1",
+    #     api_target_host="10.10.9.239"
+    # )
     exit(0)
 
     return None
