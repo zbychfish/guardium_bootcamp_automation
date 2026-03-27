@@ -689,6 +689,200 @@ class ApplianceCommand:
             if original_timeout is not None:
                 self.channel.settimeout(original_timeout)
     
+    def generate_external_stap_csr(
+        self,
+        alias: str,
+        common_name: str,
+        san1: str,
+        organizational_unit: str = "Training",
+        organization: str = "Demo",
+        locality: str = "",
+        state: str = "",
+        country: str = "PL",
+        email: str = "",
+        encryption_algorithm: str = "2",
+        keysize: str = "2",
+        san2: str = "",
+        timeout_sec: int = 180,
+        prompt_timeout_sec: int = 20
+    ) -> Tuple[str, str, str]:
+        """
+        Generuje CSR dla Guardium External S-TAP używając istniejącego połączenia.
+        
+        Args:
+            alias: Alias CSR (np. mysql-etap)
+            common_name: CN certyfikatu
+            san1: Pierwsza wartość SAN
+            organizational_unit: Jednostka organizacyjna (domyślnie "Training")
+            organization: Organizacja (domyślnie "Demo")
+            locality: Miasto/lokalizacja (domyślnie puste - skip)
+            state: Stan/prowincja (domyślnie puste - skip)
+            country: Dwuliterowy kod kraju (domyślnie "PL")
+            email: Adres email (domyślnie puste - skip)
+            encryption_algorithm: Algorytm szyfrowania (domyślnie "2")
+            keysize: Rozmiar klucza (domyślnie "2")
+            san2: Druga wartość SAN (domyślnie puste)
+            timeout_sec: Globalny timeout w sekundach (domyślnie 180)
+            prompt_timeout_sec: Timeout dla pojedynczego promptu (domyślnie 20)
+        
+        Returns:
+            Tuple[str, str, str]: (csr_pem, deployment_token, line_above_token)
+        
+        Raises:
+            RuntimeError: Jeśli nie połączono lub wystąpił błąd
+            TimeoutError: Jeśli przekroczono timeout
+        """
+        if not self.channel:
+            raise RuntimeError("Not connected")
+        
+        # Type assertion dla type checkera
+        assert self.channel is not None
+        
+        # Definicja kroków wizarda - dokładnie jak w csr.py
+        steps = [
+            ("alias", "Please enter the hostname as the alias", alias),
+            ("CN", "What is the Common Name", common_name),
+            ("OU", "organizational unit", organizational_unit),
+            ("OU-confirm", "another organizational unit", "n"),
+            ("O", "organization (O=", organization),
+            ("L", "city or locality", locality),
+            ("L-skip", "skip 'L'", "y" if not locality else "n"),
+            ("ST", "state or province", state),
+            ("ST-skip", "skip 'ST'", "y" if not state else "n"),
+            ("C", "two-letter country code", country),
+            ("email", "email address", email),
+            ("email-skip", "skip 'emailAddress'", "y" if not email else "n"),
+            ("crypto", "encryption algorithm", encryption_algorithm),
+            ("keysize", "keysize", keysize),
+            ("SAN1", "What is the name of SAN #1", san1),
+            ("SAN2", "What is the name of SAN #2", san2),
+        ]
+        
+        if self.debug:
+            print(f"[DEBUG] Starting External S-TAP CSR generation", file=sys.stderr)
+            print(f"[DEBUG] Alias={alias}, CN={common_name}, SAN1={san1}", file=sys.stderr)
+        
+        # Funkcja pomocnicza do odczytu outputu
+        def read_output() -> str:
+            assert self.channel is not None
+            buf = ""
+            while self.channel.recv_ready():
+                chunk = self.channel.recv(65535).decode("utf-8", errors="ignore")
+                if self.debug:
+                    print(f"[DEBUG] RECV <<< {chunk}", file=sys.stderr)
+                buf += chunk
+            return buf
+        
+        # Funkcja pomocnicza do wysyłania
+        def send(text: str) -> None:
+            assert self.channel is not None
+            if self.debug:
+                print(f"[DEBUG] SEND >>> {text!r}", file=sys.stderr)
+            self.channel.send((text + "\n").encode("utf-8"))
+        
+        # Wyślij komendę
+        send("create csr external_stap")
+        if self.debug:
+            print("[DEBUG] Command sent: create csr external_stap", file=sys.stderr)
+        
+        full_output = ""
+        step_idx = 0
+        start_time = time.time()
+        last_activity = time.time()
+        
+        # Główna pętla - dokładnie jak w csr.py
+        while True:
+            if time.time() - start_time > timeout_sec:
+                raise TimeoutError("GLOBAL TIMEOUT: CSR generation took too long")
+            
+            out = read_output()
+            if out:
+                full_output += out
+                last_activity = time.time()
+            
+            # CSR już istnieje → wybór opcji [2]
+            if (
+                "CSR for this alias already exists" in full_output
+                or "How would you like to proceed?" in full_output
+            ):
+                if self.debug:
+                    print("[DEBUG] Existing CSR detected – selecting option [2]", file=sys.stderr)
+                send("2")
+                full_output = ""
+                continue
+            
+            # Koniec – token
+            if "To deploy the external_stap, use the following token:" in full_output:
+                if self.debug:
+                    print("[DEBUG] Wizard completed – token detected", file=sys.stderr)
+                break
+            
+            # Standardowy flow
+            if step_idx < len(steps):
+                step_name, expected_prompt, answer = steps[step_idx]
+                
+                if expected_prompt in full_output:
+                    if self.debug:
+                        print(
+                            f"[DEBUG] Step [{step_idx + 1}/{len(steps)}] "
+                            f"{step_name} → sending "
+                            f"{'ENTER' if answer == '' else answer}",
+                            file=sys.stderr
+                        )
+                    send(answer)
+                    step_idx += 1
+                    full_output = ""
+                    continue
+                
+                if time.time() - last_activity > prompt_timeout_sec:
+                    raise TimeoutError(
+                        f"PROMPT TIMEOUT at step '{step_name}', "
+                        f"waiting for: '{expected_prompt}'"
+                    )
+            
+            time.sleep(0.3)
+        
+        if self.debug:
+            print("[DEBUG] CSR generation completed", file=sys.stderr)
+        
+        # Ekstrakcja CSR
+        csr_match = re.search(
+            r"-----BEGIN NEW CERTIFICATE REQUEST-----(.*?)-----END NEW CERTIFICATE REQUEST-----",
+            full_output,
+            re.S,
+        )
+        if not csr_match:
+            raise RuntimeError("CSR not found in output")
+        
+        csr = (
+            "-----BEGIN NEW CERTIFICATE REQUEST-----"
+            + csr_match.group(1)
+            + "-----END NEW CERTIFICATE REQUEST-----"
+        )
+        
+        # Ekstrakcja tokenu i linii powyżej
+        lines = full_output.splitlines()
+        token: Optional[str] = None
+        line_above: Optional[str] = None
+        
+        for i, line in enumerate(lines):
+            if "To deploy the external_stap, use the following token:" in line:
+                token = line.split(":")[-1].strip()
+                if i > 0:
+                    line_above = lines[i - 1].strip()
+                break
+        
+        if token is None:
+            raise RuntimeError("Deployment token not found")
+        if line_above is None:
+            raise RuntimeError("Line above token not found")
+        
+        if self.debug:
+            print(f"[DEBUG] Deployment token extracted: {token}", file=sys.stderr)
+        
+        return csr, token, line_above
+    
+    
     def disconnect(self):
         """Zamyka połączenie"""
         try:
