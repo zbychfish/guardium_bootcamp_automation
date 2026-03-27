@@ -1209,7 +1209,7 @@ def lab4_atap(state):
         client_id='BOOTCAMP'
     )
 
-    run_task('configure_atap_for_postgres_on_raptor', lambda: t_correct_mysql_ie(api), state)
+    run_task('Correct mysql IE\'s', lambda: t_correct_mysql_ie(api), state)
 
     run_task('Configure SSL for Mongo', lambda: t_configure_ssl_for_mongo(), state)
 
