@@ -24,6 +24,7 @@ import zipfile
 import glob
 from pathlib import Path
 import subprocess
+from packaging.version import Version
 
 
 
@@ -1125,13 +1126,14 @@ def t_setup_raptor_to_deploy_etap():
     subprocess.run(["dnf", "-y", "install", "podman-docker", "skopeo"], check=True)
     print("\n Determine the latest ETAP version")
     result = subprocess.run(["skopeo", "list-tags", "docker://icr.io/guardium/guardium_external_s-tap"], check=True, text=True, capture_output=True)
-
-
-    etap_versions = result.stdout
-    print(etap_versions, 2)
-    print(type(etap_versions))
-    print(json.loads(etap_versions))
-
+    etap_versions = json.loads(result.stdout)
+    latest = {}
+    for t in etap_versions:
+        if re.match(r"^v\d+\.\d+\.\d+$", t):
+            m, n, p = t[1:].split(".")
+            k=f"{m}.{n}"
+            latest[k]=max(latest.get(k, Version(get_env_value("GUARDIUM_MINOR_VERSION"))), Version(t[1:]))
+    print(latest)
     exit(0)
 
 
