@@ -1138,10 +1138,16 @@ def t_setup_raptor_to_deploy_etap():
         v = Version(version_str)
         latest[key] = max(latest.get(key, v), v)
     print("ETAP version:", latest[get_env_value("GUARDIUM_MINOR_VERSION")])
+    return None
 
+def t_deploy_ca_on_raptor():
     print("\n Create CA directory")
     subprocess.run(["mkdir", "-p", "/root/gn-trainings/ETAP/ca"], check=True)
-    return latest[get_env_value("GUARDIUM_MINOR_VERSION")]
+    print("\n Create CA private key")
+    subprocess.run(["openssl", "genrsa", "-out", "/root/gn-trainings/ETAP/ca/ca.key", "2048"], check=True)
+    print("\n Generate CA certificate")
+    subprocess.run(["openssl", "req", "-x509", "-sha256", "-new", "-key", "/root/gn-trainings/ETAP/ca/ca.key", "-days", "3650", "-out", "/root/gn-trainings/ETAP/ca/ca.crt", "-subj", "/C=PL/O=Demo/OU=Training/CN=Demo Root CA"], check=True)
+    return None
 
 def lab1_appliance_setup(state):
     """
@@ -1304,26 +1310,29 @@ def lab7_etap(state):
         client_id='BOOTCAMP'
     )
     run_task('Setup EXIT for DB2 on raptor', lambda: t_setup_raptor_to_deploy_etap(), state)
+
+    run_task('Deploy CA on raptor', lambda: t_deploy_ca_on_raptor(), state)
+
     
-    appliance = ApplianceCommand(
-        host="10.10.9.239",
-        user="cli",
-        password="Guardium123!",
-        prompt_regex=r">",
-        debug=True
-    )
-    if appliance.connect():
-        csr, token, line_above = appliance.generate_external_stap_csr(
-        alias="mysql-etap",
-        common_name="mysql-etap",
-        san1="coll1.gdemo.com"
-    )
-        file_path = "/root/gn-trainings/ETAP/ca/etap.csr"
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.write(csr)
-        save_to_env("ETAP_CSR_ID", line_above)
-        save_to_env("ETAP_TOKEN", token)
-    appliance.disconnect()
+    # appliance = ApplianceCommand(
+    #     host="10.10.9.239",
+    #     user="cli",
+    #     password="Guardium123!",
+    #     prompt_regex=r">",
+    #     debug=True
+    # )
+    # if appliance.connect():
+    #     csr, token, line_above = appliance.generate_external_stap_csr(
+    #     alias="mysql-etap",
+    #     common_name="mysql-etap",
+    #     san1="coll1.gdemo.com"
+    # )
+    #     file_path = "/root/gn-trainings/ETAP/ca/etap.csr"
+    #     with open(file_path, "w", encoding="utf-8") as f:
+    #         f.write(csr)
+    #     save_to_env("ETAP_CSR_ID", line_above)
+    #     save_to_env("ETAP_TOKEN", token)
+    # appliance.disconnect()
 
     print("\n" + "=" * 60)
     print("Lab 7 completed!")

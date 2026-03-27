@@ -1,41 +1,38 @@
 import paramiko
 import time
-import re
 import logging
-from typing import Tuple
+from typing import Optional
 
 
-def generate_external_stap_csr(
+def import_external_stap_ca_certificate(
     host: str,
     username: str,
     password: str,
     *,
     alias: str,
-    common_name: str,
-    san1: str,
-    log_file: str = "external_stap_csr.log",
+    ca_cert: str,
+    log_file: str = "external_stap_ca_import.log",
     cli_prompt: str = ">",
-    timeout_sec: int = 180,
+    timeout_sec: int = 120,
     prompt_timeout_sec: int = 20,
-) -> Tuple[str, str, str]:
+    ignore_time_parse_error: bool = True,
+) -> None:
     """
-    Automatycznie generuje CSR dla Guardium External S-TAP.
+    Importuje certyfikat CA do Guardium External S-TAP keystore.
 
-    Parametry biznesowe:
-      - alias        → alias CSR (np. mysql-etap)
-      - common_name  → CN certyfikatu
-      - san1         → pierwsza wartość SAN
-
-    Zwraca:
-      - csr_pem (str)
-      - deployment_token (str)
-      - line_above_token (str)
+    Flow:
+      - store certificate keystore_external_stap
+      - alias
+      - wklejenie certyfikatu PEM
+      - ENTER
+      - CTRL+D
+      - SUCCESS + opcjonalny błąd 'Error parsing time' → ignorowany
     """
 
     # ------------------------------------------------------------------
     # LOGGING
     # ------------------------------------------------------------------
-    logger = logging.getLogger("guardium-csr")
+    logger = logging.getLogger("guardium-ca-import")
     logger.setLevel(logging.DEBUG)
 
     formatter = logging.Formatter(
@@ -55,31 +52,9 @@ def generate_external_stap_csr(
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)
 
-    logger.info("Starting External S-TAP CSR generation")
+    logger.info("Starting Guardium External S-TAP CA certificate import")
     logger.debug(f"Target host: {host}")
-    logger.debug(f"Alias={alias}, CN={common_name}, SAN1={san1}")
-
-    # ------------------------------------------------------------------
-    # MASKZYNA STANÓW – KROKI WIZARDA
-    # ------------------------------------------------------------------
-    steps = [
-        ("alias", "Please enter the hostname as the alias", alias),
-        ("CN", "What is the Common Name", common_name),
-        ("OU", "organizational unit", "Training"),
-        ("OU-confirm", "another organizational unit", "n"),
-        ("O", "organization (O=", "Demo"),
-        ("L", "city or locality", ""),               # ENTER
-        ("L-skip", "skip 'L'", "y"),
-        ("ST", "state or province", ""),              # ENTER
-        ("ST-skip", "skip 'ST'", "y"),
-        ("C", "two-letter country code", "PL"),
-        ("email", "email address", ""),               # ENTER
-        ("email-skip", "skip 'emailAddress'", "y"),
-        ("crypto", "encryption algorithm", "2"),
-        ("keysize", "keysize", "2"),
-        ("SAN1", "What is the name of SAN #1", san1),
-        ("SAN2", "What is the name of SAN #2", ""),   # ENTER
-    ]
+    logger.debug(f"Alias: {alias}")
 
     # ------------------------------------------------------------------
     # SSH
@@ -97,6 +72,14 @@ def generate_external_stap_csr(
         logger.debug(f"SEND >>> {text!r}")
         chan.send((text + "\n").encode("utf-8"))
 
+    def send_raw(data: str) -> None:
+        logger.debug("SEND >>> (raw certificate data)")
+        chan.send(data.encode("utf-8"))
+
+    def send_ctrl_d() -> None:
+        logger.debug("SEND >>> CTRL+D")
+        chan.send(b"\x04")
+
     def read_output() -> str:
         buf = ""
         while chan.recv_ready():
@@ -106,7 +89,7 @@ def generate_external_stap_csr(
         return buf
 
     # ------------------------------------------------------------------
-    # CZEKAJ NA PROMPT CLI
+    # WAIT FOR GUARDIUM PROMPT
     # ------------------------------------------------------------------
     logger.info("Waiting for Guardium CLI prompt")
 
@@ -130,109 +113,77 @@ def generate_external_stap_csr(
         time.sleep(0.3)
 
     # ------------------------------------------------------------------
-    # START KOMENDY
+    # START COMMAND
     # ------------------------------------------------------------------
-    send("create csr external_stap")
-    logger.info("Command sent: create csr external_stap")
+    send("store certificate keystore_external_stap")
+    logger.info("Command sent: store certificate keystore_external_stap")
 
     full_output = ""
-    step_idx = 0
     start_time = time.time()
     last_activity = time.time()
 
     # ------------------------------------------------------------------
-    # GŁÓWNA PĘTLA
+    # MAIN LOOP
     # ------------------------------------------------------------------
     while True:
         if time.time() - start_time > timeout_sec:
             ssh.close()
-            raise RuntimeError("GLOBAL TIMEOUT: CSR generation took too long")
+            raise RuntimeError("GLOBAL TIMEOUT during CA certificate import")
 
         out = read_output()
         if out:
             full_output += out
             last_activity = time.time()
 
-        # CSR już istnieje → wybór opcji [2]
-        if (
-            "CSR for this alias already exists" in full_output
-            or "How would you like to proceed?" in full_output
-        ):
-            logger.warning("Existing CSR detected – selecting option [2]")
-            send("2")
+        # alias prompt
+        if "Please enter the alias associated with the certificate" in full_output:
+            logger.info(f"Sending alias: {alias}")
+            send(alias)
             full_output = ""
             continue
 
-        # koniec – token
-        if "To deploy the external_stap, use the following token:" in full_output:
-            logger.info("Wizard completed – token detected")
+        # certificate paste prompt
+        if "Please paste your Trusted certificate below" in full_output:
+            logger.info("Pasting CA certificate")
+            send_raw(ca_cert.strip() + "\n")
+            send("")       # ENTER
+            time.sleep(0.5)
+            send_ctrl_d()  # CTRL+D
+            full_output = ""
+            continue
+
+        # success
+        if "SUCCESS: Certificate imported successfully" in full_output:
+            logger.info("Certificate imported successfully")
             break
 
-        # standardowy flow
-        if step_idx < len(steps):
-            step_name, expected_prompt, answer = steps[step_idx]
+        # optional known error → normal termination
+        if (
+            ignore_time_parse_error
+            and "Error parsing time" in full_output
+        ):
+            logger.warning("Known 'Error parsing time' detected – treating as success")
+            break
 
-            if expected_prompt in full_output:
-                logger.info(
-                    f"Step [{step_idx + 1}/{len(steps)}] "
-                    f"{step_name} → sending "
-                    f"{'ENTER' if answer == '' else answer}"
-                )
-                send(answer)
-                step_idx += 1
-                full_output = ""
-                continue
-
-            if time.time() - last_activity > prompt_timeout_sec:
-                ssh.close()
-                raise RuntimeError(
-                    f"PROMPT TIMEOUT at step '{step_name}', "
-                    f"waiting for: '{expected_prompt}'"
-                )
+        if time.time() - last_activity > prompt_timeout_sec:
+            ssh.close()
+            raise RuntimeError(
+                "PROMPT TIMEOUT during CA certificate import"
+            )
 
         time.sleep(0.3)
 
     ssh.close()
-    logger.info("SSH session closed")
+    logger.info("SSH session closed – CA import completed successfully")
 
-    # ------------------------------------------------------------------
-    # CSR
-    # ------------------------------------------------------------------
-    csr_match = re.search(
-        r"-----BEGIN NEW CERTIFICATE REQUEST-----(.*?)-----END NEW CERTIFICATE REQUEST-----",
-        full_output,
-        re.S,
-    )
-    if not csr_match:
-        raise RuntimeError("CSR not found in output")
 
-    csr = (
-        "-----BEGIN NEW CERTIFICATE REQUEST-----"
-        + csr_match.group(1)
-        + "-----END NEW CERTIFICATE REQUEST-----"
-    )
+with open("ca_cert.pem") as f:
+    ca_cert_pem = f.read()
 
-    # ------------------------------------------------------------------
-    # TOKEN + LINIA POWYŻEJ
-    # ------------------------------------------------------------------
-    lines = full_output.splitlines()
-    token: str | None = None
-    line_above: str | None = None
-
-    for i, line in enumerate(lines):
-        if "To deploy the external_stap, use the following token:" in line:
-            token = line.split(":")[-1].strip()
-            if i > 0:
-                line_above = lines[i - 1].strip()
-            break
-
-    if token is None:
-        raise RuntimeError("Deployment token not found")
-    if line_above is None:
-        raise RuntimeError("Line above token not found")
-
-    logger.info(f"Deployment token extracted: {token}")
-
-    return csr, token, line_above
-
-generate_external_stap_csr(host="10.10.9.239", username="cli", password="Guardium123!", alias="mysql-etap", common_name="mysql-etap", san1="coll1.gdemo.com")  
+import_external_stap_ca_certificate(
+    host="10.10.9.239",
+    username="cli",
+    password="secret",
+    alias="etapca1",
+    ca_cert=ca_cert_pem,
+)``
