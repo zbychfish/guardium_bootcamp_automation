@@ -186,4 +186,4 @@ import_external_stap_ca_certificate(
     password="secret",
     alias="etapca1",
     ca_cert=ca_cert_pem,
-)``
+)
