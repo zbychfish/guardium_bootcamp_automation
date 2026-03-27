@@ -1090,7 +1090,16 @@ def t_exit_for_db2_setup():
     print("\n Registering db2inst1 user")
     subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "authorize-user", "db2inst1"], check=True)
     print("\n Stop DB2")
-    subprocess.run(["sudo", "-u", "db2inst1", "-c","db2stop"], check=True)
+    subprocess.run(["sudo", "-iu", "db2inst1", "db2stop"], check=True)
+    print("\n Configure EXIT shared library")
+    subprocess.run(["sudo", "-iu", "db2inst1", "mkdir", "-p", "/home/db2inst1/sqllib/security64/plugin/commexit"], check=True)
+    subprocess.run(["sudo", "-iu", "db2inst1", "ln", "-fs", "/usr/lib64/libguard_db2_exit_64.so", "/home/db2inst1/sqllib/security64/plugin/commexit/libguard_db2_exit_64.so"], check=True)
+    subprocess.run(["sudo", "-iu", "db2inst1", "db2", "update", "dbm", "cfg", "using", "comm_exit_list", "libguard_db2_exit_64"], check=True)
+    subprocess.run(["sudo", "-iu", "db2inst1", "db2", "get", "database", "manager", "configuration"], check=True)
+    print("\n Start DB2")
+    subprocess.run(["sudo", "-iu", "db2inst1", "db2start"], check=True)
+    print("\n Configure DB2 IE for EXIT")
+    subprocess.run(["/opt/guardium/modules/STAP/current/setup_exit.sh", "db2"], check=True)
     exit(0)
 
     return None
