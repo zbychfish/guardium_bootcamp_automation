@@ -1169,6 +1169,8 @@ def t_create_mysql_csr_for_etap():
         save_to_env("ETAP_CSR_ID", line_above)
         save_to_env("ETAP_TOKEN", token)
     appliance.disconnect()
+    print("\n Signing CSR by CA")
+    subprocess.run(["openssl", "x509", "-sha256", "-req", "-days", "3650", "-CA", "ca.pem", "-CAkey", "ca.key", "-CAcreateserial", "-CAserial", "serial", "-in", "etap.csr", "-out", "etap.pem"], check=True)
     return None
 
 def lab1_appliance_setup(state):
