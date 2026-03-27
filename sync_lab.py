@@ -1129,15 +1129,19 @@ def t_setup_raptor_to_deploy_etap():
     etap_versions = json.loads(result.stdout)
     print(etap_versions)
     latest = {}
-    for t in etap_versions:
+    
+    for t in etap_versions["Tags"]:
         m = re.match(r"^v(\d+\.\d+\.\d+)", t)
         if not m:
             continue
-        version_str = m.group(1)      # np. 11.2.0 z 11.2.0.168
+
+        version_str = m.group(1)
         major, minor, patch = version_str.split(".")
         key = f"{major}.{minor}"
+
         v = Version(version_str)
         latest[key] = max(latest.get(key, v), v)
+
 
     print(latest)
     exit(0)
