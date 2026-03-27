@@ -1118,9 +1118,16 @@ def t_exit_for_db2_setup(api):
         db_install_dir="/home/db2inst1",
         api_target_host="10.10.9.239"
     )
+    return None
+
+def t_setup_raptor_to_deploy_etap():
+    print("\n Installing package requirements")
+    subprocess.run(["dnf", "-y", "install", "podman-docker", "skopeo"], check=True)
+    print("\n Determine the latest ETAP version")
+    etap_versions = subprocess.run(["skopeo", "list-tags", "docker://icr.io/guardium/guardium_external_s-tap"], check=True)
+    print(etap_versions.stdout.decode("utf-8"))
     exit(0)
 
-    return None
 
 def lab1_appliance_setup(state):
     """
@@ -1273,6 +1280,22 @@ def lab5_exit(state):
     print("Lab 5 completed!")
     print("=" * 60)
 
+def lab7_etap(state):
+    print("=" * 60)
+    print("LAB 7 - ETAP")
+    print("=" * 60)
+
+    api = GuardiumRestAPI(
+        base_url='https://10.10.9.219:8443',
+        client_id='BOOTCAMP'
+    )
+
+    run_task('Setup EXIT for DB2 on raptor', lambda: t_setup_raptor_to_deploy_etap(), state)
+
+    print("\n" + "=" * 60)
+    print("Lab 7 completed!")
+    print("=" * 60)
+
 
 def sync_lab(state, skip_below: int = 0, stop_at: int = 999):
     """
@@ -1321,6 +1344,8 @@ def sync_lab(state, skip_below: int = 0, stop_at: int = 999):
         if stop_at == 3:
             print("\n[INFO] Zatrzymano po LAB 3 (--stop-at=3)")
             return
+    else:
+        print("LAB 3 does not modify final environment")
 
     # LAB 4: ATAP
     if skip_below < 4 and stop_at >= 4:
@@ -1349,6 +1374,28 @@ def sync_lab(state, skip_below: int = 0, stop_at: int = 999):
         print("\n[LAB 4] SKIPPED - EXIT (--skip-below)")
     else:
         print("\n[LAB 4] SKIPPED - EXIT (--stop-at)")
+
+    if skip_below < 6 and stop_at >= 6:
+        print("\n[LAB 6] SKIPPED")
+        if stop_at == 6:
+            print("\n[INFO] Zatrzymano po LAB 6 (--stop-at=6)")
+            return
+    else:
+        print("LAB 6 focuses on UC 1.0 which will withdrawn in the future. There is no API to automate UC 1.0 configuration. Will decide later to automate some steps from this lab later")
+
+    # LAB 7: ETAP
+    if skip_below < 7 and stop_at >= 7:
+        lab7_etap(state)
+        print("\n" + "=" * 60)
+        print("LAB 5 completed!")
+        print("=" * 60)
+        if stop_at == 7:
+            print("\n[INFO] Stopped after LAB 7 (--stop-at=7)")
+            return
+    elif skip_below >= 7:
+        print("\n[LAB 7] SKIPPED - EXIT (--skip-below)")
+    else:
+        print("\n[LAB 7] SKIPPED - EXIT (--stop-at)")
 
 
 if __name__ == "__main__":
