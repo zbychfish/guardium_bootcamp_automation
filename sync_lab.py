@@ -1220,46 +1220,67 @@ def lab4_atap(state):
     print("All labs completed!")
     print("=" * 60)
 
-def sync_lab(state, skip_below: int = 0):
+def sync_lab(state, skip_below: int = 0, stop_at: int = 999):
     """
     Główna funkcja synchronizacji laboratorium.
     
     Args:
         skip_below: Pomiń LAB-y o numerze mniejszym niż podana wartość (domyślnie 0 - wykonaj wszystkie)
+        stop_at: Zatrzymaj się po wykonaniu LAB-a o podanym numerze (domyślnie 999 - wykonaj wszystkie)
     """
 
     print(state)
     appliance = None
     parameter = 1
+    
     # LAB 1: Appliance Setup
-    if skip_below < 1:
+    if skip_below < 1 and stop_at >= 1:
         lab1_appliance_setup(state)
         print("\n" + "=" * 60)
         print("LAB 1 completed!")
         print("=" * 60)
+        if stop_at == 1:
+            print("\n[INFO] Zatrzymano po LAB 1 (--stop-at=1)")
+            return
+    elif skip_below >= 1:
+        print("\n[LAB 1] SKIPPED - Appliance setup (--skip-below)")
     else:
-        print("\n[LAB 1] SKIPPED - Appliance setup")
+        print("\n[LAB 1] SKIPPED - Appliance setup (--stop-at)")
     
     # LAB 2: GIM Setup
-    if skip_below < 2:
+    if skip_below < 2 and stop_at >= 2:
         lab2_gim(state)
         print("\n" + "=" * 60)
         print("LAB 2 completed!")
         print("=" * 60)
+        if stop_at == 2:
+            print("\n[INFO] Zatrzymano po LAB 2 (--stop-at=2)")
+            return
+    elif skip_below >= 2:
+        print("\n[LAB 2] SKIPPED - GIM setup (--skip-below)")
     else:
-        print("\n[LAB 2] SKIPPED - GIM setup")
+        print("\n[LAB 2] SKIPPED - GIM setup (--stop-at)")
     
     # LAB 3: Tutaj dodasz kolejny lab
-    if skip_below < 3:
+    if skip_below < 3 and stop_at >= 3:
         print("\n[LAB 3] SKIPPED")
+        if stop_at == 3:
+            print("\n[INFO] Zatrzymano po LAB 3 (--stop-at=3)")
+            return
 
-    if skip_below < 4:
+    # LAB 4: ATAP
+    if skip_below < 4 and stop_at >= 4:
         lab4_atap(state)
         print("\n" + "=" * 60)
         print("LAB 4 completed!")
         print("=" * 60)
+        if stop_at == 4:
+            print("\n[INFO] Zatrzymano po LAB 4 (--stop-at=4)")
+            return
+    elif skip_below >= 4:
+        print("\n[LAB 4] SKIPPED - ATAP (--skip-below)")
     else:
-        print("\n[LAB 4] SKIPPED")
+        print("\n[LAB 4] SKIPPED - ATAP (--stop-at)")
 
     
 
@@ -1278,11 +1299,17 @@ if __name__ == "__main__":
         default=0,
         help="Pomiń LAB-y o numerze mniejszym niż podana wartość (domyślnie 0 - wykonaj wszystkie)"
     )
+    parser.add_argument(
+        "--stop-at",
+        type=int,
+        default=999,
+        help="Zatrzymaj się po wykonaniu LAB-a o podanym numerze (domyślnie 999 - wykonaj wszystkie)"
+    )
     
     args = parser.parse_args()
     
     try:
-        sync_lab(state, skip_below=args.skip_below)
+        sync_lab(state, skip_below=args.skip_below, stop_at=args.stop_at)
     except KeyboardInterrupt:
         print("\n\n[INFO] Przerwano przez użytkownika")
     except Exception as e:
