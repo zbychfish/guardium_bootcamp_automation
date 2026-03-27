@@ -1126,6 +1126,7 @@ def t_setup_raptor_to_deploy_etap():
     print("\n Determine the latest ETAP version")
     result = subprocess.run(["skopeo", "list-tags", "docker://icr.io/guardium/guardium_external_s-tap"], check=True)
     etap_versions = result.stdout
+    print(etap_versions, 2)
     print(type(etap_versions))
     print(json.loads(etap_versions))
 
