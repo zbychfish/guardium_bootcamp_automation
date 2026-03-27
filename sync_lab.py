@@ -1053,6 +1053,36 @@ def t_correct_mysql_ie(api):
     )
     return None
 
+def t_configure_ssl_for_mongo():
+    print("\n Mongo SSL configuration")
+    subprocess.run(["mkdir", "-p", "/var/lib/mongo/cert"], check=True)
+    subprocess.run(["openssl", "req", '-x509', '-newkey', "rsa:4096", "-keyout", "/var/lib/mongo/cert/key.pem", "-out", "/var/lib/mongo/cert/cert.pem", "-sha256", "-days", "3650", "-nodes", "-subj", "/C=PL/ST=Lubuskie/L=Nowa Sol/O=Training/OU=Demo/CN=mongod"], check=True)
+    with open("/var/lib/mongo/cert/both.pem", "w") as f:
+        subprocess.run(["cat", "/var/lib/mongo/cert/key.pem", "/var/lib/mongo/cert/cert.pem"], stdout=f, stderr=subprocess.STDOUT, check=True)
+    subprocess.run(["chown", "-R", "mongod:mongod", "/var/lib/mongo/cert"], check=True)
+    conf = Path("/etc/mongod.conf")
+    lines = []
+    with conf.open() as f:
+        for line in f:
+            if re.match(r"^\s*bindIp\s*:", line):
+                line = "  bindIp: 0.0.0.0  # Enter 0.0.0.0,:: to bind to all IPv4 and IPv6 addresses or, alternatively, use the net.bindIpAll setting.\n"
+                lines.append("  tls:\n")
+                lines.append("    mode: requireTLS\n")
+                lines.append("    certificateKeyFile: /var/lib/mongo/cert/both.pem\n")
+            else:
+                lines.append(line)
+    conf.write_text("".join(lines))
+    subprocess.run(["systemctl", "restart", "mongod"], check=True)
+    return None
+
+def t_enable_atap_for_mongo():
+    print("\n ATAP setup for postgres on raptor")
+    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "--db-user=mongod", "--db-home=/usr", "--db-base=/var/lib/mongo", "--db-type=", "--db-instance=mongo4", "store-conf"], check=True)
+    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "authorize-user", "mongod"], check=True)
+    subprocess.run(["systemctl", "stop", "mongod"], check=True)
+    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "--db-instance=mongo4", "activate"], check=True)
+    subprocess.run(["systemctl", "start", "mongod"], check=True)
+
 def lab1_appliance_setup(state):
     """
     LAB 1 - Konfiguracja appliance (collector).
@@ -1179,25 +1209,9 @@ def lab4_atap(state):
 
     run_task('configure_atap_for_postgres_on_raptor', lambda: t_correct_mysql_ie(api), state)
 
-    print("\n Mongo SSL configuration")
-    subprocess.run(["mkdir", "-p", "/var/lib/mongo/cert"], check=True)
-    subprocess.run(["openssl", "req", '-x509', '-newkey', "rsa:4096", "-keyout", "/var/lib/mongo/cert/key.pem", "-out", "/var/lib/mongo/cert/cert.pem", "-sha256", "-days", "3650", "-nodes", "-subj", "/C=PL/ST=Lubuskie/L=Nowa Sol/O=Training/OU=Demo/CN=mongod"], check=True)
-    with open("/var/lib/mongo/cert/both.pem", "w") as f:
-        subprocess.run(["cat", "/var/lib/mongo/cert/key.pem", "/var/lib/mongo/cert/cert.pem"], stdout=f, stderr=subprocess.STDOUT, check=True)
-    subprocess.run(["chown", "-R", "mongod:mongod", "/var/lib/mongo/cert"], check=True)
-    conf = Path("/etc/mongod.conf")
-    lines = []
-    with conf.open() as f:
-        for line in f:
-            if re.match(r"^\s*bindIp\s*:", line):
-                line = "  bindIp: 0.0.0.0  # Enter 0.0.0.0,:: to bind to all IPv4 and IPv6 addresses or, alternatively, use the net.bindIpAll setting.\n"
-                lines.append("  tls:\n")
-                lines.append("    mode: requireTLS\n")
-                lines.append("    certificateKeyFile: /var/lib/mongo/cert/both.pem\n")
-            else:
-                lines.append(line)
-    conf.write_text("".join(lines))
-    subprocess.run(["systemctl", "restart", "mongod"], check=True)
+    run_task('Configure SSL for Mongo', lambda: t_configure_ssl_for_mongo(), state)
+
+    run_task('Enable ATAP for Mongo', lambda: t_enable_atap_for_mongo(), state)
 
 
     print("\n" + "=" * 60)
