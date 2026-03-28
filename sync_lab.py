@@ -1343,7 +1343,7 @@ def lab7_etap(state):
     appliance = ApplianceCommand(
         host="10.10.9.239",
         user="cli",
-        password=get_env_value("COLLECT_PASSWORD"),
+        password=get_env_value("COLLECTOR_PASSWORD"),
         prompt_regex=r">",
         debug=True
     )
