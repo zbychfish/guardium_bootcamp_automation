@@ -882,6 +882,136 @@ class ApplianceCommand:
         
         return csr, token, line_above
     
+    def import_external_stap_ca_certificate(
+        self,
+        alias: str,
+        ca_cert: str,
+        timeout_sec: int = 120,
+        prompt_timeout_sec: int = 20,
+        ignore_time_parse_error: bool = True
+    ) -> None:
+        """
+        Importuje certyfikat CA do Guardium External S-TAP keystore używając istniejącego połączenia.
+        
+        Flow:
+          - store certificate keystore_external_stap
+          - alias
+          - wklejenie certyfikatu PEM
+          - ENTER
+          - CTRL+D
+          - SUCCESS + opcjonalny błąd 'Error parsing time' → ignorowany
+        
+        Args:
+            alias: Alias dla certyfikatu CA
+            ca_cert: Certyfikat CA w formacie PEM (string)
+            timeout_sec: Globalny timeout w sekundach (domyślnie 120)
+            prompt_timeout_sec: Timeout dla pojedynczego promptu (domyślnie 20)
+            ignore_time_parse_error: Czy ignorować błąd "Error parsing time" (domyślnie True)
+        
+        Raises:
+            RuntimeError: Jeśli nie połączono lub wystąpił błąd
+            TimeoutError: Jeśli przekroczono timeout
+        """
+        if not self.channel:
+            raise RuntimeError("Not connected")
+        
+        # Type assertion dla type checkera
+        assert self.channel is not None
+        
+        if self.debug:
+            print(f"[DEBUG] Starting External S-TAP CA certificate import", file=sys.stderr)
+            print(f"[DEBUG] Alias: {alias}", file=sys.stderr)
+        
+        # Funkcje pomocnicze
+        def send(text: str) -> None:
+            assert self.channel is not None
+            if self.debug:
+                print(f"[DEBUG] SEND >>> {text!r}", file=sys.stderr)
+            self.channel.send((text + "\n").encode("utf-8"))
+        
+        def send_raw(data: str) -> None:
+            assert self.channel is not None
+            if self.debug:
+                print("[DEBUG] SEND >>> (raw certificate data)", file=sys.stderr)
+            self.channel.send(data.encode("utf-8"))
+        
+        def send_ctrl_d() -> None:
+            assert self.channel is not None
+            if self.debug:
+                print("[DEBUG] SEND >>> CTRL+D", file=sys.stderr)
+            self.channel.send(b"\x04")
+        
+        def read_output() -> str:
+            assert self.channel is not None
+            buf = ""
+            while self.channel.recv_ready():
+                chunk = self.channel.recv(65535).decode("utf-8", errors="ignore")
+                if self.debug:
+                    print(f"[DEBUG] RECV <<< {chunk}", file=sys.stderr)
+                buf += chunk
+            return buf
+        
+        # Wyślij komendę
+        send("store certificate keystore_external_stap")
+        if self.debug:
+            print("[DEBUG] Command sent: store certificate keystore_external_stap", file=sys.stderr)
+        
+        full_output = ""
+        start_time = time.time()
+        last_activity = time.time()
+        
+        # Główna pętla - dokładnie jak w csr.py
+        while True:
+            if time.time() - start_time > timeout_sec:
+                raise TimeoutError("GLOBAL TIMEOUT during CA certificate import")
+            
+            out = read_output()
+            if out:
+                full_output += out
+                last_activity = time.time()
+            
+            # Alias prompt
+            if "Please enter the alias associated with the certificate" in full_output:
+                if self.debug:
+                    print(f"[DEBUG] Sending alias: {alias}", file=sys.stderr)
+                send(alias)
+                full_output = ""
+                continue
+            
+            # Certificate paste prompt
+            if "Please paste your Trusted certificate below" in full_output:
+                if self.debug:
+                    print("[DEBUG] Pasting CA certificate", file=sys.stderr)
+                send_raw(ca_cert.strip() + "\n")
+                send("")       # ENTER
+                time.sleep(0.5)
+                send_ctrl_d()  # CTRL+D
+                full_output = ""
+                continue
+            
+            # Success
+            if "SUCCESS: Certificate imported successfully" in full_output:
+                if self.debug:
+                    print("[DEBUG] Certificate imported successfully", file=sys.stderr)
+                break
+            
+            # Optional known error → normal termination
+            if (
+                ignore_time_parse_error
+                and "Error parsing time" in full_output
+            ):
+                if self.debug:
+                    print("[DEBUG] Known 'Error parsing time' detected – treating as success", file=sys.stderr)
+                break
+            
+            if time.time() - last_activity > prompt_timeout_sec:
+                raise TimeoutError("PROMPT TIMEOUT during CA certificate import")
+            
+            time.sleep(0.3)
+        
+        if self.debug:
+            print("[DEBUG] CA import completed successfully", file=sys.stderr)
+    
     
     def disconnect(self):
         """Zamyka połączenie"""
