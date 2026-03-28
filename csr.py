@@ -4,35 +4,37 @@ import logging
 from typing import Optional
 
 
-def import_external_stap_ca_certificate(
+def import_external_stap_certificate(
     host: str,
     username: str,
     password: str,
     *,
-    alias: str,
-    ca_cert: str,
-    log_file: str = "external_stap_ca_import.log",
+    alias_line: str,
+    stap_cert: str,
+    log_file: str = "external_stap_cert_import.log",
     cli_prompt: str = ">",
-    timeout_sec: int = 120,
-    prompt_timeout_sec: int = 20,
+    timeout_sec: int = 180,
+    prompt_timeout_sec: int = 30,
     ignore_time_parse_error: bool = True,
 ) -> None:
     """
-    Importuje certyfikat CA do Guardium External S-TAP keystore.
+    Importuje certyfikat External S‑TAP (end-entity) do Guardium.
 
     Flow:
-      - store certificate keystore_external_stap
-      - alias
+      - store certificate external_stap
+      - alias (pełna linia: <alias> proxy_keycert <UUID>)
+      - potwierdzenie zgodności z CSR (y)
       - wklejenie certyfikatu PEM
       - ENTER
       - CTRL+D
-      - SUCCESS + opcjonalny błąd 'Error parsing time' → ignorowany
+      - SUCCESS
+      - opcjonalny błąd: 'Error parsing time' → ignorowany
     """
 
     # ------------------------------------------------------------------
     # LOGGING
     # ------------------------------------------------------------------
-    logger = logging.getLogger("guardium-ca-import")
+    logger = logging.getLogger("guardium-stap-cert-import")
     logger.setLevel(logging.DEBUG)
 
     formatter = logging.Formatter(
@@ -52,9 +54,9 @@ def import_external_stap_ca_certificate(
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)
 
-    logger.info("Starting Guardium External S-TAP CA certificate import")
+    logger.info("Starting External S‑TAP certificate import")
     logger.debug(f"Target host: {host}")
-    logger.debug(f"Alias: {alias}")
+    logger.debug(f"Alias line: {alias_line}")
 
     # ------------------------------------------------------------------
     # SSH
@@ -89,12 +91,12 @@ def import_external_stap_ca_certificate(
         return buf
 
     # ------------------------------------------------------------------
-    # WAIT FOR GUARDIUM PROMPT
+    # WAIT FOR GUARDIUM CLI PROMPT
     # ------------------------------------------------------------------
     logger.info("Waiting for Guardium CLI prompt")
 
+    buffer = ""
     start_wait = time.time()
-    prompt_buffer = ""
 
     while True:
         if time.time() - start_wait > 60:
@@ -104,9 +106,9 @@ def import_external_stap_ca_certificate(
         if chan.recv_ready():
             chunk = chan.recv(65535).decode("utf-8", errors="ignore")
             logger.debug(f"RECV <<< {chunk}")
-            prompt_buffer += chunk
+            buffer += chunk
 
-            if cli_prompt in prompt_buffer:
+            if cli_prompt in buffer:
                 logger.info("Guardium CLI prompt detected")
                 break
 
@@ -115,12 +117,14 @@ def import_external_stap_ca_certificate(
     # ------------------------------------------------------------------
     # START COMMAND
     # ------------------------------------------------------------------
-    send("store certificate keystore_external_stap")
-    logger.info("Command sent: store certificate keystore_external_stap")
+    send("store certificate external_stap")
+    logger.info("Command sent: store certificate external_stap")
 
     full_output = ""
     start_time = time.time()
     last_activity = time.time()
+    csr_confirmed = False
+    cert_sent = False
 
     # ------------------------------------------------------------------
     # MAIN LOOP
@@ -128,7 +132,7 @@ def import_external_stap_ca_certificate(
     while True:
         if time.time() - start_time > timeout_sec:
             ssh.close()
-            raise RuntimeError("GLOBAL TIMEOUT during CA certificate import")
+            raise RuntimeError("GLOBAL TIMEOUT during External S‑TAP cert import")
 
         out = read_output()
         if out:
@@ -137,53 +141,69 @@ def import_external_stap_ca_certificate(
 
         # alias prompt
         if "Please enter the alias associated with the certificate" in full_output:
-            logger.info(f"Sending alias: {alias}")
-            send(alias)
+            logger.info("Sending External S‑TAP alias line")
+            send(alias_line)
             full_output = ""
             continue
 
-        # certificate paste prompt
-        if "Please paste your Trusted certificate below" in full_output:
-            logger.info("Pasting CA certificate")
-            send_raw(ca_cert.strip() + "\n")
-            send("")       # ENTER
+        # CSR confirmation
+        if (
+            not csr_confirmed
+            and "Are you importing an External S-TAP certificate" in full_output
+        ):
+            logger.info("Confirming certificate corresponds to CSR (y)")
+            send("y")
+            csr_confirmed = True
+            full_output = ""
+            continue
+
+        # paste certificate
+        if (
+            "Please paste your End-Entity certificate below" in full_output
+            and not cert_sent
+        ):
+            logger.info("Pasting External S‑TAP certificate")
+            send_raw(stap_cert.strip() + "\n")
+            send("")        # ENTER
             time.sleep(0.5)
-            send_ctrl_d()  # CTRL+D
+            send_ctrl_d()   # CTRL+D
+            cert_sent = True
             full_output = ""
             continue
 
         # success
         if "SUCCESS: Certificate imported successfully" in full_output:
-            logger.info("Certificate imported successfully")
+            logger.info("External S‑TAP certificate imported successfully")
             break
 
-        # optional known error → normal termination
+        # known Guardium bug → treat as success
         if (
             ignore_time_parse_error
             and "Error parsing time" in full_output
         ):
-            logger.warning("Known 'Error parsing time' detected – treating as success")
+            logger.warning(
+                "Known Guardium bug 'Error parsing time' detected – treating as success"
+            )
             break
 
         if time.time() - last_activity > prompt_timeout_sec:
             ssh.close()
             raise RuntimeError(
-                "PROMPT TIMEOUT during CA certificate import"
+                "PROMPT TIMEOUT during External S‑TAP certificate import"
             )
 
         time.sleep(0.3)
 
     ssh.close()
-    logger.info("SSH session closed – CA import completed successfully")
+    logger.info("SSH session closed – External S‑TAP cert import completed")
 
+with open("/root/gn-trainings/ETAP/ca/etap.pem") as f:
+    etap_cert = f.read()
 
-with open("/root/gn-trainings/ETAP/ca/ca.pem") as f:
-    ca_cert_pem = f.read()
-
-import_external_stap_ca_certificate(
+import_external_stap_certificate(
     host="10.10.9.239",
     username="cli",
     password="Guardium123!",
-    alias="etapca2",
-    ca_cert=ca_cert_pem,
+    alias_line="mysql-etap proxy_keycert 02717b9d-2a87-11f1-af30-c4df3d41f195",
+    stap_cert=etap_cert,
 )

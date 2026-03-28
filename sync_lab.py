@@ -1174,6 +1174,28 @@ def t_create_mysql_csr_for_etap():
     subprocess.run(["openssl", "x509", "-sha256", "-req", "-days", "3650", "-CA", "/root/gn-trainings/ETAP/ca/ca.pem", "-CAkey", "/root/gn-trainings/ETAP/ca/ca.key", "-CAcreateserial", "-CAserial", "serial", "-in", "/root/gn-trainings/ETAP/ca/etap.csr", "-out", "/root/gn-trainings/ETAP/ca/etap.pem"], check=True)
     return None
 
+def t_import_etap_ca_cert():
+    appliance = ApplianceCommand(
+        host="10.10.9.239",
+        user="cli",
+        password=get_env_value("COLLECTOR_PASSWORD"),
+        prompt_regex=r">",
+        debug=True
+    )
+
+    if appliance.connect():
+        # Wczytaj certyfikat CA
+        with open("/root/gn-trainings/ETAP/ca/ca.pem") as f:
+            ca_cert_pem = f.read()
+        
+        # Importuj certyfikat
+        appliance.import_external_stap_ca_certificate(
+            alias="etapca3",
+            ca_cert=ca_cert_pem
+        )
+    
+    appliance.disconnect()
+
 def lab1_appliance_setup(state):
     """
     LAB 1 - Konfiguracja appliance (collector).
@@ -1340,26 +1362,8 @@ def lab7_etap(state):
 
     run_task('Create CSR for ETAP for mysql', lambda: t_create_mysql_csr_for_etap(), state)
 
-    appliance = ApplianceCommand(
-        host="10.10.9.239",
-        user="cli",
-        password=get_env_value("COLLECTOR_PASSWORD"),
-        prompt_regex=r">",
-        debug=True
-    )
+    run_task('Import CA cert for ETAP', lambda: t_import_etap_ca_cert(), state)
 
-    if appliance.connect():
-        # Wczytaj certyfikat CA
-        with open("/root/gn-trainings/ETAP/ca/ca.pem") as f:
-            ca_cert_pem = f.read()
-        
-        # Importuj certyfikat
-        appliance.import_external_stap_ca_certificate(
-            alias="etapca3",
-            ca_cert=ca_cert_pem
-        )
-    
-    appliance.disconnect()
     
 
     print("\n" + "=" * 60)
