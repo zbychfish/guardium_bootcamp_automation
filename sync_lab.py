@@ -4,6 +4,7 @@
 Sync Lab - orkiestracja synchronizacji środowiska laboratoryjnego
 """
 
+from pexpect.FSM import Error
 import psycopg2
 #from paramiko.proxy import subprocess
 import os
@@ -580,7 +581,7 @@ def t_create_demo_user(api):
         print(f"  ✓ Dashboard Training added to demo user UI")
     return None
 
-def t_register_collector(api):
+def t_register_collector(api):  
     print("\nRegister collector to central manager")
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
     units = api.get_registered_units()
@@ -614,7 +615,7 @@ def t_register_collector(api):
         try:
             result = appliance.execute_command("show unit type")
             print(f"    {result}")
-        except TimeoutError:
+        except TimeoutError, OSError:
             pass  # Ignoruj timeout, kontynuuj
         print(f"  ✓ Collector registered ")
     else:

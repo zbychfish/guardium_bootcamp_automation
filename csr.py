@@ -177,13 +177,13 @@ def import_external_stap_ca_certificate(
     logger.info("SSH session closed – CA import completed successfully")
 
 
-with open("ca_cert.pem") as f:
+with open("/root/gn-trainings/ETAP/ca/cert.pem") as f:
     ca_cert_pem = f.read()
 
 import_external_stap_ca_certificate(
     host="10.10.9.239",
-    username="cli",
-    password="secret",
-    alias="etapca1",
+    username="root",
+    password="Guardium123!",
+    alias="etapca2",
     ca_cert=ca_cert_pem,
 )
