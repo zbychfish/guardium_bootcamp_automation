@@ -1465,8 +1465,6 @@ def lab7_etap(state):
 
     run_task('Import mysql ETAP cert', lambda: t_import_etap_cert(), state)
 
-    run_task('Start mysql ETAP on raptor', lambda: t_import_etap_cert(), state)
-
     run_task('Start mysql ETAP on raptor', lambda: t_start_etap(), state)
 
     
