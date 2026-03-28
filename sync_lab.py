@@ -1138,7 +1138,7 @@ def t_setup_raptor_to_deploy_etap():
         key = f"{major}.{minor}"
         v = Version(version_str)
         latest[key] = max(latest.get(key, v), v)
-    print("ETAP version:", latest[get_env_value("GUARDIUM_MINOR_VERSION")])
+    save_to_env("GUARDIUM_ETAP_VERSION", str( latest[get_env_value("GUARDIUM_MINOR_VERSION")]))
     return None
 
 def t_deploy_ca_on_raptor():
@@ -1215,6 +1215,85 @@ def t_import_etap_cert():
             alias_line=get_env_value("ETAP_CSR_ID"),
             stap_cert=etap_cert
         )
+
+def t_start_etap():
+    etap_host = "10.10.9.70"
+    database_port = "3306"
+    token = get_env_value("ETAP_TOKEN")
+    db_type = "mysql"
+    etap_label = "MYSQLETAP"
+    collector_ip = "10.10.9.239"
+    etap_release = get_env_value("GUARDIUM_ETAP_VERSION")
+    listen_port = "63333"
+
+    etap_command = [
+        "podman",
+        "run",
+        "--restart",
+        "unless-stopped",
+        "--hostname",
+        "localhost-gext0-044eb2cb-0b29-4d0f-852b-b4c347831f41",
+        "--name",
+        "gext0-044eb2cb-0b29-4d0f-852b-b4c347831f41",
+        "-d",
+        "--shm-size",
+        "800M",
+        "-e",
+        "STAP_CONFIG_TAP_TAP_IP=NULL",
+        "-e",
+        "STAP_CONFIG_TAP_PRIVATE_TAP_IP=NULL",
+        "-e",
+        "STAP_CONFIG_TAP_FORCE_SERVER_IP=0",
+        "-e",
+        "STAP_CONFIG_PROXY_GROUP_UUID=044eb2cb-0b29-4d0f-852b-b4c347831f41",
+        "-e",
+        "STAP_CONFIG_PROXY_GROUP_MEMBER_COUNT=1",
+        "-e",
+        f"STAP_CONFIG_PROXY_DB_HOST={etap_host}",
+        "-e",
+        "STAP_CONFIG_PROXY_NUM_WORKERS=1",
+        "-e",
+        "STAP_CONFIG_PROXY_PROXY_PROTOCOL=0",
+        "-e",
+        "STAP_CONFIG_PROXY_DISCONNECT_ON_INVALID_CERTIFICATE=0",
+        "-e",
+        "STAP_CONFIG_PROXY_NOTIFY_ON_INVALID_CERTIFICATE=0",
+        "-e",
+        "STAP_CONFIG_PROXY_DETECT_SSL_WITHIN_X_PACKETS=-1",
+        "-e",
+        f"STAP_CONFIG_DB_0_REAL_DB_PORT={database_port}",
+        "-e",
+        "STAP_CONFIG_PROXY_LISTEN_PORT=8888",
+        "-e",
+        "STAP_CONFIG_PROXY_DEBUG=0",
+        "-e",
+        f"STAP_CONFIG_PROXY_SECRET={token}",
+        "-e",
+        "STAP_CONFIG_PROXY_CSR_NAME=",
+        "-e",
+        "STAP_CONFIG_PROXY_CSR_COUNTRY=",
+        "-e",
+        "STAP_CONFIG_PROXY_CSR_PROVINCE=",
+        "-e",
+        "STAP_CONFIG_PROXY_CSR_CITY=",
+        "-e",
+        "STAP_CONFIG_PROXY_CSR_ORGANIZATION=",
+        "-e",
+        "STAP_CONFIG_PROXY_CSR_KEYLENGTH=2048",
+        "-e",
+        f"STAP_CONFIG_DB_0_DB_TYPE={db_type}",
+        "-e",
+        "STAP_CONFIG_PARTICIPATE_IN_LOAD_BALANCING=0",
+        "-e",
+        f"STAP_CONFIG_TAP_TENANT_ID={etap_label}",
+        "-e",
+        f"STAP_CONFIG_SQLGUARD_0_SQLGUARD_IP={collector_ip}",
+        f"-p={listen_port}:8888/tcp",
+        f"icr.io/guardium/guardium_external_s-tap:v{etap_release}"
+    ]
+    subprocess.run(etap_command, check=True)
+    exit(0)
+ 
 
 def lab1_appliance_setup(state):
     """
@@ -1385,6 +1464,10 @@ def lab7_etap(state):
     run_task('Import CA cert for ETAP', lambda: t_import_etap_ca_cert(), state)
 
     run_task('Import mysql ETAP cert', lambda: t_import_etap_cert(), state)
+
+    run_task('Start mysql ETAP on raptor', lambda: t_import_etap_cert(), state)
+
+    run_task('Start mysql ETAP on raptor', lambda: t_start_etap(), state)
 
     
 
