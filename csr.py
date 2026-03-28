@@ -177,7 +177,7 @@ def import_external_stap_ca_certificate(
     logger.info("SSH session closed – CA import completed successfully")
 
 
-with open("/root/gn-trainings/ETAP/ca/cert.pem") as f:
+with open("/root/gn-trainings/ETAP/ca/ca.pem") as f:
     ca_cert_pem = f.read()
 
 import_external_stap_ca_certificate(
