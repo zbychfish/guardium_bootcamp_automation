@@ -4,7 +4,7 @@
 Sync Lab - orkiestracja synchronizacji środowiska laboratoryjnego
 """
 
-from pexpect.FSM import Error
+#from pexpect.FSM import Error
 import psycopg2
 #from paramiko.proxy import subprocess
 import os
