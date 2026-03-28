@@ -182,8 +182,8 @@ with open("/root/gn-trainings/ETAP/ca/ca.pem") as f:
 
 import_external_stap_ca_certificate(
     host="10.10.9.239",
-    username="root",
-    password="gdptraining321!",
+    username="cli",
+    password="Guardium123!",
     alias="etapca2",
     ca_cert=ca_cert_pem,
 )
