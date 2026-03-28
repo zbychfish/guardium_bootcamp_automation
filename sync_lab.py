@@ -615,7 +615,7 @@ def t_register_collector(api):
         try:
             result = appliance.execute_command("show unit type")
             print(f"    {result}")
-        except TimeoutError, OSError:
+        except (TimeoutError, OSError):
             pass  # Ignoruj timeout, kontynuuj
         print(f"  ✓ Collector registered ")
     else:
