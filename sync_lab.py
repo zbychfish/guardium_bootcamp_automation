@@ -1190,7 +1190,7 @@ def t_import_etap_ca_cert():
         
         # Importuj certyfikat
         appliance.import_external_stap_ca_certificate(
-            alias="etapca4",
+            alias="etapca10",
             ca_cert=ca_cert_pem
         )
     
