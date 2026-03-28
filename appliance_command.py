@@ -1006,6 +1006,156 @@ class ApplianceCommand:
             
             if time.time() - last_activity > prompt_timeout_sec:
                 raise TimeoutError("PROMPT TIMEOUT during CA certificate import")
+    def import_external_stap_certificate(
+        self,
+        alias_line: str,
+        stap_cert: str,
+        timeout_sec: int = 180,
+        prompt_timeout_sec: int = 30,
+        ignore_time_parse_error: bool = True
+    ) -> None:
+        """
+        Importuje certyfikat External S-TAP (end-entity) do Guardium używając istniejącego połączenia.
+        
+        Flow:
+          - store certificate external_stap
+          - alias (pełna linia: <alias> proxy_keycert <UUID>)
+          - potwierdzenie zgodności z CSR (y)
+          - wklejenie certyfikatu PEM
+          - ENTER
+          - CTRL+D
+          - SUCCESS
+          - opcjonalny błąd: 'Error parsing time' → ignorowany
+        
+        Args:
+            alias_line: Pełna linia aliasu (np. "mysql-etap proxy_keycert 02717b9d-2a87-11f1-af30-c4df3d41f195")
+            stap_cert: Certyfikat External S-TAP w formacie PEM (string)
+            timeout_sec: Globalny timeout w sekundach (domyślnie 180)
+            prompt_timeout_sec: Timeout dla pojedynczego promptu (domyślnie 30)
+            ignore_time_parse_error: Czy ignorować błąd "Error parsing time" (domyślnie True)
+        
+        Raises:
+            RuntimeError: Jeśli nie połączono lub wystąpił błąd
+            TimeoutError: Jeśli przekroczono timeout
+        """
+        if not self.channel:
+            raise RuntimeError("Not connected")
+        
+        # Type assertion dla type checkera
+        assert self.channel is not None
+        
+        if self.debug:
+            print(f"[DEBUG] Starting External S-TAP certificate import", file=sys.stderr)
+            print(f"[DEBUG] Alias line: {alias_line}", file=sys.stderr)
+        
+        # Funkcje pomocnicze
+        def send(text: str) -> None:
+            assert self.channel is not None
+            if self.debug:
+                print(f"[DEBUG] SEND >>> {text!r}", file=sys.stderr)
+            self.channel.send((text + "\n").encode("utf-8"))
+        
+        def send_raw(data: str) -> None:
+            assert self.channel is not None
+            if self.debug:
+                print("[DEBUG] SEND >>> (raw certificate data)", file=sys.stderr)
+            self.channel.send(data.encode("utf-8"))
+        
+        def send_ctrl_d() -> None:
+            assert self.channel is not None
+            if self.debug:
+                print("[DEBUG] SEND >>> CTRL+D", file=sys.stderr)
+            self.channel.send(b"\x04")
+        
+        def read_output() -> str:
+            assert self.channel is not None
+            buf = ""
+            while self.channel.recv_ready():
+                chunk = self.channel.recv(65535).decode("utf-8", errors="ignore")
+                if self.debug:
+                    print(f"[DEBUG] RECV <<< {chunk}", file=sys.stderr)
+                buf += chunk
+            return buf
+        
+        # Wyślij komendę
+        send("store certificate external_stap")
+        if self.debug:
+            print("[DEBUG] Command sent: store certificate external_stap", file=sys.stderr)
+        
+        full_output = ""
+        start_time = time.time()
+        last_activity = time.time()
+        csr_confirmed = False
+        cert_sent = False
+        
+        # Główna pętla - dokładnie jak w csr.py
+        while True:
+            if time.time() - start_time > timeout_sec:
+                raise TimeoutError("GLOBAL TIMEOUT during External S-TAP cert import")
+            
+            out = read_output()
+            if out:
+                full_output += out
+                last_activity = time.time()
+            
+            # Alias prompt
+            if "Please enter the alias associated with the certificate" in full_output:
+                if self.debug:
+                    print("[DEBUG] Sending External S-TAP alias line", file=sys.stderr)
+                send(alias_line)
+                full_output = ""
+                continue
+            
+            # CSR confirmation
+            if (
+                not csr_confirmed
+                and "Are you importing an External S-TAP certificate" in full_output
+            ):
+                if self.debug:
+                    print("[DEBUG] Confirming certificate corresponds to CSR (y)", file=sys.stderr)
+                send("y")
+                csr_confirmed = True
+                full_output = ""
+                continue
+            
+            # Paste certificate
+            if (
+                "Please paste your End-Entity certificate below" in full_output
+                and not cert_sent
+            ):
+                if self.debug:
+                    print("[DEBUG] Pasting External S-TAP certificate", file=sys.stderr)
+                send_raw(stap_cert.strip() + "\n")
+                send("")        # ENTER
+                time.sleep(0.5)
+                send_ctrl_d()   # CTRL+D
+                cert_sent = True
+                full_output = ""
+                continue
+            
+            # Success
+            if "SUCCESS: Certificate imported successfully" in full_output:
+                if self.debug:
+                    print("[DEBUG] External S-TAP certificate imported successfully", file=sys.stderr)
+                break
+            
+            # Known Guardium bug → treat as success
+            if (
+                ignore_time_parse_error
+                and "Error parsing time" in full_output
+            ):
+                if self.debug:
+                    print("[DEBUG] Known Guardium bug 'Error parsing time' detected – treating as success", file=sys.stderr)
+                break
+            
+            if time.time() - last_activity > prompt_timeout_sec:
+                raise TimeoutError("PROMPT TIMEOUT during External S-TAP certificate import")
+            
+            time.sleep(0.3)
+        
+        if self.debug:
+            print("[DEBUG] External S-TAP cert import completed", file=sys.stderr)
+    
             
             time.sleep(0.3)
         

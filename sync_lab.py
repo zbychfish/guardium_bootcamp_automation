@@ -1196,6 +1196,26 @@ def t_import_etap_ca_cert():
     
     appliance.disconnect()
 
+def t_import_etap_cert():
+    appliance = ApplianceCommand(
+    host="10.10.9.239",
+    user="cli",
+    password=get_env_value("COLLECTOR_PASSWORD"),
+    prompt_regex=r">",
+    debug=True
+)
+
+    if appliance.connect():
+    # Wczytaj certyfikat External S-TAP
+        with open("/root/gn-trainings/ETAP/ca/etap.pem") as f:
+            etap_cert = f.read()
+        
+        # Importuj certyfikat
+        appliance.import_external_stap_certificate(
+            alias_line=get_env_value("ETAP_CSR_ID"),
+            stap_cert=etap_cert
+        )
+
 def lab1_appliance_setup(state):
     """
     LAB 1 - Konfiguracja appliance (collector).
@@ -1363,6 +1383,8 @@ def lab7_etap(state):
     run_task('Create CSR for ETAP for mysql', lambda: t_create_mysql_csr_for_etap(), state)
 
     run_task('Import CA cert for ETAP', lambda: t_import_etap_ca_cert(), state)
+
+    run_task('Import mysql ETAP cert', lambda: t_import_etap_cert(), state)
 
     
 
