@@ -1467,7 +1467,16 @@ def lab7_etap(state):
 
     run_task('Start mysql ETAP on raptor', lambda: t_start_etap(), state)
 
-    
+    print("\n" + "=" * 60)
+    print("Lab 7 completed!")
+    print("=" * 60)
+
+def lab8_va(state):
+    print("=" * 60)
+    print("LAB 7 - ETAP")
+    print("=" * 60)
+
+
 
     print("\n" + "=" * 60)
     print("Lab 7 completed!")
@@ -1564,7 +1573,7 @@ def sync_lab(state, skip_below: int = 0, stop_at: int = 999):
     if skip_below < 7 and stop_at >= 7:
         lab7_etap(state)
         print("\n" + "=" * 60)
-        print("LAB 5 completed!")
+        print("LAB 7 completed!")
         print("=" * 60)
         if stop_at == 7:
             print("\n[INFO] Stopped after LAB 7 (--stop-at=7)")
@@ -1573,6 +1582,20 @@ def sync_lab(state, skip_below: int = 0, stop_at: int = 999):
         print("\n[LAB 7] SKIPPED - EXIT (--skip-below)")
     else:
         print("\n[LAB 7] SKIPPED - EXIT (--stop-at)")
+
+    # LAB 8: VA
+    if skip_below < 8 and stop_at >= 8:
+        lab8_va(state)
+        print("\n" + "=" * 60)
+        print("LAB 8 completed!")
+        print("=" * 60)
+        if stop_at == 8:
+            print("\n[INFO] Stopped after LAB 8 (--stop-at=8)")
+            return
+    elif skip_below >= 8:
+        print("\n[LAB 8] SKIPPED - EXIT (--skip-below)")
+    else:
+        print("\n[LAB 8] SKIPPED - EXIT (--stop-at)")
 
 
 if __name__ == "__main__":
