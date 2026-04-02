@@ -1315,7 +1315,7 @@ def configure_raptor_for_va():
     target_dir = "/root/gn-trainings"
     os.makedirs(target_dir, exist_ok=True)
     filename = os.path.join(target_dir, os.path.basename("dps.zip"))
-    urllib.request.urlretrieve(get_env_value("DPS_ZIP_URL"), filename)
+    urllib.request.urlretrieve(get_env_value("DPS_ZIP_ARCHIVE"), filename)
     print("\nExtract DPS file")
     with zipfile.ZipFile(filename, "r") as zipf:
             zipf.extractall(path=target_dir)
@@ -1517,6 +1517,9 @@ def lab8_va(state):
     )
     
     #run_task('Import VA process for postgres', lambda: import_va_process_for_postgres(api), state)
+    
+    subprocess.run(["playwright", "install"], check=True)
+
     guardium_customer_upload_import(
         login_url='https://jp-tok.services.cloud.techzone.ibm.com:39997/',
         username='demo',
