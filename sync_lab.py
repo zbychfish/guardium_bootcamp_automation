@@ -1327,10 +1327,10 @@ def import_DPS():
 
     print("\nStart DPS import")
     guardium_customer_upload_import(
-        login_url='https://jp-tok.services.cloud.techzone.ibm.com:39997/',
+        login_url='10.10.9.219:8443',
         username='demo',
         password=get_env_value("DEMOUSER_PASSWORD"),
-        file_to_upload='/root/gn-trainings/DPS.enc',
+        file_to_upload=f'/root/gn-trainings/{get_env_value("DPS_NAME")}.enc',
         headless=True
     )
 
