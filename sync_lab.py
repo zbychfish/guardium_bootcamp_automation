@@ -1534,7 +1534,8 @@ def lab8_va(state):
     
     result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"), commands=["mkdir -p /root/gn-trainings/vascanner/certs", ])
     print(result)
-    
+    scp_file_as_root(host='10.10.9.60', root_password=get_env_value("HANA_PASSWORD"), local_path='guardium_configuration_files/vascanner.pem', remote_path='/root/gn-trainings/vascanner/vascanner.pem')
+
       
     
 
