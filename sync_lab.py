@@ -1493,8 +1493,9 @@ def lab7_etap(state):
     print("=" * 60)
 
 def lab8_va(state):
+    
     print("=" * 60)
-    print("LAB 7 - ETAP")
+    print("LAB 9 - VA")
     print("=" * 60)
 
     run_task('Add sqlguard user for VA', lambda: t_start_etap(), state)
@@ -1507,7 +1508,7 @@ def lab8_va(state):
     run_task('Add sqlguard user for VA', lambda: import_va_process_for_postgres(api), state)
 
     print("\n" + "=" * 60)
-    print("Lab 7 completed!")
+    print("Lab 8 completed!")
     print("=" * 60)
 
 
