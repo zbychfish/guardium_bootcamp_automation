@@ -1321,6 +1321,19 @@ def configure_raptor_for_va():
             zipf.extractall(path=target_dir)
             print(f"  ✓ DPS downloaded and unpacked")
 
+def import_DPS():
+    print("\nConfigure playwright browsers")
+    subprocess.run(["playwright", "install"], check=True)
+
+    print("\nStart DPS import")
+    guardium_customer_upload_import(
+        login_url='https://jp-tok.services.cloud.techzone.ibm.com:39997/',
+        username='demo',
+        password=get_env_value("DEMOUSER_PASSWORD"),
+        file_to_upload='/root/gn-trainings/DPS.enc',
+        headless=True
+    )
+
 def import_va_process_for_postgres(api):
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
     print("\n Import Vulnerability Assessment process")
@@ -1511,6 +1524,8 @@ def lab8_va(state):
 
     run_task('Add sqlguard user for VA', lambda: configure_raptor_for_va(), state)
 
+    run_task('Import DPS', lambda: import_DPS(), state)
+
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443',
         client_id='BOOTCAMP'
@@ -1518,15 +1533,7 @@ def lab8_va(state):
     
     #run_task('Import VA process for postgres', lambda: import_va_process_for_postgres(api), state)
     
-    subprocess.run(["playwright", "install"], check=True)
-
-    guardium_customer_upload_import(
-        login_url='https://jp-tok.services.cloud.techzone.ibm.com:39997/',
-        username='demo',
-        password=get_env_value("DEMOUSER_PASSWORD"),
-        file_to_upload='/root/gn-trainings/Guardium_V12_Quarterly_DPS_2026_Q1_20260216.enc',
-        headless=True
-    )
+    
     
       
     
