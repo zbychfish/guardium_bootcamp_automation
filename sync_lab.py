@@ -1493,12 +1493,12 @@ def lab7_etap(state):
     print("=" * 60)
 
 def lab8_va(state):
-    
+
     print("=" * 60)
     print("LAB 9 - VA")
     print("=" * 60)
 
-    run_task('Add sqlguard user for VA', lambda: t_start_etap(), state)
+    run_task('Add sqlguard user for VA', lambda: configure_pgsql_for_va(), state)
 
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443',
