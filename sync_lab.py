@@ -1293,8 +1293,7 @@ def t_start_etap():
         f"icr.io/guardium/guardium_external_s-tap:v{etap_release}"
     ]
     subprocess.run(etap_command, check=True)
-    exit(0)
- 
+
 def configure_raptor_for_va():
     print("\n postgres package installation to enable some features")
     subprocess.run(["dnf", "-y", "install", "postgresql-contrib"], check=True)
@@ -1523,6 +1522,7 @@ def lab8_va(state):
         username='demo',
         password=get_env_value("DEMOUSER_PASSWORD"),
         file_to_upload='/root/gn-trainings/Guardium_V12_Quarterly_DPS_2026_Q1_20260216.enc',
+        headless=True
     )
     
       
