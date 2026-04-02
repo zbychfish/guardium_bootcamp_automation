@@ -1532,8 +1532,8 @@ def lab8_va(state):
     
     #run_task('Import VA process for postgres', lambda: import_va_process_for_postgres(api), state)
     
-    result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"), commands=["mkdir -p /root/gn-trainings/vascanner/certs", f"podman login cp.icr.io -u cp -p {get_env_value('IBM_REGISTRY_KEY')} && podman pull cp.icr.io/cp/ibm-guardium-data-security-center/guardium/{get_env_value('VASCANNER_IMAGE_TAG')}", "podman images"])
-    print(result)
+    result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"), commands=["mkdir -p /root/gn-trainings/vascanner/certs", f"podman login cp.icr.io -u cp -p {get_env_value('IBM_REGISTRY_KEY')} && podman pull cp.icr.io/cp/ibm-guardium-data-security-center/guardium/{get_env_value('VASCANNER_IMAGE_TAG')}", "podman images --format '{{.ID}}'"])
+    print(result[2])
     scp_file_as_root(host='10.10.9.60', root_password=get_env_value("HANA_PASSWORD"), local_path='guardium_configuration_files/vascanner.pem', remote_path='/root/gn-trainings/vascanner/certs/vascanner.pem')
 
       
