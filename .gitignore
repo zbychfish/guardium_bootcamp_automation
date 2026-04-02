@@ -78,3 +78,5 @@ debug/
 .pytest_cache/
 .coverage
 htmlcov/
+guardium_bootcamp_automation/web_debug.py
+guardium_bootcamp_automation/web_debug2.py

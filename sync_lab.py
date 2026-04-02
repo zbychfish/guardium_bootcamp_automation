@@ -14,6 +14,7 @@ import json
 import paramiko
 from dotenv import load_dotenv
 from appliance_command import ApplianceCommand, change_password_as_root, scp_file_as_root
+from manual_web_ui_processing import guardium_customer_upload_import
 from guardium_patch import install_patch
 import os
 from guardium_rest_api import GuardiumRestAPI
@@ -1294,7 +1295,7 @@ def t_start_etap():
     subprocess.run(etap_command, check=True)
     exit(0)
  
-def configure_pgsql_for_va():
+def configure_raptor_for_va():
     print("\n postgres package installation to enable some features")
     subprocess.run(["dnf", "-y", "install", "postgresql-contrib"], check=True)
 
@@ -1311,11 +1312,22 @@ def configure_pgsql_for_va():
     cur.close()
     conn.close()
 
+    print("\nDownload DPS archive")
+    target_dir = "/root/gn-trainings"
+    os.makedirs(target_dir, exist_ok=True)
+    filename = os.path.join(target_dir, os.path.basename("dps.zip"))
+    urllib.request.urlretrieve(get_env_value("DPS_ZIP_URL"), filename)
+    print("\nExtract DPS file")
+    with zipfile.ZipFile(filename, "r") as zipf:
+            zipf.extractall(path=target_dir)
+            print(f"  ✓ DPS downloaded and unpacked")
+
 def import_va_process_for_postgres(api):
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
     print("\n Import Vulnerability Assessment process")
     result = api.import_definitions('guardium_definition_files/exp_security_assessment_va_postgres.sql')
     print(f"  ✓ VA process imported")
+
 def lab1_appliance_setup(state):
     """
     LAB 1 - Konfiguracja appliance (collector).
@@ -1506,6 +1518,16 @@ def lab8_va(state):
     )
     
     #run_task('Import VA process for postgres', lambda: import_va_process_for_postgres(api), state)
+    guardium_customer_upload_import(
+        login_url='https://jp-tok.services.cloud.techzone.ibm.com:39997/',
+        username='demo',
+        password=get_env_value("DEMOUSER_PASSWORD"),
+        file_to_upload='/root/gn-trainings/Guardium_V12_Quarterly_DPS_2026_Q1_20260216.enc',
+    )
+    
+      
+    
+
 
     print("\n" + "=" * 60)
     print("Lab 8 completed!")
