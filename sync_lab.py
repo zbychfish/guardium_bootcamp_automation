@@ -1509,7 +1509,7 @@ def lab8_va(state):
     print("LAB 8 - VA")
     print("=" * 60)
 
-    run_task('Add sqlguard user for VA', lambda: configure_pgsql_for_va(), state)
+    run_task('Add sqlguard user for VA', lambda: configure_raptor_for_va(), state)
 
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443',
