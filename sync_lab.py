@@ -1455,7 +1455,7 @@ def lab7_etap(state):
         base_url='https://10.10.9.219:8443',
         client_id='BOOTCAMP'
     )
-    run_task('Setup EXIT for DB2 on raptor', lambda: t_setup_raptor_to_deploy_etap(), state)
+    run_task('Setup raptor for ETAP', lambda: t_setup_raptor_to_deploy_etap(), state)
 
     run_task('Deploy CA on raptor', lambda: t_deploy_ca_on_raptor(), state)
 
