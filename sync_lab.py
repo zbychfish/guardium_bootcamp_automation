@@ -1486,7 +1486,7 @@ def lab7_etap(state):
 
     run_task('Import mysql ETAP cert', lambda: t_import_etap_cert(), state)
 
-    run_task('Start mysql ETAP on raptor', lambda: configure_pgsql_for_va(), state)
+    run_task('Start mysql ETAP on raptor', lambda: t_start_etap(), state)
 
     print("\n" + "=" * 60)
     print("Lab 7 completed!")
@@ -1495,7 +1495,7 @@ def lab7_etap(state):
 def lab8_va(state):
 
     print("=" * 60)
-    print("LAB 9 - VA")
+    print("LAB 8 - VA")
     print("=" * 60)
 
     run_task('Add sqlguard user for VA', lambda: configure_pgsql_for_va(), state)

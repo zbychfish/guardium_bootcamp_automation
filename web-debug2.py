@@ -4,22 +4,20 @@
 import time
 import traceback
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, Optional
 
 from playwright.sync_api import sync_playwright, Page, Frame
 
 # =========================
 # CONFIG
 # =========================
-LOGIN_URL = "https://useast.services.cloud.techzone.ibm.com:35391/"
+LOGIN_URL = "https://eu-de.services.cloud.techzone.ibm.com:29213"
 USERNAME = "demo"
 PASSWORD = "Guardium123!"
 WELCOME_SELECTOR = "div.guard--welcome-page--page-subtitle"
 
 CUSTOMER_UPLOADS_WAIT_S = 15
 POST_PICK_BEFORE_UPLOAD_S = 2
-
-# After confirming the final dialog (import confirmation), wait before closing browser
 POST_FINAL_OK_WAIT_S = 15
 
 FILE_TO_UPLOAD = Path(r"U:\-=GUARDIUM\Guardium 12.2 INSTALL\Guardium_V12_Quarterly_DPS_2026_Q1_20260216.enc")
@@ -124,13 +122,7 @@ def attach_debug_listeners(page: Page):
         except Exception:
             pass
 
-    def on_dialog(dialog):
-        try:
-            print(f"[DIALOG_EVENT] type={dialog.type} message='{dialog.message}'")
-        except Exception:
-            pass
-
-    def on_filechooser(fc):
+    def on_filechooser(_fc):
         try:
             print("[FILECHOOSER_EVENT] filechooser appeared")
         except Exception:
@@ -139,8 +131,21 @@ def attach_debug_listeners(page: Page):
     page.on("console", on_console)
     page.on("pageerror", on_page_error)
     page.on("framenavigated", on_frame_navigated)
-    page.on("dialog", on_dialog)
     page.on("filechooser", on_filechooser)
+
+def install_global_dialog_autook(page: Page):
+    """
+    Kluczowe: zawsze zamykaj dialogi, żeby test nigdy nie stanął.
+    To jest 'bezpiecznik'.
+    """
+    def auto_ok(dialog):
+        try:
+            print(f"[DIALOG_AUTO] type={dialog.type} message='{dialog.message}' -> ACCEPT")
+            dialog.accept()
+        except Exception as e:
+            print(f"[DIALOG_AUTO] accept failed: {e}")
+
+    page.on("dialog", auto_ok)
 
 def probe_frames(page: Page, label: str):
     """Dump HTML wszystkich frame’ów do debug/ + podstawowe info."""
@@ -197,6 +202,60 @@ def click_locator(scope, selector: str, timeout_ms=60000, label="click"):
             raise TimeoutError(f"[{label}] Nie mogę kliknąć {selector}: {e}")
 
 # =========================
+# DIALOG/MODAL HANDLING
+# =========================
+def click_and_confirm_ok(page: Page, click_fn, label: str, timeout_s: int = 30) -> Optional[str]:
+    """
+    Robi klik i gwarantuje zamknięcie potwierdzenia:
+    1) Próbuje przechwycić browser dialog przez page.once('dialog') ustawione PRZED kliknięciem
+    2) Jeśli nie złapie (bo to HTML modal), próbuje kliknąć przycisk 'OK' w DOM
+    Zwraca message z dialogu (jeśli złapany).
+    """
+    holder = {"msg": None, "got": False}
+
+    def handler(dialog):
+        try:
+            holder["msg"] = dialog.message
+            holder["got"] = True
+            print(f"[DIALOG_CAPTURED:{label}] '{dialog.message}' -> ACCEPT")
+            dialog.accept()
+        except Exception as e:
+            print(f"[DIALOG_CAPTURED:{label}] accept failed: {e}")
+
+    # Ustaw handler przed kliknięciem (eliminuje race)
+    page.once("dialog", handler)
+
+    # Klik
+    click_fn()
+
+    # Czekaj aż handler złapie dialog
+    end = time.time() + timeout_s
+    while time.time() < end:
+        if holder["got"]:
+            return holder["msg"]
+        time.sleep(0.1)
+
+    # Fallback: to może być HTML modal, nie browser dialog
+    print(f"[WARN:{label}] Dialog event not captured. Trying HTML modal OK button fallback...")
+
+    # Najpierw spróbuj po roli
+    try:
+        page.get_by_role("button", name="OK").click(timeout=3000)
+        print(f"[OK:{label}] Clicked HTML modal OK (role=button, name=OK)")
+        return None
+    except Exception:
+        pass
+
+    # Spróbuj też prosty tekst "OK" (czasem to <span> lub <a>)
+    try:
+        page.locator("text=OK").first.click(timeout=3000)
+        print(f"[OK:{label}] Clicked HTML modal OK (text=OK)")
+        return None
+    except Exception:
+        dump_page(page, f"{label}_ok_not_found")
+        raise TimeoutError(f"[{label}] Nie udało się zamknąć okna potwierdzenia: ani dialog, ani HTML 'OK' nie zadziałało.")
+
+# =========================
 # FLOW
 # =========================
 def login(page: Page):
@@ -243,7 +302,7 @@ def wait_for_dynamic_content(page: Page):
 def set_file_prev_style_with_diagnostics(page: Page, scope, file_path: Path) -> bool:
     """
     Prefer: expect_file_chooser + chooser.set_files
-    If not captured, send ESC (close possible native dialog) then fallback to set_input_files.
+    If not captured, send ESC then fallback to set_input_files.
     Returns True if textbox confirms file name.
     """
     if not file_path.exists():
@@ -357,51 +416,29 @@ def set_file_prev_style_with_diagnostics(page: Page, scope, file_path: Path) -> 
 
     return confirmed
 
-def click_upload_then_ok(page: Page, scope):
-    """
-    Click Upload, wait for dialog, accept OK.
-    Returns dialog message (for logging).
-    """
+def click_upload_and_confirm(page: Page, scope):
     print(f"[WAIT] After pick file: sleep {POST_PICK_BEFORE_UPLOAD_S}s before Upload")
     time.sleep(POST_PICK_BEFORE_UPLOAD_S)
     dump_page(page, "before_upload_click")
 
-    print("[STEP] Click Upload + expect dialog OK")
-    try:
-        with page.expect_event("dialog", timeout=20000) as dlg_info:
-            click_locator(scope, UPLOAD_BUTTON_ABS_XPATH, timeout_ms=60000, label="upload")
-        dialog = dlg_info.value
-        msg = dialog.message
-        print(f"[DIALOG] (upload) message: {msg}")
-        dialog.accept()
-        print("[OK] Upload dialog accepted (OK)")
-        dump_page(page, "after_upload_dialog_ok")
-        return msg
-    except Exception as e:
-        dump_page(page, "upload_dialog_not_captured")
-        probe_frames(page, "probe_after_upload_dialog_not_captured")
-        raise RuntimeError(f"Nie udało się przechwycić/zaakceptować okna OK po upload: {e}")
+    def do_click():
+        click_locator(scope, UPLOAD_BUTTON_ABS_XPATH, timeout_ms=60000, label="upload")
 
-def click_start_import_then_ok(page: Page, scope):
-    """
-    After upload OK: click the import icon and accept the next dialog OK.
-    """
-    print("[STEP] Start Import: click icon + expect dialog OK")
+    print("[STEP] Upload: click + confirm OK")
+    msg = click_and_confirm_ok(page, do_click, label="upload_ok", timeout_s=30)
+    dump_page(page, "after_upload_ok_confirmed")
+    return msg
+
+def click_import_and_confirm(page: Page, scope):
     dump_page(page, "before_start_import_click")
-    try:
-        with page.expect_event("dialog", timeout=30000) as dlg_info:
-            click_locator(scope, START_IMPORT_ICON_XPATH, timeout_ms=60000, label="start_import")
-        dialog = dlg_info.value
-        msg = dialog.message
-        print(f"[DIALOG] (import) message: {msg}")
-        dialog.accept()
-        print("[OK] Import dialog accepted (OK)")
-        dump_page(page, "after_import_dialog_ok")
-        return msg
-    except Exception as e:
-        dump_page(page, "import_dialog_not_captured")
-        probe_frames(page, "probe_after_import_dialog_not_captured")
-        raise RuntimeError(f"Nie udało się przechwycić/zaakceptować okna OK po starcie importu: {e}")
+
+    def do_click():
+        click_locator(scope, START_IMPORT_ICON_XPATH, timeout_ms=60000, label="start_import")
+
+    print("[STEP] Import: click start + confirm OK")
+    msg = click_and_confirm_ok(page, do_click, label="import_ok", timeout_s=45)
+    dump_page(page, "after_import_ok_confirmed")
+    return msg
 
 def main():
     with sync_playwright() as p:
@@ -410,6 +447,9 @@ def main():
         page = context.new_page()
 
         attach_debug_listeners(page)
+
+        # Bezpiecznik: nie pozwól, żeby dialog kiedykolwiek zablokował test
+        install_global_dialog_autook(page)
 
         try:
             login(page)
@@ -428,10 +468,10 @@ def main():
                 print("[WARN] File not confirmed in textbox, continuing anyway (may still work).")
 
             # Upload -> OK
-            click_upload_then_ok(page, scope)
+            click_upload_and_confirm(page, scope)
 
-            # Start import -> OK
-            click_start_import_then_ok(page, scope)
+            # Start import -> OK (FIX: guaranteed accept/close)
+            click_import_and_confirm(page, scope)
 
             # final wait before close
             print(f"[WAIT] Final wait {POST_FINAL_OK_WAIT_S}s before closing browser")
