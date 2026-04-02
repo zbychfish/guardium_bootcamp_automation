@@ -1327,7 +1327,7 @@ def import_DPS():
 
     print("\nStart DPS import")
     guardium_customer_upload_import(
-        login_url='10.10.9.219:8443',
+        login_url='https://10.10.9.219:8443',
         username='demo',
         password=get_env_value("DEMOUSER_PASSWORD"),
         file_to_upload=f'/root/gn-trainings/{get_env_value("DPS_NAME")}.enc',
@@ -1527,7 +1527,7 @@ def lab8_va(state):
     run_task('Import DPS', lambda: import_DPS(), state)
 
     api = GuardiumRestAPI(
-        base_url='https://10.10.9.219:8443',
+        base_url='https://10.10.9.219:8443/',
         client_id='BOOTCAMP'
     )
     
