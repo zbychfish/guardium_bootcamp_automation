@@ -74,7 +74,7 @@ desktop.ini
 .cache/
 
 # Test files
-test_output/
+debug/
 .pytest_cache/
 .coverage
 htmlcov/

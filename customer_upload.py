@@ -9,7 +9,7 @@ from playwright.sync_api import sync_playwright, Page
 # =========================
 # CONFIG
 # =========================
-LOGIN_URL = "https://eu-de.services.cloud.techzone.ibm.com:40459/"
+LOGIN_URL = "https://eu-de.services.cloud.techzone.ibm.com:27494/"
 USERNAME = "demo"
 PASSWORD = "Guardium123!"
 WELCOME_SELECTOR = "div.guard--welcome-page--page-subtitle"

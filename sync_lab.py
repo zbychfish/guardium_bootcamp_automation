@@ -1203,7 +1203,7 @@ def t_import_etap_cert():
     password=get_env_value("COLLECTOR_PASSWORD"),
     prompt_regex=r">",
     debug=True
-)
+    )   
 
     if appliance.connect():
     # Wczytaj certyfikat External S-TAP
@@ -1294,7 +1294,28 @@ def t_start_etap():
     subprocess.run(etap_command, check=True)
     exit(0)
  
+def configure_pgsql_for_va():
+    print("\n postgres package installation to enable some features")
+    subprocess.run(["dnf", "-y", "install", "postgresql-contrib"], check=True)
 
+    print("\n Create sqlguard user")
+    conn = psycopg2.connect(dbname="postgres", user= "postgres", password="guardium", host="localhost", port=5432)
+    cur = conn.cursor()
+    cur.execute(f"CREATE USER sqlguard WITH ENCRYPTED PASSWORD '{get_env_value('DEFAULT_SERVICE_PASSWORD')}';")
+    cur.execute(f"CREATE GROUP gdmmonitor;")
+    conn.commit()
+    cur.execute(f"ALTER GROUP gdmmonitor ADD USER sqlguard;")
+    cur.execute(f"GRANT pg_read_all_settings TO gdmmonitor;")
+    cur.execute(f"GRANT SELECT ON pg_authid TO gdmmonitor;")
+    cur.execute(f"CREATE EXTENSION IF NOT EXISTS pgcrypto;")
+    cur.close()
+    conn.close()
+
+def import_va_process_for_postgres(api):
+    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
+    print("\n Import Vulnerability Assessment process")
+    result = api.import_definitions('guardium_definition_files/exp_security_assessment_va_postgres.sql')
+    print(f"  ✓ VA process imported")
 def lab1_appliance_setup(state):
     """
     LAB 1 - Konfiguracja appliance (collector).
@@ -1465,7 +1486,7 @@ def lab7_etap(state):
 
     run_task('Import mysql ETAP cert', lambda: t_import_etap_cert(), state)
 
-    run_task('Start mysql ETAP on raptor', lambda: t_start_etap(), state)
+    run_task('Start mysql ETAP on raptor', lambda: configure_pgsql_for_va(), state)
 
     print("\n" + "=" * 60)
     print("Lab 7 completed!")
@@ -1476,7 +1497,14 @@ def lab8_va(state):
     print("LAB 7 - ETAP")
     print("=" * 60)
 
+    run_task('Add sqlguard user for VA', lambda: t_start_etap(), state)
 
+    api = GuardiumRestAPI(
+        base_url='https://10.10.9.219:8443',
+        client_id='BOOTCAMP'
+    )
+    
+    run_task('Add sqlguard user for VA', lambda: import_va_process_for_postgres(api), state)
 
     print("\n" + "=" * 60)
     print("Lab 7 completed!")
