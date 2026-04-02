@@ -29,6 +29,33 @@ def _find_last_prompt_span(text: str, prompt_re: re.Pattern) -> Optional[Tuple[i
     return last
 
 
+def run_many_commands_remotely(host, commands, port=22, key_file=None, password=None):
+    client = paramiko.SSHClient()
+    client.load_system_host_keys()
+    client.set_missing_host_key_policy(paramiko.RejectPolicy())
+
+    client.connect(
+        hostname=host,
+        port=port,
+        username="root",
+        key_filename=key_file,
+        password=password,
+        look_for_keys=True,
+        allow_agent=True,
+        timeout=15,
+    )
+
+    results = []
+    for cmd in commands:
+        stdin, stdout, stderr = client.exec_command(cmd, timeout=60)
+        rc = stdout.channel.recv_exit_status()
+        out = stdout.read().decode("utf-8", errors="replace")
+        err = stderr.read().decode("utf-8", errors="replace")
+        results.append({"cmd": cmd, "rc": rc, "stdout": out, "stderr": err})
+
+    client.close()
+    return results
+
 
 def change_password_as_root(
     host: str,

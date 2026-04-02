@@ -13,7 +13,7 @@ import time
 import json
 import paramiko
 from dotenv import load_dotenv
-from appliance_command import ApplianceCommand, change_password_as_root, scp_file_as_root
+from appliance_command import ApplianceCommand, change_password_as_root, scp_file_as_root, run_many_commands_remotely
 from manual_web_ui_processing import guardium_customer_upload_import
 from guardium_patch import install_patch
 import os
@@ -154,7 +154,6 @@ common_config = {
     'initial_pattern': 'Last login',
     'timeout': 120
 }
-
 
 # Konfiguracja specyficzna dla każdego appliance
 appliances = {
@@ -1533,7 +1532,8 @@ def lab8_va(state):
     
     #run_task('Import VA process for postgres', lambda: import_va_process_for_postgres(api), state)
     
-    
+    result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"), commands=["mkdir -p /root/gn-trainings/vascanner/certs", ])
+    print(result)
     
       
     
