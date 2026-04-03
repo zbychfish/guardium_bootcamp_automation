@@ -1464,7 +1464,7 @@ def t_install_enable_fam_on_winsql(api):
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
     api.gim_client_assign(
         client_ip="10.10.9.59",
-        module="FAMONITOR",
+        module="FAMMONITOR",
         module_version="12.2_r120201205_1"
     )
     api.gim_client_params(
@@ -1479,7 +1479,6 @@ def t_install_enable_fam_on_winsql(api):
     time.sleep(10)
     print("\n Monitoring is a FAM enabled")
     monitor_gim_module_installation(api, "10.10.9.59")
-
 
 def lab1_appliance_setup(state):
     """
