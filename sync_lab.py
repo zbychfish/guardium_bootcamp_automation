@@ -1458,6 +1458,10 @@ def t_enable_fam_on_raptor(api):
     # time.sleep(10)
     print("\n Monitoring is a FAM enabled")
     monitor_gim_module_installation(api, "10.10.9.70")
+    
+    print("\nEnable root account monitoring")
+    subprocess.run(["sed", "-i", "'s/^fam_protect_privileged[[:space:]]*=.*/fam_protect_privileged=0/'", "/opt/guardium/modules/STAP/current/guard_tap.ini"], check=True)
+    subprocess.run(["/opt/guardium/modules/STAP/current/guard-config-update", "--restart", "stap"], check=True)
 
 def t_install_enable_fam_on_winsql(api):
     print("\n Set FAM settings")
@@ -1471,6 +1475,11 @@ def t_install_enable_fam_on_winsql(api):
         client_ip="10.10.9.59",
         param_name="FAMMONITOR_SQLGUARD_IP",
         param_value="10.10.9.239"
+    )
+    api.gim_client_params(
+        client_ip="10.10.9.59",
+        param_name="FAMMONITOR_FAM_PROTECT_PRIVILEGED",
+        param_value="1"
     )
     api.gim_schedule_install(
         client_ip="10.10.9.59",
