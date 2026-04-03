@@ -1531,9 +1531,16 @@ def lab8_va(state):
     )
     
     #run_task('Import VA process for postgres', lambda: import_va_process_for_postgres(api), state)
-    
+    print("\nPull vascanner image on hana")
     result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"), commands=["mkdir -p /root/gn-trainings/vascanner/certs", f"podman login cp.icr.io -u cp -p {get_env_value('IBM_REGISTRY_KEY')} && podman pull cp.icr.io/cp/ibm-guardium-data-security-center/guardium/{get_env_value('VASCANNER_IMAGE_TAG')}", "podman images --format '{{.ID}}'"])
-    print(result[2])
+    va_image_id = result[2].stdout
+    print("\nPrepare vascanner config file")
+    subprocess.run(["cp", "guardium_configuration_files/vascanner_config", "guardium_configuration_files/config"], check=True)
+    with open('guardium_configuration_files/config', 'a') as f:
+        subprocess.run(["echo", f"CLIENT_API_KEY={va_image_id}", ], stdout=f, text=True, check=True)
+    print("\nCopy vascanner file to hana machine")
+    scp_file_as_root(host='10.10.9.60', root_password=get_env_value("HANA_PASSWORD"), local_path='guardium_configuration_files/config', remote_path='/root/gn-trainings/vascanner/config')
+    print("\nCopy cm certificate to hana machine")
     scp_file_as_root(host='10.10.9.60', root_password=get_env_value("HANA_PASSWORD"), local_path='guardium_configuration_files/vascanner.pem', remote_path='/root/gn-trainings/vascanner/certs/vascanner.pem')
 
       
