@@ -1645,7 +1645,13 @@ def lab10_fam(state):
     """
     LAB 10 - FAM
     """
-    pass
+    api = GuardiumRestAPI(
+        base_url='https://10.10.9.219:8443/',
+        client_id='BOOTCAMP'
+    )
+    
+    run_task('Enable FAM on raptor', lambda: t_enable_fam_on_raptor(api), state)
+
 
 
 def sync_lab(state, skip_below: int = 0, stop_at: int = 999):
