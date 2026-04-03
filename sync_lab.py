@@ -1363,6 +1363,11 @@ def setup_vascanner():
     scp_file_as_root(host='10.10.9.60', root_password=get_env_value("HANA_PASSWORD"), local_path='guardium_configuration_files/config', remote_path='/root/gn-trainings/vascanner/config')
     print("\nCopy cm certificate to hana machine")
     scp_file_as_root(host='10.10.9.60', root_password=get_env_value("HANA_PASSWORD"), local_path='guardium_configuration_files/vascanner.pem', remote_path='/root/gn-trainings/vascanner/certs/vascanner.pem')
+    print("\nRun vascanner container on hana")
+    result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"), commands=[f"podman run --network host -d --replace --env-file /root/gn-trainings/vascanner/config --name va-scanner-hana -v /root/gn-trainings/vascanner/certs:/var/vascanner/certs {va_image_id}"])
+    print(result)
+
+    
 
 def lab1_appliance_setup(state):
     """
