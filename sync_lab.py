@@ -1535,8 +1535,11 @@ def lab8_va(state):
     print("=" * 60)
 
     run_task('Configure raptor for VA', lambda: configure_raptor_for_va(), state)
-
+    
     appliance = create_appliance('cm')
+    if not appliance.connect():
+        print(f"  ✗ Failed to connect to cm")
+        return None
     output = appliance.execute_command("grdapi create_api_key name=vascanner")
     print(output)
     #run_task('Import DPS', lambda: import_DPS(), state)
