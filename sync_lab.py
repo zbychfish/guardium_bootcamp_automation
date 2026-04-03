@@ -1531,8 +1531,27 @@ def t_install_fam_policy(api):
     result = api.install_policy("Log Everything|raptor FAM policy", api_target_host="10.10.9.239")
     print(f"  ✓ FAM policy installed")
 
-def t_configure_env_for_oracle():
-    pass
+def t_configure_env_for_oracle(api):
+    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
+    print("\n Setup oracle user settings")
+    run_as_user(["bash", "-c", r'mkdir -p ~/.sqlcl && printf "%s\n" "SET SQLFORMAT ansiconsole" > "$HOME/.sqlcl/login.sql" && printf "%s\n" "export SQLPATH=.:$HOME/.sqlcl/" >> "$HOME/.bashrc"'], user="oracle", text=True)
+    print("\n Import Oracle dashboard")
+    result = api.import_definitions('guardium_definition_files/exp_dashboard_oracle.sql')
+    print("\n Add missing IE definition")
+    api.create_inspection_engine(
+        stap_host="10.10.9.70",
+        protocol="oracle",
+        port_min="1521",
+        port_max="1521",
+        ktap_db_port="1521",
+        # db_user="oracle",
+        db_version="19",
+        client="0.0.0.0/0.0.0.0",
+        proc_name="opt/oracle/product/19c/dbhome_1/bin/oracle",
+        db_install_dir="/home/oracle",
+        unix_socket_marker="EXTPROC2",
+        api_target_host="10.10.9.239"
+    )
 
 def lab1_appliance_setup(state):
     """
@@ -1739,26 +1758,28 @@ def lab11_oracle(state):
         base_url='https://10.10.9.219:8443/',
         client_id='BOOTCAMP'
     )
-    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
-    print("\n Setup oracle user settings")
-    # run_as_user(["bash", "-c", r'mkdir -p ~/.sqlcl && printf "%s\n" "SET SQLFORMAT ansiconsole" > "$HOME/.sqlcl/login.sql" && printf "%s\n" "export SQLPATH=.:$HOME/.sqlcl/" >> "$HOME/.bashrc"'], user="oracle", text=True)
-    print("\n Import Oracle dashboard")
-    result = api.import_definitions('guardium_definition_files/exp_dashboard_oracle.sql')
-    print("\n Add missing IE definition")
-    api.create_inspection_engine(
-        stap_host="10.10.9.70",
-        protocol="oracle",
-        port_min="1521",
-        port_max="1521",
-        ktap_db_port="1521",
-        # db_user="oracle",
-        db_version="19",
-        client="0.0.0.0/0.0.0.0",
-        proc_name="opt/oracle/product/19c/dbhome_1/bin/oracle",
-        db_install_dir="/home/oracle",
-        unix_socket_marker="EXTPROC2",
-        api_target_host="10.10.9.239"
-    )
+    
+    # run_task('Configure system for oracle lab', lambda: t_configure_env_for_oracle(api), state)
+
+    print("\n Create server wallet")
+    run_as_user(["mkdir", "-p", "/opt/oracle/product/19c/dbhome_1/wallet"], user="oracle", text=True)
+    run_as_user(["orapki", "wallet", "create", "-wallet", "/opt/oracle/product/19c/dbhome_1/wallet", "-auto_login_local", "-pwd", f"{get_env_value("DEFAULT_SERVICE_PASSWORD")}"], user="oracle", text=True)
+    print("\n Add self-sign certificate to server wallet")
+    run_as_user(["orapki", "wallet", "add", "-wallet", r'"/opt/oracle/product/19c/dbhome_1/wallet"', "-dn", r'"CN=raptor.gdemo.com"', "-keysize", "2048", "-self_signed", "-validity", "3650", "-pwd", f"{get_env_value("DEFAULT_SERVICE_PASSWORD")}"], user="oracle", text=True)
+    print("\n Create client wallet")
+    run_as_user(["mkdir", "-p", "/opt/oracle/product/19c/dbhome_1/client_wallet"], user="oracle", text=True)
+    run_as_user(["orapki", "wallet", "create", "-wallet", "/opt/oracle/product/19c/dbhome_1/client_wallet", "-auto_login_local", "-pwd", f"{get_env_value("DEFAULT_SERVICE_PASSWORD")}"], user="oracle", text=True)
+    print("\n Add self-sign certificate to client wallet")
+    run_as_user(["orapki", "wallet", "add", "-wallet", r'"/opt/oracle/product/19c/dbhome_1/client_wallet"', "-dn", r'"CN=client"', "-keysize", "2048", "-self_signed", "-validity", "3650", "-pwd", f"{get_env_value("DEFAULT_SERVICE_PASSWORD")}"], user="oracle", text=True)
+    print("\n Export public keys")
+    run_as_user(["orapki", "wallet", "export", "-wallet", r'"/opt/oracle/product/19c/dbhome_1/wallet"', "-dn", r'"CN=raptor.gdemo.com"', "-cert", "/tmp/server-cert.crt", "-pwd", f"{get_env_value("DEFAULT_SERVICE_PASSWORD")}"], user="oracle", text=True)
+    run_as_user(["orapki", "wallet", "export", "-wallet", r'"/opt/oracle/product/19c/dbhome_1/client_wallet"', "-dn", r'"CN=client"', "-cert", "/tmp/client-cert.crt", "-pwd", f"{get_env_value("DEFAULT_SERVICE_PASSWORD")}"], user="oracle", text=True)
+    run_as_user(["orapki", "wallet", "add", "-wallet", r'"/opt/oracle/product/19c/dbhome_1/client_wallet"', "-trusted_cert", "-cert", "/tmp/server-cert.crt", "-pwd", f"{get_env_value("DEFAULT_SERVICE_PASSWORD")}"], user="oracle", text=True)
+    run_as_user(["orapki", "wallet", "add", "-wallet", r'"/opt/oracle/product/19c/dbhome_1/wallet"', "-trusted_cert", "-cert", "/tmp/client-cert.crt", "-pwd", f"{get_env_value("DEFAULT_SERVICE_PASSWORD")}"], user="oracle", text=True)
+    run_as_user(["rm", "/tmp/server-cert.crt", "/tmp/client-cert.crt"], user="oracle", text=True)
+
+
+
 
 def sync_lab(state, skip_below: int = 0, stop_at: int = 999):
     """
