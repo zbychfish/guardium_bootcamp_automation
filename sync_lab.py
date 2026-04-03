@@ -1537,7 +1537,7 @@ def lab8_va(state):
     print("\nPrepare vascanner config file")
     subprocess.run(["cp", "guardium_configuration_files/vascanner_config", "guardium_configuration_files/config"], check=True)
     with open('guardium_configuration_files/config', 'a') as f:
-        subprocess.run(["echo", f"CLIENT_API_KEY={va_image_id}", ], stdout=f, text=True, check=True)
+        subprocess.run(["echo", f"\nCLIENT_API_KEY={get_env_value("IBM_REGISTRY_KEY")}", ], stdout=f, text=True, check=True)
     print("\nCopy vascanner file to hana machine")
     scp_file_as_root(host='10.10.9.60', root_password=get_env_value("HANA_PASSWORD"), local_path='guardium_configuration_files/config', remote_path='/root/gn-trainings/vascanner/config')
     print("\nCopy cm certificate to hana machine")
