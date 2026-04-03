@@ -1550,23 +1550,15 @@ def lab8_va(state):
 
     run_task('Configure VA scanner', lambda: setup_vascanner(), state)
 
-    #run_task('Import DPS', lambda: import_DPS(), state)
-
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443/',
         client_id='BOOTCAMP'
     )
     
+    run_task('Import VA process for postgres', lambda: import_va_process_for_postgres(api), state)
 
-
-
-    #run_task('Import VA process for postgres', lambda: import_va_process_for_postgres(api), state)
+    #run_task('Import DPS', lambda: import_DPS(), state)
     
-
-      
-    
-
-
     print("\n" + "=" * 60)
     print("Lab 8 completed!")
     print("=" * 60)
