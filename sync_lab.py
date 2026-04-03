@@ -909,45 +909,10 @@ def t_install_gim_on_raptor():
     print("\n GIM client installation on raptor")
     subprocess.run(["/root/gn-trainings/gim_installers/guard-bundle-GIM-12.2.0.0_r121306_v12_2_1-rhel-8-linux-x86_64.gim.sh", "--", "--dir", "/opt/guardium", "--tapip", "10.10.9.70", "--sqlguardip", "10.10.9.219"], check=True)
 
-def t_install_stap_on_raptor(api):
-    print("\n S-TAP installation schedule")
-    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
-    api.gim_client_assign(
-        client_ip="10.10.9.70",
-        module="BUNDLE-STAP",
-        module_version="12.2.0.0_r121306_5"
-    )
-    api.gim_client_params(
-        client_ip="10.10.9.70",
-        param_name="STAP_SQLGUARD_IP",
-        param_value="10.10.9.239"
-    )
-    api.gim_client_params(
-        client_ip="10.10.9.70",
-        param_name="STAP_USE_TLS",
-        param_value="1"
-    )
-    api.gim_client_params(
-        client_ip="10.10.9.70",
-        param_name="STAP_STATISTICS",
-        param_value="-3"
-    )
-    api.gim_client_params(
-        client_ip="10.10.9.70",
-        param_name="STAP_CONNECTION_POOL_SIZE",
-        param_value="2"
-    )
-    api.gim_schedule_install(
-        client_ip="10.10.9.70",
-        date="now",
-    )
-
-    print("\n S-TAP installation monitoring")
-    # Pętla sprawdzająca status instalacji modułów co 10 sekund
+def monitor_gim_module_installation(api, client_ip):
     pending = ["initial"]  # Inicjalizacja aby wejść do pętli
-    
     while pending:
-        modules = api.gim_list_client_modules(client_ip="10.10.9.70")
+        modules = api.gim_list_client_modules(client_ip=client_ip)
         msg = modules["Message"]
 
         entries = [
@@ -980,6 +945,41 @@ def t_install_stap_on_raptor(api):
             time.sleep(30)
         else:
             print("All modules installed successfully!")
+
+def t_install_stap_on_raptor(api):
+    print("\n S-TAP installation schedule")
+    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
+    api.gim_client_assign(
+        client_ip="10.10.9.70",
+        module="BUNDLE-STAP",
+        module_version="12.2.0.0_r121306_5"
+    )
+    api.gim_client_params(
+        client_ip="10.10.9.70",
+        param_name="STAP_SQLGUARD_IP",
+        param_value="10.10.9.239"
+    )
+    api.gim_client_params(
+        client_ip="10.10.9.70",
+        param_name="STAP_USE_TLS",
+        param_value="1"
+    )
+    api.gim_client_params(
+        client_ip="10.10.9.70",
+        param_name="STAP_STATISTICS",
+        param_value="-3"
+    )
+    api.gim_client_params(
+        client_ip="10.10.9.70",
+        param_name="STAP_CONNECTION_POOL_SIZE",
+        param_value="2"
+    )
+    api.gim_schedule_install(
+        client_ip="10.10.9.70",
+        date="now",
+    )
+    print("\n S-TAP installation monitoring")
+    monitor_gim_module_installation(api, "10.10.9.70")
 
 def t_enable_atap_for_postgres_on_raptor():
     print("\n ATAP setup for postgres on raptor")
@@ -1294,7 +1294,7 @@ def t_start_etap():
     ]
     subprocess.run(etap_command, check=True)
 
-def configure_raptor_for_va():
+def t_configure_raptor_for_va():
     print("\n postgres package installation to enable some features")
     subprocess.run(["dnf", "-y", "install", "postgresql-contrib"], check=True)
 
@@ -1321,7 +1321,7 @@ def configure_raptor_for_va():
             zipf.extractall(path=target_dir)
             print(f"  ✓ DPS downloaded and unpacked")
 
-def import_DPS():
+def t_import_DPS():
     print("\nConfigure playwright browsers")
     subprocess.run(["playwright", "install"], check=True)
 
@@ -1334,13 +1334,13 @@ def import_DPS():
         headless=True
     )
 
-def import_va_process_for_postgres(api):
+def t_import_va_process_for_postgres(api):
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
     print("\n Import Vulnerability Assessment process")
     result = api.import_definitions('guardium_definition_files/exp_security_assessment_va_postgres.sql')
     print(f"  ✓ VA process imported")
 
-def setup_vascanner():
+def t_setup_vascanner():
     print(f"\nCreate API key for vascanner")
     appliance = create_appliance('cm')
     if not appliance.connect():
@@ -1367,6 +1367,38 @@ def setup_vascanner():
     print("\nRun vascanner container on hana")
     result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"), commands=[f"podman run --network host -d --replace --env-file /root/gn-trainings/vascanner/config --name va-scanner-hana -v /root/gn-trainings/vascanner/certs:/var/vascanner/certs {va_image_id}"])
     print(result)
+
+def t_install_gim_on_winsql():
+    print("\n Run GIM client on winsql")
+    res = run_winrm(
+        host="10.10.9.59",
+        username=r".\administrator",
+        password=get_env_value("WINSQL_PASSWORD"),
+        command= ("New-Item -ItemType Directory -Force -Path 'GIM_Client' | Out-Null; Invoke-WebRequest -Uri 'https://ibm.box.com/shared/static/w26pu9sm69l6ysr2xklvoh9nkxgah23b.zip' -OutFile 'GIM_Client\\GIM_install.zip'; Expand-Archive -Force -Path 'GIM_Client\\GIM_install.zip' -DestinationPath 'GIM_Client\\'; & '.\\GIM_Client\\Setup.exe' -UNATTENDED -APPLIANCE 10.10.9.219 -LOCALIP 10.10.9.59"),
+        command_type="ps",
+        transport="ntlm",
+        use_ssl=False,  # HTTP
+    )
+
+def t_install_stap_on_winsql(api):
+    print("\n S-TAP installation schedule")
+    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
+    api.gim_client_assign(
+        client_ip="10.10.9.59",
+        module="WINSTAP",
+        module_version="12.2_r120201205_1"
+    )
+    api.gim_client_params(
+        client_ip="10.10.9.59",
+        param_name="WINSTAP_SQLGUARD_IP",
+        param_value="10.10.9.239"
+    )
+    api.gim_schedule_install(
+        client_ip="10.10.9.59",
+        date="now",
+    )
+    print("\n S-TAP installation monitoring")
+    monitor_gim_module_installation(api, "10.10.9.59")
 
 def lab1_appliance_setup(state):
     """
@@ -1550,18 +1582,18 @@ def lab8_va(state):
     print("LAB 8 - VA")
     print("=" * 60)
 
-    run_task('Configure raptor for VA', lambda: configure_raptor_for_va(), state)
+    run_task('Configure raptor for VA', lambda: t_configure_raptor_for_va(), state)
 
-    run_task('Configure VA scanner', lambda: setup_vascanner(), state)
+    run_task('Configure VA scanner', lambda: t_setup_vascanner(), state)
 
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443/',
         client_id='BOOTCAMP'
     )
     
-    run_task('Import VA process for postgres', lambda: import_va_process_for_postgres(api), state)
+    run_task('Import VA process for postgres', lambda: t_import_va_process_for_postgres(api), state)
 
-    run_task('Import DPS', lambda: import_DPS(), state)
+    run_task('Import DPS', lambda: t_import_DPS(), state)
     
     print("\n" + "=" * 60)
     print("Lab 8 completed!")
@@ -1573,16 +1605,14 @@ def lab9_winstap(state):
     print("LAB 9 - WINSTAP")
     print("=" * 60)
 
-    print("\n Run GIM client on winsql")
-    res = run_winrm(
-        host="10.10.9.59",
-        username=r".\administrator",
-        password=get_env_value("WINSQL_PASSWORD"),
-        command= ("New-Item -ItemType Directory -Force -Path 'GIM_Client' | Out-Null; Invoke-WebRequest -Uri 'https://ibm.box.com/shared/static/w26pu9sm69l6ysr2xklvoh9nkxgah23b.zip' -OutFile 'GIM_Client\\GIM_install.zip'; Expand-Archive -Force -Path 'GIM_Client\\GIM_install.zip' -DestinationPath 'GIM_Client\\'; & '.\\GIM_Client\\Setup.exe' -UNATTENDED -APPLIANCE 10.10.9.219 -LOCALIP 10.10.9.59"),
-        command_type="ps",
-        transport="ntlm",
-        use_ssl=False,  # HTTP
+    api = GuardiumRestAPI(
+        base_url='https://10.10.9.219:8443/',
+        client_id='BOOTCAMP'
     )
+    
+    run_task('Install GIM client on winsql', lambda: t_install_gim_on_winsql(), state)
+
+    run_task('Install STAP on winsql', lambda: t_install_stap_on_winsql(api), state)
 
     print("\n" + "=" * 60)
     print("Lab 9 completed!")
