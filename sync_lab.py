@@ -1460,7 +1460,7 @@ def t_enable_fam_on_raptor(api):
     monitor_gim_module_installation(api, "10.10.9.70")
     
     print("\nEnable root account monitoring")
-    subprocess.run(["sed", "-i", "'s/^fam_protect_privileged[[:space:]]*=.*/fam_protect_privileged=0/'", "/opt/guardium/modules/STAP/current/guard_tap.ini"], check=True)
+    subprocess.run(["sed", "-i", r"s/^fam_protect_privileged[[:space:]]*=.*/fam_protect_privileged=0/", "/opt/guardium/modules/STAP/current/guard_tap.ini"], check=True)
     subprocess.run(["/opt/guardium/modules/STAP/current/guard-config-update", "--restart", "stap"], check=True)
 
 def t_install_enable_fam_on_winsql(api):
@@ -1700,6 +1700,11 @@ def lab10_fam(state):
 
     run_task('Install FAM policy on collector', lambda: t_install_fam_policy(api), state)
 
+def lab11_oracle(state):
+    """
+    LAB 11 - Oracle
+    """
+    pass
 
 def sync_lab(state, skip_below: int = 0, stop_at: int = 999):
     """
@@ -1724,6 +1729,8 @@ def sync_lab(state, skip_below: int = 0, stop_at: int = 999):
         (8, lab8_va, "VA", "VA"),
         (9, lab9_winstap, "WINSTAP", "WINSTAP"),
         (10, lab10_fam, "FAM", "FAM"),
+        (11, lab11_oracle, "Oracle", "Oracle"),
+
     ]
     
     # Iteracja przez wszystkie LAB-y
