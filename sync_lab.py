@@ -1434,7 +1434,7 @@ def t_install_stap_on_winsql(api):
         client_ip="10.10.9.59",
         date="now",
     )
-    time.sleep(10)
+    time.sleep(30)
     print("\n WINSTAP installation monitoring")
     monitor_gim_module_installation(api, "10.10.9.59")
 
