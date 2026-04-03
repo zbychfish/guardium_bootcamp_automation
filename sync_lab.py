@@ -148,6 +148,33 @@ def parse_unit_summary(text: str) -> dict:
         "online": online,
     }
 
+import os
+import pwd
+import subprocess
+
+def run_as_user(argv, user, *, check=True, **kwargs):
+    pw = pwd.getpwnam(user)
+    uid, gid = pw.pw_uid, pw.pw_gid
+    home = pw.pw_dir
+
+    def demote():
+        # ustaw grupę i uid procesu dziecka
+        os.setgid(gid)
+        os.setuid(uid)
+        # opcjonalnie: czyść umask / env itp.
+
+    env = dict(os.environ)
+    env["HOME"] = home
+    env["USER"] = user
+    env["LOGNAME"] = user
+
+    return subprocess.run(
+        argv,
+        check=check,
+        env=env,
+        preexec_fn=demote,
+        **kwargs
+    )
 
 # Wspólna konfiguracja dla wszystkich appliance
 common_config = {
@@ -1504,6 +1531,9 @@ def t_install_fam_policy(api):
     result = api.install_policy("Log Everything|raptor FAM policy", api_target_host="10.10.9.239")
     print(f"  ✓ FAM policy installed")
 
+def t_configure_env_for_oracle():
+    pass
+
 def lab1_appliance_setup(state):
     """
     LAB 1 - Konfiguracja appliance (collector).
@@ -1705,6 +1735,9 @@ def lab11_oracle(state):
     """
     LAB 11 - Oracle
     """
+    run_as_user(["bash", "-lc", r'mkdir -p ~/.sqlcl && printf "%s\n" "SET SQLFORMAT ansiconsole" > ~/.sqlcl/login.sql && printf "%s\n" "export SQLPATH=.:~/.sqlcl/" >> .bashrc'], user="oracle", text=True)
+    
+
     pass
 
 def sync_lab(state, skip_below: int = 0, stop_at: int = 999):

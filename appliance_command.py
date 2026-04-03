@@ -64,7 +64,7 @@ def change_password_as_root(
     new_password: str,
     port: int = 22,
     timeout: int = 10,
-) -> bool:
+    ) -> bool:
     """
     Loguje się jako root przez SSH (hasłem) i zmienia hasło target_user.
     Zwraca True jeśli OK, False jeśli błąd.
@@ -1033,6 +1033,7 @@ class ApplianceCommand:
             
             if time.time() - last_activity > prompt_timeout_sec:
                 raise TimeoutError("PROMPT TIMEOUT during CA certificate import")
+    
     def import_external_stap_certificate(
         self,
         alias_line: str,
@@ -1188,8 +1189,7 @@ class ApplianceCommand:
         
         if self.debug:
             print("[DEBUG] CA import completed successfully", file=sys.stderr)
-    
-    
+        
     def disconnect(self):
         """Zamyka połączenie"""
         try:
