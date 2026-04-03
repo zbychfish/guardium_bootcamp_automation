@@ -1419,6 +1419,7 @@ def t_install_gim_on_winsql():
 
 def t_install_stap_on_winsql(api):
     print("\n WINSTAP installation schedule")
+    time.sleep(60)
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
     api.gim_client_assign(
         client_ip="10.10.9.59",
@@ -1434,7 +1435,7 @@ def t_install_stap_on_winsql(api):
         client_ip="10.10.9.59",
         date="now",
     )
-    time.sleep(30)
+    
     print("\n WINSTAP installation monitoring")
     monitor_gim_module_installation(api, "10.10.9.59")
 
