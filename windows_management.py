@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional, Sequence
 import re
+import time
 import winrm
 
 
@@ -109,7 +110,7 @@ res = run_winrm(
     host="10.10.9.59",
     username=r".\administrator",
     password="gdptraining",
-    command="pwd; Invoke-WebRequest -Uri 'https://ibm.box.com/shared/static/w26pu9sm69l6ysr2xklvoh9nkxgah23b.zip' -OutFile 'GIM_Client\\GIM_install.zip';Expand-Archive -Path 'GIM_Client\\GIM_install.zip' -DestinationPath 'GIM_Client\\'",
+    command="mkdir GIM_Client; Invoke-WebRequest -Uri 'https://ibm.box.com/shared/static/w26pu9sm69l6ysr2xklvoh9nkxgah23b.zip' -OutFile 'GIM_Client\\GIM_install.zip';Expand-Archive -Path 'GIM_Client\\GIM_install.zip' -DestinationPath 'GIM_Client\\';'GIM_Client\\Setup.exe -UNATTENDED -APPLIANCE 10.10.9.219 -LOCALIP 10.10.9.59'",
     command_type="ps",
     transport="ntlm",
     use_ssl=False,  # HTTP
@@ -118,3 +119,46 @@ res = run_winrm(
 print("RC:", res.status_code)
 print("OUT:", res.stdout)
 print("ERR:", res.stderr)
+
+
+# service_name = "gim"
+# timeout_sec = 300     # total time to wait
+# interval_sec = 5      # sleep between checks
+
+# deadline = time.time() + timeout_sec
+
+# # PowerShell that won't error if service is missing
+# ps = (
+#     f"$svc = Get-Service -Name '{service_name}' -ErrorAction SilentlyContinue; "
+#     "if (-not $svc) { 'MISSING' } else { $svc.Status.ToString() }"
+# )
+
+# last = None
+
+# while time.time() < deadline:
+#     res = run_winrm(
+#         host="10.10.9.59",
+#         username=r".\administrator",
+#         password="gdptraining",
+#         command=ps,
+#         command_type="ps",
+#         transport="ntlm",
+#         use_ssl=False,
+#     )
+
+#     status = (res.stdout or "").strip()
+#     last = status
+
+#     print(f"Service {service_name} status: {status!r}")
+
+#     if status == "Running":
+#         print("✅ Service is Running")
+#         break
+
+#     # Still missing or not running yet -> wait and retry
+#     time.sleep(interval_sec)
+# else:
+#     raise TimeoutError(
+#         f"Service '{service_name}' did not reach 'Running' within {timeout_sec}s. "
+#         f"Last status: {last!r}"
+#     )
