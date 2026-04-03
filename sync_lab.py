@@ -1480,6 +1480,13 @@ def t_install_enable_fam_on_winsql(api):
     print("\n Monitoring is a FAM enabled")
     monitor_gim_module_installation(api, "10.10.9.59")
 
+def t_import_fam_definitions(api):
+    print("\n Import FAM policy")
+    result = api.import_definitions('guardium_definition_files/exp_raptor_fam_policy.sql')
+    print("\n Import FAM dashboard")
+    result = api.import_definitions('guardium_definition_files/exp_dashboard_fam.sql')
+    print(f"  ✓ Definitions imported")
+
 def lab1_appliance_setup(state):
     """
     LAB 1 - Konfiguracja appliance (collector).
@@ -1673,6 +1680,7 @@ def lab10_fam(state):
 
     run_task('Enable FAM on winsql', lambda: t_install_enable_fam_on_winsql(api), state)
 
+    run_task('Import FAM definitions', lambda: t_import_fam_definitions(api), state)
 
 
 def sync_lab(state, skip_below: int = 0, stop_at: int = 999):
