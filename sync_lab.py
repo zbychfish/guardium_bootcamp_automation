@@ -1735,7 +1735,7 @@ def lab11_oracle(state):
     """
     LAB 11 - Oracle
     """
-    run_as_user(["bash", "-lc", r'mkdir -p ~/.sqlcl && printf "%s\n" "SET SQLFORMAT ansiconsole" > ~/.sqlcl/login.sql && printf "%s\n" "export SQLPATH=.:~/.sqlcl/" >> .bashrc'], user="oracle", text=True)
+    run_as_user(["bash", "-c", r'mkdir -p ~/.sqlcl && printf "%s\n" "SET SQLFORMAT ansiconsole" > "$HOME/.sqlcl/login.sql" && printf "%s\n" "export SQLPATH=.:$HOME/.sqlcl/" >> "$HOME/.bashrc"'], user="oracle", text=True)
     
 
     pass
