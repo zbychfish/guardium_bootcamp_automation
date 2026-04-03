@@ -1439,7 +1439,7 @@ def t_install_stap_on_winsql(api):
     monitor_gim_module_installation(api, "10.10.9.59")
 
 def t_enable_fam_on_raptor(api):
-    print("\n S-TAP installation schedule")
+    print("\n Set FAM settings")
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
     api.gim_client_params(
         client_ip="10.10.9.70",
@@ -1456,9 +1456,29 @@ def t_enable_fam_on_raptor(api):
         date="now",
     )
     # time.sleep(10)
-    print("\n S-TAP installation monitoring")
+    print("\n Monitoring is a FAM enabled")
     monitor_gim_module_installation(api, "10.10.9.70")
 
+def t_install_enable_fam_on_winsql(api):
+    print("\n Set FAM settings")
+    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
+    api.gim_client_assign(
+        client_ip="10.10.9.59",
+        module="FAMONITOR",
+        module_version="12.2_r120201205_1"
+    )
+    api.gim_client_params(
+        client_ip="10.10.9.59",
+        param_name="FAMMONITOR_SQLGUARD_IP",
+        param_value="10.10.9.239"
+    )
+    api.gim_schedule_install(
+        client_ip="10.10.9.59",
+        date="now",
+    )
+    time.sleep(10)
+    print("\n Monitoring is a FAM enabled")
+    monitor_gim_module_installation(api, "10.10.9.59")
 
 
 def lab1_appliance_setup(state):
@@ -1651,6 +1671,8 @@ def lab10_fam(state):
     )
     
     run_task('Enable FAM on raptor', lambda: t_enable_fam_on_raptor(api), state)
+
+    run_task('Enable FAM on winsql', lambda: t_install_enable_fam_on_winsql(api), state)
 
 
 
