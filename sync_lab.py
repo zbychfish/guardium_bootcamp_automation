@@ -1735,10 +1735,30 @@ def lab11_oracle(state):
     """
     LAB 11 - Oracle
     """
-    run_as_user(["bash", "-c", r'mkdir -p ~/.sqlcl && printf "%s\n" "SET SQLFORMAT ansiconsole" > "$HOME/.sqlcl/login.sql" && printf "%s\n" "export SQLPATH=.:$HOME/.sqlcl/" >> "$HOME/.bashrc"'], user="oracle", text=True)
-    
-
-    pass
+    api = GuardiumRestAPI(
+        base_url='https://10.10.9.219:8443/',
+        client_id='BOOTCAMP'
+    )
+    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
+    print("\n Setup oracle user settings")
+    # run_as_user(["bash", "-c", r'mkdir -p ~/.sqlcl && printf "%s\n" "SET SQLFORMAT ansiconsole" > "$HOME/.sqlcl/login.sql" && printf "%s\n" "export SQLPATH=.:$HOME/.sqlcl/" >> "$HOME/.bashrc"'], user="oracle", text=True)
+    print("\n Import Oracle dashboard")
+    result = api.import_definitions('guardium_definition_files/exp_dashboard_oracle.sql')
+    print("\n Add missing IE definition")
+    api.create_inspection_engine(
+        stap_host="10.10.9.70",
+        protocol="oracle",
+        port_min="1521",
+        port_max="1521",
+        ktap_db_port="1521",
+        # db_user="oracle",
+        db_version="19",
+        client="0.0.0.0/0.0.0.0",
+        proc_name="opt/oracle/product/19c/dbhome_1/bin/oracle",
+        db_install_dir="/home/oracle",
+        unix_socket_marker="EXTPROC2",
+        api_target_host="10.10.9.239"
+    )
 
 def sync_lab(state, skip_below: int = 0, stop_at: int = 999):
     """
