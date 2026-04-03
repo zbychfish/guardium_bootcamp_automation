@@ -979,6 +979,43 @@ def t_install_stap_on_raptor(api):
         date="now",
     )
     print("\n S-TAP installation monitoring")
+    time.sleep(10)
+    api.gim_module_status(
+        client_ip="10.10.9.70",
+        module_name="STAP_SQLGUARD"
+    )
+    print("\n S-TAP installation monitoring")
+    time.sleep(10)
+    api.gim_module_status(
+        client_ip="10.10.9.70",
+        module_name="STAP_SQLGUARD"
+    )
+    print("\n S-TAP installation monitoring")
+    time.sleep(10)
+    api.gim_module_status(
+        client_ip="10.10.9.70",
+        module_name="STAP_SQLGUARD"
+    )
+    print("\n S-TAP installation monitoring")
+    time.sleep(10)
+    api.gim_module_status(
+        client_ip="10.10.9.70",
+        module_name="STAP_SQLGUARD"
+    )
+    print("\n S-TAP installation monitoring")
+    time.sleep(10)
+    api.gim_module_status(
+        client_ip="10.10.9.70",
+        module_name="STAP_SQLGUARD"
+    )
+    print("\n S-TAP installation monitoring")
+    time.sleep(10)
+    api.gim_module_status(
+        client_ip="10.10.9.70",
+        module_name="STAP_SQLGUARD"
+    )
+    print("\n S-TAP installation monitoring")
+
     monitor_gim_module_installation(api, "10.10.9.70")
 
 def t_enable_atap_for_postgres_on_raptor():
@@ -1397,6 +1434,7 @@ def t_install_stap_on_winsql(api):
         client_ip="10.10.9.59",
         date="now",
     )
+    time.sleep(10)
     print("\n S-TAP installation monitoring")
     monitor_gim_module_installation(api, "10.10.9.59")
 
@@ -1618,6 +1656,16 @@ def lab9_winstap(state):
     print("Lab 9 completed!")
     print("=" * 60)
 
+def lab10_fam(state):
+    print("=" * 60)
+    print("LAB 10 - FAM")
+    print("=" * 60)
+
+
+    print("\n" + "=" * 60)
+    print("Lab 10 completed!")
+    print("=" * 60)
+
 
 def sync_lab(state, skip_below: int = 0, stop_at: int = 999):
     """
@@ -1629,123 +1677,43 @@ def sync_lab(state, skip_below: int = 0, stop_at: int = 999):
     """
 
     print(state)
-    appliance = None
-    parameter = 1
     
-    # LAB 1: Appliance Setup
-    if skip_below < 1 and stop_at >= 1:
-        lab1_appliance_setup(state)
-        print("\n" + "=" * 60)
-        print("LAB 1 completed!")
-        print("=" * 60)
-        if stop_at == 1:
-            print("\n[INFO] Zatrzymano po LAB 1 (--stop-at=1)")
-            return
-    elif skip_below >= 1:
-        print("\n[LAB 1] SKIPPED - Appliance setup (--skip-below)")
-    else:
-        print("\n[LAB 1] SKIPPED - Appliance setup (--stop-at)")
+    # Konfiguracja LAB-ów: (numer, funkcja, nazwa, opis)
+    labs_config = [
+        (1, lab1_appliance_setup, "Appliance Setup", "Appliance setup"),
+        (2, lab2_gim, "GIM Setup", "GIM setup"),
+        (3, None, "SKIPPED", "LAB 3 does not modify final environment"),
+        (4, lab4_atap, "ATAP", "ATAP"),
+        (5, lab5_exit, "EXIT", "EXIT"),
+        (6, None, "SKIPPED", "LAB 6 focuses on UC 1.0 which will withdrawn in the future. There is no API to automate UC 1.0 configuration. Will decide later to automate some steps from this lab later"),
+        (7, lab7_etap, "ETAP", "ETAP"),
+        (8, lab8_va, "VA", "VA"),
+        (9, lab9_winstap, "WINSTAP", "WINSTAP"),
+        (10, lab10_fam, "FAM", "FAM"),
+    ]
     
-    # LAB 2: GIM Setup
-    if skip_below < 2 and stop_at >= 2:
-        lab2_gim(state)
-        print("\n" + "=" * 60)
-        print("LAB 2 completed!")
-        print("=" * 60)
-        if stop_at == 2:
-            print("\n[INFO] Zatrzymano po LAB 2 (--stop-at=2)")
-            return
-    elif skip_below >= 2:
-        print("\n[LAB 2] SKIPPED - GIM setup (--skip-below)")
-    else:
-        print("\n[LAB 2] SKIPPED - GIM setup (--stop-at)")
-    
-    # LAB 3: Tutaj dodasz kolejny lab
-    if skip_below < 3 and stop_at >= 3:
-        print("\n[LAB 3] SKIPPED")
-        if stop_at == 3:
-            print("\n[INFO] Zatrzymano po LAB 3 (--stop-at=3)")
-            return
-    else:
-        print("LAB 3 does not modify final environment")
-
-    # LAB 4: ATAP
-    if skip_below < 4 and stop_at >= 4:
-        lab4_atap(state)
-        print("\n" + "=" * 60)
-        print("LAB 4 completed!")
-        print("=" * 60)
-        if stop_at == 4:
-            print("\n[INFO] Zatrzymano po LAB 4 (--stop-at=4)")
-            return
-    elif skip_below >= 4:
-        print("\n[LAB 4] SKIPPED - ATAP (--skip-below)")
-    else:
-        print("\n[LAB 4] SKIPPED - ATAP (--stop-at)")
-
-    # LAB 5: EXIT
-    if skip_below < 5 and stop_at >= 5:
-        lab5_exit(state)
-        print("\n" + "=" * 60)
-        print("LAB 5 completed!")
-        print("=" * 60)
-        if stop_at == 4:
-            print("\n[INFO] Stopped after LAB 5 (--stop-at=5)")
-            return
-    elif skip_below >= 5:
-        print("\n[LAB 4] SKIPPED - EXIT (--skip-below)")
-    else:
-        print("\n[LAB 4] SKIPPED - EXIT (--stop-at)")
-
-    if skip_below < 6 and stop_at >= 6:
-        print("\n[LAB 6] SKIPPED")
-        if stop_at == 6:
-            print("\n[INFO] Zatrzymano po LAB 6 (--stop-at=6)")
-            return
-    else:
-        print("LAB 6 focuses on UC 1.0 which will withdrawn in the future. There is no API to automate UC 1.0 configuration. Will decide later to automate some steps from this lab later")
-
-    # LAB 7: ETAP
-    if skip_below < 7 and stop_at >= 7:
-        lab7_etap(state)
-        print("\n" + "=" * 60)
-        print("LAB 7 completed!")
-        print("=" * 60)
-        if stop_at == 7:
-            print("\n[INFO] Stopped after LAB 7 (--stop-at=7)")
-            return
-    elif skip_below >= 7:
-        print("\n[LAB 7] SKIPPED - EXIT (--skip-below)")
-    else:
-        print("\n[LAB 7] SKIPPED - EXIT (--stop-at)")
-
-    # LAB 8: VA
-    if skip_below < 8 and stop_at >= 8:
-        lab8_va(state)
-        print("\n" + "=" * 60)
-        print("LAB 8 completed!")
-        print("=" * 60)
-        if stop_at == 8:
-            print("\n[INFO] Stopped after LAB 8 (--stop-at=8)")
-            return
-    elif skip_below >= 8:
-        print("\n[LAB 8] SKIPPED - EXIT (--skip-below)")
-    else:
-        print("\n[LAB 8] SKIPPED - EXIT (--stop-at)")
-
-    # LAB 9: WINSTAP
-    if skip_below < 9 and stop_at >= 9:
-        lab9_winstap(state)
-        print("\n" + "=" * 60)
-        print("LAB 9 completed!")
-        print("=" * 60)
-        if stop_at == 8:
-            print("\n[INFO] Stopped after LAB 9 (--stop-at=9)")
-            return
-    elif skip_below >= 9:
-        print("\n[LAB 9] SKIPPED - EXIT (--skip-below)")
-    else:
-        print("\n[LAB 9] SKIPPED - EXIT (--stop-at)")
+    # Iteracja przez wszystkie LAB-y
+    for lab_num, lab_func, lab_name, lab_desc in labs_config:
+        if skip_below < lab_num and stop_at >= lab_num:
+            if lab_func is not None:
+                # Wykonaj LAB
+                lab_func(state)
+                print("\n" + "=" * 60)
+                print(f"LAB {lab_num} completed!")
+                print("=" * 60)
+            else:
+                # LAB pominięty (None)
+                print(f"\n[LAB {lab_num}] SKIPPED")
+                print(lab_desc)
+            
+            # Sprawdź czy zatrzymać się po tym LAB-ie
+            if stop_at == lab_num:
+                print(f"\n[INFO] Zatrzymano po LAB {lab_num} (--stop-at={lab_num})")
+                return
+        elif skip_below >= lab_num:
+            print(f"\n[LAB {lab_num}] SKIPPED - {lab_name} (--skip-below)")
+        else:
+            print(f"\n[LAB {lab_num}] SKIPPED - {lab_name} (--stop-at)")
 
 
 if __name__ == "__main__":
