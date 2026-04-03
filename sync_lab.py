@@ -1541,8 +1541,14 @@ def lab8_va(state):
         print(f"  ✗ Failed to connect to cm")
         return None
     output = appliance.execute_command("grdapi create_api_key name=vascanner")
-    m = re.search(r"Encoded API key:\s*([A-Za-z0-9+/=_-]+)", output)
-    print(m)
+    match = re.search(r"Encoded API key:\s*([A-Za-z0-9+/=_-]+)", output)
+    if not match:
+        print(f"  ✗ Failed to extract API key from output")
+        return None
+    api_key = match.group(1)
+    print(f"  ✓ API key extracted: {api_key}")
+
+
     #run_task('Import DPS', lambda: import_DPS(), state)
 
     api = GuardiumRestAPI(
