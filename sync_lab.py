@@ -16,6 +16,7 @@ from dotenv import load_dotenv
 from appliance_command import ApplianceCommand, change_password_as_root, scp_file_as_root, run_many_commands_remotely
 from manual_web_ui_processing import guardium_customer_upload_import
 from guardium_patch import install_patch
+from windows_management import run_winrm
 import os
 from guardium_rest_api import GuardiumRestAPI
 from typing import Any, Dict, List, Optional
@@ -1561,6 +1562,22 @@ def lab8_va(state):
     run_task('Import VA process for postgres', lambda: import_va_process_for_postgres(api), state)
 
     run_task('Import DPS', lambda: import_DPS(), state)
+
+    
+    res = run_winrm(
+        host="10.10.9.59",
+        username=r".\administrator",
+        password="gdptraining",
+        command="Get-Date; hostname; whoami",
+        command_type="ps",
+        transport="ntlm",
+        use_ssl=False,        # HTTP
+    )
+
+    print("RC:", res.status_code)
+    print("OUT:", res.stdout)
+    print("ERR:", res.stderr)
+
     
     print("\n" + "=" * 60)
     print("Lab 8 completed!")
