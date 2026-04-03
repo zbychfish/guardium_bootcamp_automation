@@ -1367,8 +1367,6 @@ def setup_vascanner():
     result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"), commands=[f"podman run --network host -d --replace --env-file /root/gn-trainings/vascanner/config --name va-scanner-hana -v /root/gn-trainings/vascanner/certs:/var/vascanner/certs {va_image_id}"])
     print(result)
 
-    
-
 def lab1_appliance_setup(state):
     """
     LAB 1 - Konfiguracja appliance (collector).
