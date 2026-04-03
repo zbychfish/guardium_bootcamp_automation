@@ -1562,25 +1562,20 @@ def lab8_va(state):
     run_task('Import VA process for postgres', lambda: import_va_process_for_postgres(api), state)
 
     run_task('Import DPS', lambda: import_DPS(), state)
-
-    
-    res = run_winrm(
-        host="10.10.9.59",
-        username=r".\administrator",
-        password="gdptraining",
-        command="Get-Date; hostname; whoami",
-        command_type="ps",
-        transport="ntlm",
-        use_ssl=False,        # HTTP
-    )
-
-    print("RC:", res.status_code)
-    print("OUT:", res.stdout)
-    print("ERR:", res.stderr)
-
     
     print("\n" + "=" * 60)
     print("Lab 8 completed!")
+    print("=" * 60)
+
+def lab9_winstap(state):
+
+    print("=" * 60)
+    print("LAB 9 - WINSTAP")
+    print("=" * 60)
+
+
+    print("\n" + "=" * 60)
+    print("Lab 9 completed!")
     print("=" * 60)
 
 
@@ -1697,6 +1692,20 @@ def sync_lab(state, skip_below: int = 0, stop_at: int = 999):
         print("\n[LAB 8] SKIPPED - EXIT (--skip-below)")
     else:
         print("\n[LAB 8] SKIPPED - EXIT (--stop-at)")
+
+    # LAB 9: WINSTAP
+    if skip_below < 9 and stop_at >= 9:
+        lab9_winstap(state)
+        print("\n" + "=" * 60)
+        print("LAB 9 completed!")
+        print("=" * 60)
+        if stop_at == 8:
+            print("\n[INFO] Stopped after LAB 9 (--stop-at=9)")
+            return
+    elif skip_below >= 9:
+        print("\n[LAB 9] SKIPPED - EXIT (--skip-below)")
+    else:
+        print("\n[LAB 9] SKIPPED - EXIT (--stop-at)")
 
 
 if __name__ == "__main__":
