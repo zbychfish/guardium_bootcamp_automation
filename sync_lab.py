@@ -1573,6 +1573,16 @@ def lab9_winstap(state):
     print("LAB 9 - WINSTAP")
     print("=" * 60)
 
+    print("\n Run GIM client on winsql")
+    res = run_winrm(
+        host="10.10.9.59",
+        username=r".\administrator",
+        password=get_env_value("WINSQL_PASSWORD"),
+        command= ("New-Item -ItemType Directory -Force -Path 'GIM_Client' | Out-Null; Invoke-WebRequest -Uri 'https://ibm.box.com/shared/static/w26pu9sm69l6ysr2xklvoh9nkxgah23b.zip' -OutFile 'GIM_Client\\GIM_install.zip'; Expand-Archive -Force -Path 'GIM_Client\\GIM_install.zip' -DestinationPath 'GIM_Client\\'; & '.\\GIM_Client\\Setup.exe' -UNATTENDED -APPLIANCE 10.10.9.219 -LOCALIP 10.10.9.59"),
+        command_type="ps",
+        transport="ntlm",
+        use_ssl=False,  # HTTP
+    )
 
     print("\n" + "=" * 60)
     print("Lab 9 completed!")
