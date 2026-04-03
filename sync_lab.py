@@ -1481,6 +1481,7 @@ def t_install_enable_fam_on_winsql(api):
     monitor_gim_module_installation(api, "10.10.9.59")
 
 def t_import_fam_definitions(api):
+    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
     print("\n Import FAM policy")
     result = api.import_definitions('guardium_definition_files/exp_raptor_fam_policy.sql')
     print("\n Import FAM dashboard")
