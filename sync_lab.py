@@ -1418,7 +1418,7 @@ def t_install_gim_on_winsql():
     )
 
 def t_install_stap_on_winsql(api):
-    print("\n S-TAP installation schedule")
+    print("\n WINSTAP installation schedule")
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
     api.gim_client_assign(
         client_ip="10.10.9.59",
@@ -1435,17 +1435,36 @@ def t_install_stap_on_winsql(api):
         date="now",
     )
     time.sleep(10)
-    print("\n S-TAP installation monitoring")
+    print("\n WINSTAP installation monitoring")
     monitor_gim_module_installation(api, "10.10.9.59")
+
+def t_enable_fam_on_raptor(api):
+    print("\n S-TAP installation schedule")
+    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
+    api.gim_client_params(
+        client_ip="10.10.9.70",
+        param_name="STAP_FAM_ENABLED",
+        param_value="1"
+    )
+    api.gim_client_params(
+        client_ip="10.10.9.70",
+        param_name="STAP_FAM_INSTALLED",
+        param_value="1"
+    )
+    api.gim_schedule_install(
+        client_ip="10.10.9.70",
+        date="now",
+    )
+    # time.sleep(10)
+    print("\n S-TAP installation monitoring")
+    monitor_gim_module_installation(api, "10.10.9.70")
+
+
 
 def lab1_appliance_setup(state):
     """
     LAB 1 - Konfiguracja appliance (collector).
     """
-    
-    print("=" * 60)
-    print("LAB 1 - Appliance Setup")
-    print("=" * 60)
     
     run_task('cli_users_password_change_on_appliances', lambda: t_password_change_on_appliances, state)
     if 'other_collector_settings' not in state["completed_tasks"]:
@@ -1502,10 +1521,6 @@ def lab1_appliance_setup(state):
 
     run_task('policy_installation_on_collector', lambda: t_install_policy_on_collector(api), state)
     
-    print("\n" + "=" * 60)
-    print("LAB 1 - Appliance Setup completed!")
-    print("=" * 60)
-    
     return None
     
 def lab2_gim(state):
@@ -1518,9 +1533,6 @@ def lab2_gim(state):
     Returns:
         appliance: Połączony obiekt ApplianceCommand lub None w przypadku błędu
     """
-    print("=" * 60)
-    print("LAB 2 - GIM Setup")
-    print("=" * 60)
 
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443',
@@ -1531,16 +1543,12 @@ def lab2_gim(state):
 
     run_task('getting_gim_files', lambda: t_getting_gim_files(), state)
 
-    run_task('import_gim_files_on_cm', lambda: t_import_gim_modules(api), state) 
-
-    print("\n" + "=" * 60)
-    print("Lab 2 completed!")
-    print("=" * 60)
+    run_task('import_gim_files_on_cm', lambda: t_import_gim_modules(api), state)
 
 def lab4_atap(state):
-    print("=" * 60)
-    print("LAB 4 - ATAP")
-    print("=" * 60)
+    """
+    LAB 4 - ATAP
+    """
 
     run_task('installing psql on raptor', lambda: t_postgres_installation(), state)
 
@@ -1568,15 +1576,10 @@ def lab4_atap(state):
 
     run_task('Enable ATAP for Mongo', lambda: t_enable_atap_for_mongo(), state)
 
-
-    print("\n" + "=" * 60)
-    print("Lab 4 completed!")
-    print("=" * 60)
-
 def lab5_exit(state):
-    print("=" * 60)
-    print("LAB 5 - EXIT")
-    print("=" * 60)
+    """
+    LAB 5 - EXIT
+    """
 
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443',
@@ -1585,14 +1588,10 @@ def lab5_exit(state):
 
     run_task('Setup EXIT for DB2 on raptor', lambda: t_exit_for_db2_setup(api), state)
 
-    print("\n" + "=" * 60)
-    print("Lab 5 completed!")
-    print("=" * 60)
-
 def lab7_etap(state):
-    print("=" * 60)
-    print("LAB 7 - ETAP")
-    print("=" * 60)
+    """
+    LAB 7 - ETAP
+    """
 
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443',
@@ -1610,15 +1609,10 @@ def lab7_etap(state):
 
     run_task('Start mysql ETAP on raptor', lambda: t_start_etap(), state)
 
-    print("\n" + "=" * 60)
-    print("Lab 7 completed!")
-    print("=" * 60)
-
 def lab8_va(state):
-
-    print("=" * 60)
-    print("LAB 8 - VA")
-    print("=" * 60)
+    """
+    LAB 8 - VA
+    """
 
     run_task('Configure raptor for VA', lambda: t_configure_raptor_for_va(), state)
 
@@ -1632,16 +1626,11 @@ def lab8_va(state):
     run_task('Import VA process for postgres', lambda: t_import_va_process_for_postgres(api), state)
 
     run_task('Import DPS', lambda: t_import_DPS(), state)
-    
-    print("\n" + "=" * 60)
-    print("Lab 8 completed!")
-    print("=" * 60)
 
 def lab9_winstap(state):
-
-    print("=" * 60)
-    print("LAB 9 - WINSTAP")
-    print("=" * 60)
+    """
+    LAB 9 - WINSTAP
+    """
 
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443/',
@@ -1652,19 +1641,11 @@ def lab9_winstap(state):
 
     run_task('Install STAP on winsql', lambda: t_install_stap_on_winsql(api), state)
 
-    print("\n" + "=" * 60)
-    print("Lab 9 completed!")
-    print("=" * 60)
-
 def lab10_fam(state):
-    print("=" * 60)
-    print("LAB 10 - FAM")
-    print("=" * 60)
-
-
-    print("\n" + "=" * 60)
-    print("Lab 10 completed!")
-    print("=" * 60)
+    """
+    LAB 10 - FAM
+    """
+    pass
 
 
 def sync_lab(state, skip_below: int = 0, stop_at: int = 999):
