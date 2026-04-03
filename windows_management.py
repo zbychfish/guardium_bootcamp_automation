@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional, Sequence, Union
+from typing import Optional, Sequence
+import re
 import winrm
 
 
@@ -22,69 +23,58 @@ def run_winrm(
     password: str,
     *,
     command: str,
-    command_type: str = "ps",          # "ps" (PowerShell) or "cmd"
-    args: Optional[Sequence[str]] = None,  # Only for command_type="cmd"
+    command_type: str = "ps",              # "ps" or "cmd"
+    args: Optional[Sequence[str]] = None,  # only for cmd
     port: Optional[int] = None,
     use_ssl: bool = False,
     path: str = "wsman",
-    transport: str = "ntlm",           # "ntlm" | "kerberos" | "basic" | "certificate"
-    verify_ssl: Union[bool, str] = True,   # True/False or path to CA bundle
-    server_cert_validation: str = "validate",  # "validate" or "ignore" (pywinrm uses this)
+    transport: str = "ntlm",               # "ntlm" | "kerberos" | "basic" | "certificate" | "credssp"
+    ca_trust_path: Optional[str] = None,   # path do CA bundle (opcjonalnie)
+    server_cert_validation: str = "validate",  # "validate" lub "ignore" (dla labów/self-signed) [2](https://github.com/faezehghiasi/ansible-windows-playbooks)[4](https://github.com/diyan/pywinrm)
     read_timeout_sec: int = 60,
     operation_timeout_sec: int = 40,
 ) -> WinRMResult:
     """
     Execute a remote command on Windows via WinRM.
 
-    Parameters
-    ----------
-    host : str
-        DNS name or IP of the Windows host
-    username/password : str
-        Credentials (DOMAIN\\user, user@domain, or local user)
-    command : str
-        PowerShell script (command_type="ps") or CMD command (command_type="cmd")
-    command_type : str
-        "ps" or "cmd"
-    args : list[str] | None
-        Optional arguments for CMD command when using run_cmd
-    use_ssl : bool
-        True -> HTTPS (typically 5986), False -> HTTP (typically 5985)
-    verify_ssl : bool | str
-        TLS validation: True, False, or CA bundle file path
-    server_cert_validation : str
-        "validate" (recommended) or "ignore" (not recommended)
-    read_timeout_sec / operation_timeout_sec : int
-        WinRM timeouts
-
-    Returns
-    -------
-    WinRMResult
+    NOTE:
+    - pywinrm NIE wspiera parametru 'verify=' w Session/Protocol; użyj server_cert_validation i ca_trust_path. [1](https://buildingtents.com/2025/01/15/using-kerberos-to-authenticate-winrm-for-ansible/)[2](https://github.com/faezehghiasi/ansible-windows-playbooks)
     """
-    scheme = "https" if use_ssl else "http"
-    if port is None:
-        port = 5986 if use_ssl else 5985
-    endpoint = f"{scheme}://{host}:{port}/{path}"
 
-    # Map verify_ssl to what pywinrm expects.
-    # pywinrm uses requests under the hood; verify can be True/False or CA bundle path.
-    # server_cert_validation is a pywinrm setting used mainly in older versions;
-    # leaving both gives flexibility across environments.
+    scheme = "https" if use_ssl else "http"
+
+    # Jeśli host ma już port (np. "example.com:26612"), nie doklejaj kolejnego
+    if re.search(r":\d+$", host):
+        endpoint = f"{scheme}://{host}/{path}"
+    else:
+        if port is None:
+            port = 5986 if use_ssl else 5985
+        endpoint = f"{scheme}://{host}:{port}/{path}"
+
     session = winrm.Session(
-        target=endpoint,
+        endpoint,
         auth=(username, password),
         transport=transport,
         server_cert_validation=server_cert_validation,
+        ca_trust_path=ca_trust_path,
         read_timeout_sec=read_timeout_sec,
         operation_timeout_sec=operation_timeout_sec,
-        # requests kwargs:
-        
     )
 
     if command_type.lower() == "ps":
-        r = session.run_ps(command)
+        # Wycisz progress (usuwa CLIXML typu "Preparing modules for first use.")
+        prolog = (
+            "$ProgressPreference = 'SilentlyContinue'\n"
+            "$VerbosePreference  = 'SilentlyContinue'\n"
+            "$DebugPreference    = 'SilentlyContinue'\n"
+            "$InformationPreference = 'SilentlyContinue'\n"
+        )
+        ps_script = prolog + command
+
+        r = session.run_ps(ps_script)
         stdout = (r.std_out or b"").decode("utf-8", errors="replace")
         stderr = (r.std_err or b"").decode("utf-8", errors="replace")
+
         return WinRMResult(
             host=host,
             transport=transport,
@@ -99,6 +89,7 @@ def run_winrm(
         r = session.run_cmd(command, args or [])
         stdout = (r.std_out or b"").decode("utf-8", errors="replace")
         stderr = (r.std_err or b"").decode("utf-8", errors="replace")
+
         return WinRMResult(
             host=host,
             transport=transport,
@@ -112,6 +103,8 @@ def run_winrm(
     else:
         raise ValueError("command_type must be 'ps' or 'cmd'")
 
+
+# === PRZYKŁAD UŻYCIA ===
 res = run_winrm(
     host="10.10.9.59",
     username=r".\administrator",
@@ -119,7 +112,7 @@ res = run_winrm(
     command="Get-Date; hostname; whoami",
     command_type="ps",
     transport="ntlm",
-    use_ssl=False,        # HTTP
+    use_ssl=False,  # HTTP
 )
 
 print("RC:", res.status_code)
