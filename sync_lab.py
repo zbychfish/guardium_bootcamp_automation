@@ -1557,7 +1557,7 @@ def lab8_va(state):
     
     run_task('Import VA process for postgres', lambda: import_va_process_for_postgres(api), state)
 
-    #run_task('Import DPS', lambda: import_DPS(), state)
+    run_task('Import DPS', lambda: import_DPS(), state)
     
     print("\n" + "=" * 60)
     print("Lab 8 completed!")
