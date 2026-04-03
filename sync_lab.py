@@ -1491,9 +1491,8 @@ def t_import_fam_definitions(api):
 def t_install_fam_policy(api):
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
     print("\n Install FAM policy")
-    result = api.install_policy("Log Everything|raptor FAM policy")
+    result = api.install_policy("Log verything|raptor FAM policy", api_target_host="10.10.9.239")
     print(f"  ✓ FAM policy installed")
-
 
 def lab1_appliance_setup(state):
     """
@@ -1689,6 +1688,8 @@ def lab10_fam(state):
     run_task('Enable FAM on winsql', lambda: t_install_enable_fam_on_winsql(api), state)
 
     run_task('Import FAM definitions', lambda: t_import_fam_definitions(api), state)
+
+    run_task('Install FAM policy on collector', lambda: t_install_fam_policy(api), state)
 
 
 def sync_lab(state, skip_below: int = 0, stop_at: int = 999):
