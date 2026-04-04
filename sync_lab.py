@@ -1567,9 +1567,10 @@ def lab11_oracle(state):
     unpack_cmd = "bash -lc 'gunzip -k /home/oracle19_oua_image.tar.gz 2>/dev/null || true'"
     result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"),
     commands=[
-        f"wget -q {get_env_value('ORACLE_OUA_IMAGE')} -O /home/oracle19_oua_image.tar.gz",
-        unpack_cmd
-
+        #f"wget -q {get_env_value('ORACLE_OUA_IMAGE')} -O /home/oracle19_oua_image.tar.gz",
+        #unpack_cmd,
+        f"rm -f /home/oracle19_oua_image.tar.gz",
+        "podman load -i oracle19_oua_image.tar"
     ])
 
     print("\n Setup oracle container on hana")
