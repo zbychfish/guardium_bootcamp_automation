@@ -397,6 +397,43 @@ def run_task(task_id, task_fn, state):
     save_state(state)
     return output
 
+def monitor_gim_module_installation(api, client_ip):
+    pending = ["initial"]  # Inicjalizacja aby wejść do pętli
+    while pending:
+        modules = api.gim_list_client_modules(client_ip=client_ip)
+        msg = modules["Message"]
+
+        entries = [
+            e.strip()
+            for e in re.split(r"#+\s*ENTRY\s+\d+\s*#+", msg)
+            if e.strip()
+        ]
+
+        result = []
+
+        for e in entries:
+            def g(p):
+                m = re.search(p, e)
+                return m.group(1) if m else None
+
+            result.append({
+                "module_id": g(r"MODULE_ID:\s+(-?\d+)"),
+                "name": g(r"NAME:\s+([A-Z0-9\-]+)"),
+                "installed_version": g(r"INSTALLED_VERSION\s+([0-9][^\s]+)"),
+                "scheduled_version": g(r"SCHEDULED_VERSION\s+([0-9][^\s]+)"),
+                "state": g(r"STATE:\s+([A-Z\-]+)"),
+                "is_scheduled": g(r"IS_SCHEDULED:\s+([NY])"),
+                "schedule_time": g(r"IS_SCHEDULED:\s+[NY]\s+\(([^)]+)\)")
+            })
+        
+        pending = [m for m in result if m["state"] != "INSTALLED"]
+        
+        if pending:
+            print("Waiting 30 seconds before next check...")
+            time.sleep(30)
+        else:
+            print("All modules installed successfully!")
+
 def t_password_change_on_appliances():
     print("\nPassword change for cli user on appliances")
     current_appliances = appliances.copy()
@@ -921,43 +958,6 @@ def t_create_postgres_admin_users():
 def t_install_gim_on_raptor():
     print("\n GIM client installation on raptor")
     subprocess.run(["/root/gn-trainings/gim_installers/guard-bundle-GIM-12.2.0.0_r121306_v12_2_1-rhel-8-linux-x86_64.gim.sh", "--", "--dir", "/opt/guardium", "--tapip", "10.10.9.70", "--sqlguardip", "10.10.9.219"], check=True)
-
-def monitor_gim_module_installation(api, client_ip):
-    pending = ["initial"]  # Inicjalizacja aby wejść do pętli
-    while pending:
-        modules = api.gim_list_client_modules(client_ip=client_ip)
-        msg = modules["Message"]
-
-        entries = [
-            e.strip()
-            for e in re.split(r"#+\s*ENTRY\s+\d+\s*#+", msg)
-            if e.strip()
-        ]
-
-        result = []
-
-        for e in entries:
-            def g(p):
-                m = re.search(p, e)
-                return m.group(1) if m else None
-
-            result.append({
-                "module_id": g(r"MODULE_ID:\s+(-?\d+)"),
-                "name": g(r"NAME:\s+([A-Z0-9\-]+)"),
-                "installed_version": g(r"INSTALLED_VERSION\s+([0-9][^\s]+)"),
-                "scheduled_version": g(r"SCHEDULED_VERSION\s+([0-9][^\s]+)"),
-                "state": g(r"STATE:\s+([A-Z\-]+)"),
-                "is_scheduled": g(r"IS_SCHEDULED:\s+([NY])"),
-                "schedule_time": g(r"IS_SCHEDULED:\s+[NY]\s+\(([^)]+)\)")
-            })
-        
-        pending = [m for m in result if m["state"] != "INSTALLED"]
-        
-        if pending:
-            print("Waiting 30 seconds before next check...")
-            time.sleep(30)
-        else:
-            print("All modules installed successfully!")
 
 def t_install_stap_on_raptor(api):
     print("\n S-TAP installation schedule")
@@ -1547,7 +1547,16 @@ def lab11_oracle(state):
 
     run_task('Configure SSL support for oracle on raptor', lambda: t_setup_SSL_for_oracle(api), state)
 
-    
+    print("\n Stop oracle instance")
+    run_as_user(["bash","-lc", "/opt/oracle/product/19c/dbhome_1/bin/lsnrctl stop"], user="oracle", text=True)
+    run_as_user(["bash","-lc", r"$ORACLE_HOME/bin/dbshut $ORACLE_HOME"], user="oracle", text=True)
+    print("\n ATAP setup for oracle on raptor")
+    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "--db-user=oracle", "--db-home=/opt/oracle/product/19c/dbhome_1", "--db-base=/home/oracle", "--db-type=oracle", "--db-instance=ORCLDB", "--db-version=19", "store-conf"], check=True)
+    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "authorize-user", "oracle"], check=True)
+    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "--db-type=oracle --db-instance=ORCLDB", "activate"], check=True)
+    print("\n Start oracle instance")
+    run_as_user(["bash","-lc", r"$ORACLE_HOME/bin/dbstart $ORACLE_HOME"], user="oracle", text=True)
+    run_as_user(["bash","-lc", "/opt/oracle/product/19c/dbhome_1/bin/lsnrctl stop"], user="oracle", text=True)
     
     
 def lab10_fam(state):
