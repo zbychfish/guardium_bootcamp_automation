@@ -1208,7 +1208,7 @@ def t_import_etap_ca_cert():
         
         # Importuj certyfikat
         appliance.import_external_stap_ca_certificate(
-            alias="etapca10",
+            alias="etapca",
             ca_cert=ca_cert_pem
         )
     
@@ -1604,6 +1604,50 @@ def t_deploy_oracle_in_container_on_hana():
             f"Timeout after {timeout_sec}s waiting for log marker. Last stdout={last_out!r}"
     )
 
+def t_create_oracle_csr_for_etap():
+    appliance = ApplianceCommand(
+        host="10.10.9.239",
+        user="cli",
+        password=get_env_value("COLLECTOR_PASSWORD"),
+        prompt_regex=r">",
+        debug=True
+    )
+    if appliance.connect():
+        csr, token, line_above = appliance.generate_external_stap_csr(
+        alias="oracle-etap",
+        common_name="oracle-etap",
+        san1="coll1.gdemo.com"
+    )
+        file_path = "/root/gn-trainings/ETAP/ca/etap2.csr"
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(csr)
+        save_to_env("ETAP_CSR_ID", line_above)
+        save_to_env("ETAP_TOKEN", token)
+    appliance.disconnect()
+    print("\n Signing CSR by CA")
+    subprocess.run(["openssl", "x509", "-sha256", "-req", "-days", "3650", "-CA", "/root/gn-trainings/ETAP/ca/ca.pem", "-CAkey", "/root/gn-trainings/ETAP/ca/ca.key", "-CAcreateserial", "-CAserial", "serial", "-in", "/root/gn-trainings/ETAP/ca/etap2.csr", "-out", "/root/gn-trainings/ETAP/ca/etap2.pem"], check=True)
+    return None
+
+def t_import_oracle_etap_cert():
+    appliance = ApplianceCommand(
+    host="10.10.9.239",
+    user="cli",
+    password=get_env_value("COLLECTOR_PASSWORD"),
+    prompt_regex=r">",
+    debug=True
+    )   
+
+    if appliance.connect():
+    # Wczytaj certyfikat External S-TAP
+        with open("/root/gn-trainings/ETAP/ca/etap2.pem") as f:
+            etap_cert = f.read()
+        
+        # Importuj certyfikat
+        appliance.import_external_stap_certificate(
+            alias_line=get_env_value("ETAP_CSR_ID"),
+            stap_cert=etap_cert
+        )
+
 def lab11_oracle(state):
     """
     LAB 11 - Oracle
@@ -1620,6 +1664,8 @@ def lab11_oracle(state):
     run_task('Configure ATAP for oracle on raptor', lambda: t_setup_ATAP_for_oracle(), state)
 
     run_task('Deploy Oracle in container on hana', lambda: t_deploy_oracle_in_container_on_hana(), state)
+
+    run_task('Create CSR for ETAP for oracle in container', lambda: t_create_oracle_csr_for_etap(), state)
     
     
 def lab10_fam(state):
