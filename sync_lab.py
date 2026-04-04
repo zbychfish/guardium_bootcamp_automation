@@ -1748,15 +1748,6 @@ def lab11_oracle(state):
 
     run_task('Start oracle ETAP', lambda: t_start_oracle_etap(), state)
     
-    etap_host = "10.10.9.60"
-    database_port = "1521"
-    token = get_env_value("ETAP_TOKEN_ORACLE")
-    db_type = "oracle"
-    etap_label = "ORACLEETAP"
-    collector_ip = "10.10.9.239"
-    etap_release = get_env_value("GUARDIUM_ETAP_VERSION")
-    listen_port = "64444"
-
     etap_command = [
         "podman",
         "run",
@@ -1780,7 +1771,7 @@ def lab11_oracle(state):
         "-e",
         "STAP_CONFIG_PROXY_GROUP_MEMBER_COUNT=1",
         "-e",
-        f"STAP_CONFIG_PROXY_DB_HOST={etap_host}",
+        "STAP_CONFIG_PROXY_DB_HOST=10.10.9.60",
         "-e",
         "STAP_CONFIG_PROXY_NUM_WORKERS=1",
         "-e",
@@ -1792,13 +1783,13 @@ def lab11_oracle(state):
         "-e",
         "STAP_CONFIG_PROXY_DETECT_SSL_WITHIN_X_PACKETS=-1",
         "-e",
-        f"STAP_CONFIG_DB_0_REAL_DB_PORT={database_port}",
+        "STAP_CONFIG_DB_0_REAL_DB_PORT=1521",
         "-e",
         "STAP_CONFIG_PROXY_LISTEN_PORT=8888",
         "-e",
         "STAP_CONFIG_PROXY_DEBUG=0",
         "-e",
-        f"STAP_CONFIG_PROXY_SECRET={token}",
+        "STAP_CONFIG_PROXY_SECRET=8abc4648-305c-11f1-9394-9a08576ba658",
         "-e",
         "STAP_CONFIG_PROXY_CSR_NAME=",
         "-e",
@@ -1812,18 +1803,18 @@ def lab11_oracle(state):
         "-e",
         "STAP_CONFIG_PROXY_CSR_KEYLENGTH=2048",
         "-e",
-        f"STAP_CONFIG_DB_0_DB_TYPE={db_type}",
+        "STAP_CONFIG_DB_0_DB_TYPE=oracle",
         "-e",
         "STAP_CONFIG_PARTICIPATE_IN_LOAD_BALANCING=0",
         "-e",
-        f"STAP_CONFIG_TAP_TENANT_ID={etap_label}",
+        "STAP_CONFIG_TAP_TENANT_ID=ORACLEETAP",
         "-e",
-        f"STAP_CONFIG_SQLGUARD_0_SQLGUARD_IP={collector_ip}",
-        f"-p={listen_port}:8888/tcp",
-        f"icr.io/guardium/guardium_external_s-tap:v{etap_release}"
+        "STAP_CONFIG_SQLGUARD_0_SQLGUARD_IP=10.10.9.239",
+        "-p=64444:8888/tcp",
+        "icr.io/guardium/guardium_external_s-tap:v12.2.4"
     ]
     subprocess.run(etap_command, check=True)
-    
+
 def lab10_fam(state):
     """
     LAB 10 - FAM
