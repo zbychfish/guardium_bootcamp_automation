@@ -1567,7 +1567,7 @@ def lab11_oracle(state):
     unpack_cmd = "bash -lc 'gunzip -k /home/oracle19_oua_image.tar.gz 2>/dev/null || true'"
     result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"),
     commands=[
-        f"wget {get_env_value('ORACLE_OUA_IMAGE_URL')} -O /home/oracle19_oua_image.tar.gz",
+        f"wget {get_env_value('ORACLE_OUA_IMAGE')} -O /home/oracle19_oua_image.tar.gz",
         unpack_cmd
 
     ])
