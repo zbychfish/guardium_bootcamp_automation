@@ -1715,7 +1715,7 @@ def lab11_oracle(state):
     
     run_task('Configure system for oracle lab', lambda: t_configure_env_for_oracle(api), state)
 
-
+    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
     api.create_inspection_engine(
         stap_host="10.10.9.70",
         protocol="oracle",
