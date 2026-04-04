@@ -1740,8 +1740,8 @@ def lab11_oracle(state):
     subprocess.run(["chown", "-R", "oracle:oinstall", "/opt/oracle/product/19c/dbhome_1/network/admin/"], check=True)
 
     print("\n Restart listener")
-    run_as_user(["lsnrctl", "stop"], user="oracle", text=True)
-    run_as_user(["lsnrctl", "start"], user="oracle", text=True)
+    run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/lsnrctl", "stop"], user="oracle", text=True)
+    run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/lsnrctl", "start"], user="oracle", text=True)
 
 
 
