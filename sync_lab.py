@@ -1563,15 +1563,14 @@ def lab11_oracle(state):
     run_task('Configure ATAP for oracle on raptor', lambda: t_setup_ATAP_for_oracle(), state)
     
     print("\n Download and setup Oracle 21c container on hana")
-
     unpack_cmd = "bash -lc 'gunzip -k /home/oracle19_oua_image.tar.gz 2>/dev/null || true'"
-    result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"),
-    commands=[
-        #f"wget -q {get_env_value('ORACLE_OUA_IMAGE')} -O /home/oracle19_oua_image.tar.gz",
-        #unpack_cmd,
-        #f"rm -f /home/oracle19_oua_image.tar.gz",
-        "podman load -i /home/oracle19_oua_image.tar"
-    ])
+    # result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"),
+    # commands=[
+    #     f"wget -q {get_env_value('ORACLE_OUA_IMAGE')} -O /home/oracle19_oua_image.tar.gz",
+    #     unpack_cmd,
+    #     f"rm -f /home/oracle19_oua_image.tar.gz",
+    #     "podman -q load -i /home/oracle19_oua_image.tar"
+    # ])
 
     print("\n Setup oracle container on hana")
     result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"),
@@ -1582,6 +1581,48 @@ def lab11_oracle(state):
         "semanage fcontext -a -t container_file_t '/home/oradata(/.*)?'",
         "restorecon -Rv /home/oradata"
     ])
+
+    print("\n Setup oracle container on hana")
+    result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"),
+    commands=[
+        f"podman run -d --name oracle_db_21c -p 1521:1521 -p 5500:5500 -e ORACLE_EDITION=EE -e ORACLE_SID=ORCL  -e ORACLE_PDB=ORCLPDB1  -e ORACLE_CHARACTERSET=AL32UTF8 -e ORACLE_SERVICE_NAME=ORCLPDB1.localdomain -v /home/oradata:/opt/oracle/oradata -e ORACLE_PWD='{get_env_value("DEFAULT_SERVICE_PASSWORD")}' oracle/database:21.3.0-ee-oua"
+    ])
+    needle = "DATABASES IS READY TO USE!"
+    interval_sec = 30
+    timeout_sec = 1800
+    deadline = time.time() + timeout_sec
+    last_out = None
+    while time.time() < deadline:
+        res=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"),
+            commands=[r"podman logs -f oracle_db_21c | grep 'DATABASES IS READY TO USE!' | wc -l"],
+        )[0]
+
+        out = (res.get("stdout") or "").strip()
+        err = (res.get("stderr") or "").strip()
+        rc = res.get("rc")
+
+        last_out = out
+
+        # Jeśli chcesz logować status:
+        print(f"rc={rc} out={out!r} err={err[:120]!r}")
+
+        # out powinno być liczbą (wynik wc -l)
+        try:
+            count = int(out) if out else 0
+        except ValueError:
+            count = 0
+
+        if count >= 1:
+            print("✅ Found readiness marker in logs. Exiting loop.")
+            break
+        time.sleep(interval_sec)
+    else:
+        raise TimeoutError(
+            f"Timeout after {timeout_sec}s waiting for log marker. Last stdout={last_out!r}"
+    )
+
+
+     
     
 def lab10_fam(state):
     """
