@@ -1498,7 +1498,7 @@ def t_configure_env_for_oracle(api):
         port_min="1521",
         port_max="1521",
         ktap_db_port="1521",
-        # db_user="oracle",
+        db_user="oracle",
         db_version="19",
         client="0.0.0.0/0.0.0.0",
         proc_name="opt/oracle/product/19c/dbhome_1/bin/oracle",
@@ -1715,6 +1715,22 @@ def lab11_oracle(state):
     
     run_task('Configure system for oracle lab', lambda: t_configure_env_for_oracle(api), state)
 
+
+    api.create_inspection_engine(
+        stap_host="10.10.9.70",
+        protocol="oracle",
+        port_min="1521",
+        port_max="1521",
+        ktap_db_port="1521",
+        db_user="oracle",
+        db_version="19",
+        client="0.0.0.0/0.0.0.0",
+        proc_name="opt/oracle/product/19c/dbhome_1/bin/oracle",
+        db_install_dir="/home/oracle",
+        unix_socket_marker="EXTPROC2",
+        api_target_host="10.10.9.239"
+    )
+    
     # print("\n Create server wallet")
     # run_as_user(["mkdir", "-p", "/opt/oracle/product/19c/dbhome_1/wallet"], user="oracle", text=True)
     # run_as_user(["orapki", "wallet", "create", "-wallet", "/opt/oracle/product/19c/dbhome_1/wallet", "-auto_login_local", "-pwd", f"{get_env_value("DEFAULT_SERVICE_PASSWORD")}"], user="oracle", text=True)
@@ -1762,7 +1778,7 @@ def sync_lab(state, skip_below: int = 0, stop_at: int = 999):
         (3, None, "SKIPPED", "LAB 3 does not modify final environment"),
         (4, lab4_atap, "ATAP", "ATAP"),
         (5, lab5_exit, "EXIT", "EXIT"),
-        (6, None, "SKIPPED", "LAB 6 focuses on UC 1.0 which will withdrawn in the future. There is no API to automate UC 1.0 configuration. Will decide later to automate some steps from this lab later"),
+        (6, None, "UC 1.0", "LAB 6 focuses on UC 1.0 which will withdrawn in the future. There is no API to automate UC 1.0 configuration. Will decide later to automate some steps from this lab later"),
         (7, lab7_etap, "ETAP", "ETAP"),
         (8, lab8_va, "VA", "VA"),
         (9, lab9_winstap, "WINSTAP", "WINSTAP"),
