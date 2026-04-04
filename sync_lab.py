@@ -1024,7 +1024,9 @@ def t_install_stap_on_raptor(api):
         module_name="STAP_SQLGUARD"
     )
     print("\n S-TAP installation monitoring")
+    
     time.sleep(10)
+    
     api.gim_module_status(
         client_ip="10.10.9.70",
         module_name="STAP_SQLGUARD"
