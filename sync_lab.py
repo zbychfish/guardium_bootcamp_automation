@@ -1005,44 +1005,9 @@ def t_install_stap_on_raptor(api):
         client_ip="10.10.9.70",
         date="now",
     )
-    print("\n S-TAP installation monitoring")
+
     time.sleep(10)
-    api.gim_module_status(
-        client_ip="10.10.9.70",
-        module_name="STAP_SQLGUARD"
-    )
-    print("\n S-TAP installation monitoring")
-    time.sleep(10)
-    api.gim_module_status(
-        client_ip="10.10.9.70",
-        module_name="STAP_SQLGUARD"
-    )
-    print("\n S-TAP installation monitoring")
-    time.sleep(10)
-    api.gim_module_status(
-        client_ip="10.10.9.70",
-        module_name="STAP_SQLGUARD"
-    )
-    print("\n S-TAP installation monitoring")
-    
-    time.sleep(10)
-    
-    api.gim_module_status(
-        client_ip="10.10.9.70",
-        module_name="STAP_SQLGUARD"
-    )
-    print("\n S-TAP installation monitoring")
-    time.sleep(10)
-    api.gim_module_status(
-        client_ip="10.10.9.70",
-        module_name="STAP_SQLGUARD"
-    )
-    print("\n S-TAP installation monitoring")
-    time.sleep(10)
-    api.gim_module_status(
-        client_ip="10.10.9.70",
-        module_name="STAP_SQLGUARD"
-    )
+
     print("\n S-TAP installation monitoring")
 
     monitor_gim_module_installation(api, "10.10.9.70")
@@ -1516,6 +1481,7 @@ def t_install_enable_fam_on_winsql(api):
         date="now",
     )
     time.sleep(10)
+
     print("\n Monitoring is a FAM enabled")
     monitor_gim_module_installation(api, "10.10.9.59")
 

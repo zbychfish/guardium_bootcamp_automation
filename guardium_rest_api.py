@@ -464,6 +464,7 @@ class GuardiumRestAPI:
         response.raise_for_status()
         
         return response.json()
+    
     def gim_client_assign(
         self,
         client_ip: str,
@@ -505,6 +506,7 @@ class GuardiumRestAPI:
         response.raise_for_status()
         
         return response.json()
+    
     def gim_schedule_install(
         self,
         client_ip: str,
@@ -586,6 +588,7 @@ class GuardiumRestAPI:
         response.raise_for_status()
         
         return response.json()
+    
     def gim_client_params(
         self,
         client_ip: str,
@@ -637,6 +640,7 @@ class GuardiumRestAPI:
         response.raise_for_status()
         
         return response.json()
+    
     def delete_inspection_engine(
         self,
         stap_host: str,
