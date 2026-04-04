@@ -1521,6 +1521,7 @@ def t_setup_SSL_for_oracle():
     print("\n Export public keys")
     run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "export", "-wallet", r'/opt/oracle/product/19c/dbhome_1/wallet', "-dn", r'CN=raptor.gdemo.com', "-cert", "/tmp/server-cert.crt", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True)
     run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "export", "-wallet", r'/opt/oracle/product/19c/dbhome_1/client_wallet', "-dn", r'CN=client', "-cert", "/tmp/client-cert.crt", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True)
+    print("\n Import public keys")
     run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "add", "-wallet", r'/opt/oracle/product/19c/dbhome_1/client_wallet', "-trusted_cert", "-cert", "/tmp/server-cert.crt", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True)
     run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "add", "-wallet", r'/opt/oracle/product/19c/dbhome_1/wallet', "-trusted_cert", "-cert", "/tmp/client-cert.crt", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True)
     run_as_user(["rm", "/tmp/server-cert.crt", "/tmp/client-cert.crt"], user="oracle", text=True)
@@ -1561,7 +1562,25 @@ def lab11_oracle(state):
 
     run_task('Configure ATAP for oracle on raptor', lambda: t_setup_ATAP_for_oracle(), state)
     
-    
+    print("\n Download and setup Oracle 21c container on hana")
+
+    unpack_cmd = "bash -lc 'gunzip -k /home/oracle19_oua_image.tar.gz 2>/dev/null || true'"
+    result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"),
+    commands=[
+        f"wget {get_env_value('ORACLE_OUA_IMAGE_URL')} -O /home/oracle19_oua_image.tar.gz",
+        unpack_cmd
+
+    ])
+
+    print("\n Setup oracle container on hana")
+    result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"),
+    commands=[
+        "mkdir -p /home/oradata",
+        "chown -R 54321:54321 /home/oradata",
+        "chmod -R 775 /home/oradata",
+        "semanage fcontext -a -t container_file_t '/home/oradata(/.*)?'",
+        "restorecon -Rv /home/oradata"
+    ])
     
 def lab10_fam(state):
     """
