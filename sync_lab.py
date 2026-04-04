@@ -1507,6 +1507,184 @@ def t_configure_env_for_oracle(api):
         api_target_host="10.10.9.239"
     )
 
+def t_setup_SSL_for_oracle(api):
+    print("\n Create server wallet")
+    run_as_user(["mkdir", "-p", "/opt/oracle/product/19c/dbhome_1/wallet"], user="oracle", text=True)
+    run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "create", "-wallet", "/opt/oracle/product/19c/dbhome_1/wallet", "-auto_login_local", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True)
+    print("\n Add self-sign certificate to server wallet")
+    run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "add", "-wallet", r'/opt/oracle/product/19c/dbhome_1/wallet', "-dn", r'CN=raptor.gdemo.com', "-keysize", "2048", "-self_signed", "-validity", "3650", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True)
+    print("\n Create client wallet")
+    run_as_user(["mkdir", "-p", "/opt/oracle/product/19c/dbhome_1/client_wallet"], user="oracle", text=True)
+    run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "create", "-wallet", "/opt/oracle/product/19c/dbhome_1/client_wallet", "-auto_login_local", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True)
+    print("\n Add self-sign certificate to client wallet")
+    run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "add", "-wallet", r'/opt/oracle/product/19c/dbhome_1/client_wallet', "-dn", r'CN=client', "-keysize", "2048", "-self_signed", "-validity", "3650", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True)
+    print("\n Export public keys")
+    run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "export", "-wallet", r'/opt/oracle/product/19c/dbhome_1/wallet', "-dn", r'CN=raptor.gdemo.com', "-cert", "/tmp/server-cert.crt", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True)
+    run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "export", "-wallet", r'/opt/oracle/product/19c/dbhome_1/client_wallet', "-dn", r'CN=client', "-cert", "/tmp/client-cert.crt", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True)
+    run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "add", "-wallet", r'/opt/oracle/product/19c/dbhome_1/client_wallet', "-trusted_cert", "-cert", "/tmp/server-cert.crt", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True)
+    run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "add", "-wallet", r'/opt/oracle/product/19c/dbhome_1/wallet', "-trusted_cert", "-cert", "/tmp/client-cert.crt", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True)
+    run_as_user(["rm", "/tmp/server-cert.crt", "/tmp/client-cert.crt"], user="oracle", text=True)
+
+    print("\nChange listener configuration")
+    subprocess.run(["cp", "-f", "guardium_configuration_files/listener.ora", "/opt/oracle/product/19c/dbhome_1/network/admin/listener.ora"], check=True)
+    subprocess.run(["cp", "-f", "guardium_configuration_files/tnsnames.ora", "/opt/oracle/product/19c/dbhome_1/network/admin/tnsnames.ora"], check=True)
+    subprocess.run(["cp", "-f", "guardium_configuration_files/sqlnet.ora", "/opt/oracle/product/19c/dbhome_1/network/admin/sqlnet.ora"], check=True)
+    subprocess.run(["chown", "-R", "oracle:oinstall", "/opt/oracle/product/19c/dbhome_1/network/admin/"], check=True)
+
+    print("\n Restart listener")
+    run_as_user(["bash","-lc", "/opt/oracle/product/19c/dbhome_1/bin/lsnrctl reload"], user="oracle", text=True)
+
+def lab11_oracle(state):
+    """
+    LAB 11 - Oracle
+    """
+    api = GuardiumRestAPI(
+        base_url='https://10.10.9.219:8443/',
+        client_id='BOOTCAMP'
+    )
+    
+    run_task('Configure system for oracle lab', lambda: t_configure_env_for_oracle(api), state)
+
+    run_task('Configure SSL support for oracle on raptor', lambda: t_setup_SSL_for_oracle(api), state)
+
+    
+    
+    
+def lab10_fam(state):
+    """
+    LAB 10 - FAM
+    """
+    api = GuardiumRestAPI(
+        base_url='https://10.10.9.219:8443/',
+        client_id='BOOTCAMP'
+    )
+    
+    run_task('Enable FAM on raptor', lambda: t_enable_fam_on_raptor(api), state)
+
+    run_task('Enable FAM on winsql', lambda: t_install_enable_fam_on_winsql(api), state)
+
+    run_task('Import FAM definitions', lambda: t_import_fam_definitions(api), state)
+
+    run_task('Install FAM policy on collector', lambda: t_install_fam_policy(api), state)
+
+def lab9_winstap(state):
+    """
+    LAB 9 - WINSTAP
+    """
+
+    api = GuardiumRestAPI(
+        base_url='https://10.10.9.219:8443/',
+        client_id='BOOTCAMP'
+    )
+    
+    run_task('Install GIM client on winsql', lambda: t_install_gim_on_winsql(), state)
+
+    run_task('Install STAP on winsql', lambda: t_install_stap_on_winsql(api), state)
+
+def lab8_va(state):
+    """
+    LAB 8 - VA
+    """
+
+    run_task('Configure raptor for VA', lambda: t_configure_raptor_for_va(), state)
+
+    run_task('Configure VA scanner', lambda: t_setup_vascanner(), state)
+
+    api = GuardiumRestAPI(
+        base_url='https://10.10.9.219:8443/',
+        client_id='BOOTCAMP'
+    )
+    
+    run_task('Import VA process for postgres', lambda: t_import_va_process_for_postgres(api), state)
+
+    run_task('Import DPS', lambda: t_import_DPS(), state)
+
+def lab7_etap(state):
+    """
+    LAB 7 - ETAP
+    """
+
+    api = GuardiumRestAPI(
+        base_url='https://10.10.9.219:8443',
+        client_id='BOOTCAMP'
+    )
+    run_task('Setup raptor for ETAP', lambda: t_setup_raptor_to_deploy_etap(), state)
+
+    run_task('Deploy CA on raptor', lambda: t_deploy_ca_on_raptor(), state)
+
+    run_task('Create CSR for ETAP for mysql', lambda: t_create_mysql_csr_for_etap(), state)
+
+    run_task('Import CA cert for ETAP', lambda: t_import_etap_ca_cert(), state)
+
+    run_task('Import mysql ETAP cert', lambda: t_import_etap_cert(), state)
+
+    run_task('Start mysql ETAP on raptor', lambda: t_start_etap(), state)
+
+def lab5_exit(state):
+    """
+    LAB 5 - EXIT
+    """
+
+    api = GuardiumRestAPI(
+        base_url='https://10.10.9.219:8443',
+        client_id='BOOTCAMP'
+    )
+
+    run_task('Setup EXIT for DB2 on raptor', lambda: t_exit_for_db2_setup(api), state)
+
+def lab4_atap(state):
+    """
+    LAB 4 - ATAP
+    """
+
+    run_task('installing psql on raptor', lambda: t_postgres_installation(), state)
+
+    run_task('create postgres admin users', lambda: t_create_postgres_admin_users(), state)
+
+    run_task('install gim client on raptor', lambda: t_install_gim_on_raptor(), state)
+
+    api = GuardiumRestAPI(
+        base_url='https://10.10.9.219:8443',
+        client_id='BOOTCAMP'
+    )
+
+    run_task('install_stap_on_raptor', lambda: t_install_stap_on_raptor(api), state)
+
+    run_task('configure_atap_for_postgres_on_raptor', lambda: t_enable_atap_for_postgres_on_raptor(), state)
+    
+    api = GuardiumRestAPI(
+        base_url='https://10.10.9.219:8443',
+        client_id='BOOTCAMP'
+    )
+
+    run_task('Correct mysql IE\'s', lambda: t_correct_mysql_ie(api), state)
+
+    run_task('Configure SSL for Mongo', lambda: t_configure_ssl_for_mongo(), state)
+
+    run_task('Enable ATAP for Mongo', lambda: t_enable_atap_for_mongo(), state)
+
+def lab2_gim(state):
+    """
+    LAB 2 - Konfiguracja GIM (Group Identity Management).
+    
+    Args:
+        appliance: Opcjonalny połączony obiekt ApplianceCommand
+    
+    Returns:
+        appliance: Połączony obiekt ApplianceCommand lub None w przypadku błędu
+    """
+
+    api = GuardiumRestAPI(
+        base_url='https://10.10.9.219:8443',
+        client_id='BOOTCAMP'
+    )
+
+    run_task('resolving_collector_on_raptor', lambda: t_set_collector_resolving_on_raptor(), state)
+
+    run_task('getting_gim_files', lambda: t_getting_gim_files(), state)
+
+    run_task('import_gim_files_on_cm', lambda: t_import_gim_modules(api), state)
+
 def lab1_appliance_setup(state):
     """
     LAB 1 - Konfiguracja appliance (collector).
@@ -1568,183 +1746,6 @@ def lab1_appliance_setup(state):
     run_task('policy_installation_on_collector', lambda: t_install_policy_on_collector(api), state)
     
     return None
-    
-def lab2_gim(state):
-    """
-    LAB 2 - Konfiguracja GIM (Group Identity Management).
-    
-    Args:
-        appliance: Opcjonalny połączony obiekt ApplianceCommand
-    
-    Returns:
-        appliance: Połączony obiekt ApplianceCommand lub None w przypadku błędu
-    """
-
-    api = GuardiumRestAPI(
-        base_url='https://10.10.9.219:8443',
-        client_id='BOOTCAMP'
-    )
-
-    run_task('resolving_collector_on_raptor', lambda: t_set_collector_resolving_on_raptor(), state)
-
-    run_task('getting_gim_files', lambda: t_getting_gim_files(), state)
-
-    run_task('import_gim_files_on_cm', lambda: t_import_gim_modules(api), state)
-
-def lab4_atap(state):
-    """
-    LAB 4 - ATAP
-    """
-
-    run_task('installing psql on raptor', lambda: t_postgres_installation(), state)
-
-    run_task('create postgres admin users', lambda: t_create_postgres_admin_users(), state)
-
-    run_task('install gim client on raptor', lambda: t_install_gim_on_raptor(), state)
-
-    api = GuardiumRestAPI(
-        base_url='https://10.10.9.219:8443',
-        client_id='BOOTCAMP'
-    )
-
-    run_task('install_stap_on_raptor', lambda: t_install_stap_on_raptor(api), state)
-
-    run_task('configure_atap_for_postgres_on_raptor', lambda: t_enable_atap_for_postgres_on_raptor(), state)
-    
-    api = GuardiumRestAPI(
-        base_url='https://10.10.9.219:8443',
-        client_id='BOOTCAMP'
-    )
-
-    run_task('Correct mysql IE\'s', lambda: t_correct_mysql_ie(api), state)
-
-    run_task('Configure SSL for Mongo', lambda: t_configure_ssl_for_mongo(), state)
-
-    run_task('Enable ATAP for Mongo', lambda: t_enable_atap_for_mongo(), state)
-
-def lab5_exit(state):
-    """
-    LAB 5 - EXIT
-    """
-
-    api = GuardiumRestAPI(
-        base_url='https://10.10.9.219:8443',
-        client_id='BOOTCAMP'
-    )
-
-    run_task('Setup EXIT for DB2 on raptor', lambda: t_exit_for_db2_setup(api), state)
-
-def lab7_etap(state):
-    """
-    LAB 7 - ETAP
-    """
-
-    api = GuardiumRestAPI(
-        base_url='https://10.10.9.219:8443',
-        client_id='BOOTCAMP'
-    )
-    run_task('Setup raptor for ETAP', lambda: t_setup_raptor_to_deploy_etap(), state)
-
-    run_task('Deploy CA on raptor', lambda: t_deploy_ca_on_raptor(), state)
-
-    run_task('Create CSR for ETAP for mysql', lambda: t_create_mysql_csr_for_etap(), state)
-
-    run_task('Import CA cert for ETAP', lambda: t_import_etap_ca_cert(), state)
-
-    run_task('Import mysql ETAP cert', lambda: t_import_etap_cert(), state)
-
-    run_task('Start mysql ETAP on raptor', lambda: t_start_etap(), state)
-
-def lab8_va(state):
-    """
-    LAB 8 - VA
-    """
-
-    run_task('Configure raptor for VA', lambda: t_configure_raptor_for_va(), state)
-
-    run_task('Configure VA scanner', lambda: t_setup_vascanner(), state)
-
-    api = GuardiumRestAPI(
-        base_url='https://10.10.9.219:8443/',
-        client_id='BOOTCAMP'
-    )
-    
-    run_task('Import VA process for postgres', lambda: t_import_va_process_for_postgres(api), state)
-
-    run_task('Import DPS', lambda: t_import_DPS(), state)
-
-def lab9_winstap(state):
-    """
-    LAB 9 - WINSTAP
-    """
-
-    api = GuardiumRestAPI(
-        base_url='https://10.10.9.219:8443/',
-        client_id='BOOTCAMP'
-    )
-    
-    run_task('Install GIM client on winsql', lambda: t_install_gim_on_winsql(), state)
-
-    run_task('Install STAP on winsql', lambda: t_install_stap_on_winsql(api), state)
-
-def lab10_fam(state):
-    """
-    LAB 10 - FAM
-    """
-    api = GuardiumRestAPI(
-        base_url='https://10.10.9.219:8443/',
-        client_id='BOOTCAMP'
-    )
-    
-    run_task('Enable FAM on raptor', lambda: t_enable_fam_on_raptor(api), state)
-
-    run_task('Enable FAM on winsql', lambda: t_install_enable_fam_on_winsql(api), state)
-
-    run_task('Import FAM definitions', lambda: t_import_fam_definitions(api), state)
-
-    run_task('Install FAM policy on collector', lambda: t_install_fam_policy(api), state)
-
-def lab11_oracle(state):
-    """
-    LAB 11 - Oracle
-    """
-    api = GuardiumRestAPI(
-        base_url='https://10.10.9.219:8443/',
-        client_id='BOOTCAMP'
-    )
-    
-    run_task('Configure system for oracle lab', lambda: t_configure_env_for_oracle(api), state)
-
-    
-    print("\n Create server wallet")
-    run_as_user(["mkdir", "-p", "/opt/oracle/product/19c/dbhome_1/wallet"], user="oracle", text=True)
-    run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "create", "-wallet", "/opt/oracle/product/19c/dbhome_1/wallet", "-auto_login_local", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True)
-    print("\n Add self-sign certificate to server wallet")
-    run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "add", "-wallet", r'/opt/oracle/product/19c/dbhome_1/wallet', "-dn", r'CN=raptor.gdemo.com', "-keysize", "2048", "-self_signed", "-validity", "3650", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True)
-    print("\n Create client wallet")
-    run_as_user(["mkdir", "-p", "/opt/oracle/product/19c/dbhome_1/client_wallet"], user="oracle", text=True)
-    run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "create", "-wallet", "/opt/oracle/product/19c/dbhome_1/client_wallet", "-auto_login_local", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True)
-    print("\n Add self-sign certificate to client wallet")
-    run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "add", "-wallet", r'/opt/oracle/product/19c/dbhome_1/client_wallet', "-dn", r'CN=client', "-keysize", "2048", "-self_signed", "-validity", "3650", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True)
-    print("\n Export public keys")
-    run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "export", "-wallet", r'/opt/oracle/product/19c/dbhome_1/wallet', "-dn", r'CN=raptor.gdemo.com', "-cert", "/tmp/server-cert.crt", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True)
-    run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "export", "-wallet", r'/opt/oracle/product/19c/dbhome_1/client_wallet', "-dn", r'CN=client', "-cert", "/tmp/client-cert.crt", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True)
-    run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "add", "-wallet", r'/opt/oracle/product/19c/dbhome_1/client_wallet', "-trusted_cert", "-cert", "/tmp/server-cert.crt", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True)
-    run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "add", "-wallet", r'/opt/oracle/product/19c/dbhome_1/wallet', "-trusted_cert", "-cert", "/tmp/client-cert.crt", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True)
-    run_as_user(["rm", "/tmp/server-cert.crt", "/tmp/client-cert.crt"], user="oracle", text=True)
-
-    print("\nChange listener configuration")
-    subprocess.run(["cp", "-f", "guardium_configuration_files/listener.ora", "/opt/oracle/product/19c/dbhome_1/network/admin/listener.ora"], check=True)
-    subprocess.run(["cp", "-f", "guardium_configuration_files/tnsnames.ora", "/opt/oracle/product/19c/dbhome_1/network/admin/tnsnames.ora"], check=True)
-    subprocess.run(["cp", "-f", "guardium_configuration_files/sqlnet.ora", "/opt/oracle/product/19c/dbhome_1/network/admin/sqlnet.ora"], check=True)
-    subprocess.run(["chown", "-R", "oracle:oinstall", "/opt/oracle/product/19c/dbhome_1/network/admin/"], check=True)
-
-    print("\n Restart listener")
-    run_as_user(["bash","-lc", "/opt/oracle/product/19c/dbhome_1/bin/lsnrctl reload"], user="oracle", text=True)
-    # time.sleep(10)
-    # run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/lsnrctl", "start"], user="oracle", text=True)
-
-
 
 def sync_lab(state, skip_below: int = 0, stop_at: int = 999):
     """
