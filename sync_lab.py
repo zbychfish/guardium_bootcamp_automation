@@ -1649,7 +1649,7 @@ def t_import_oracle_etap_cert():
         )
 
 def t_start_oracle_etap():
-    etap_host = "10.10.9.70"
+    etap_host = "10.10.9.60"
     database_port = "1521"
     token = get_env_value("ETAP_TOKEN_ORACLE")
     db_type = "oracle"
