@@ -1582,7 +1582,7 @@ def lab11_oracle(state):
         "restorecon -Rv /home/oradata"
     ])
 
-    print("\n Setup oracle container on hana")
+    print("\n Starting oracle container on hana")
     result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"),
     commands=[
         f"podman run -d --name oracle_db_21c -p 1521:1521 -p 5500:5500 -e ORACLE_EDITION=EE -e ORACLE_SID=ORCL  -e ORACLE_PDB=ORCLPDB1  -e ORACLE_CHARACTERSET=AL32UTF8 -e ORACLE_SERVICE_NAME=ORCLPDB1.localdomain -v /home/oradata:/opt/oracle/oradata -e ORACLE_PWD='{get_env_value("DEFAULT_SERVICE_PASSWORD")}' oracle/database:21.3.0-ee-oua"
@@ -1591,9 +1591,10 @@ def lab11_oracle(state):
     timeout_sec = 1800
     deadline = time.time() + timeout_sec
     last_out = None
+    print("\n Monitoring first start of oracle container on hana")
     while time.time() < deadline:
         res=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"),
-            commands=[r"podman logs -f oracle_db_21c | grep 'DATABASES IS READY TO USE!' | wc -l"],
+            commands=[r"podman logs oracle_db_21c 2>&1 | grep -F 'DATABASES IS READY TO USE' | wc -l"],
         )[0]
         out = (res.get("stdout") or "").strip()
         err = (res.get("stderr") or "").strip()
