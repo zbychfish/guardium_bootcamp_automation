@@ -1594,7 +1594,7 @@ def lab11_oracle(state):
     print("\n Monitoring first start of oracle container on hana")
     while time.time() < deadline:
         res=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"),
-            commands=[r"podman logs oracle_db_21c 2>&1 | grep -F 'DATABASES IS READY TO USE' | wc -l"],
+            commands=[r"podman logs oracle_db_21c 2>&1 | grep -F 'DATABASE IS READY TO USE' | wc -l"],
         )[0]
         out = (res.get("stdout") or "").strip()
         err = (res.get("stderr") or "").strip()
