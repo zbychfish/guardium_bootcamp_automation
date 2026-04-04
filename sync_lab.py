@@ -1718,7 +1718,8 @@ def lab11_oracle(state):
     
     print("\n Create server wallet")
     run_as_user(["mkdir", "-p", "/opt/oracle/product/19c/dbhome_1/wallet"], user="oracle", text=True)
-    run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "create", "-wallet", "/opt/oracle/product/19c/dbhome_1/wallet", "-auto_login_local", "-pwd", f"{get_env_value("DEFAULT_SERVICE_PASSWORD")}"], user="oracle", text=True)
+    #run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "create", "-wallet", "/opt/oracle/product/19c/dbhome_1/wallet", "-auto_login_local", "-pwd", f"{get_env_value("DEFAULT_SERVICE_PASSWORD")}"], user="oracle", text=True)
+    run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "create", "-wallet", "/opt/oracle/product/19c/dbhome_1/wallet", "-auto_login_local", "-pwd", f"Guardium.123"], user="oracle", text=True)
     print("\n Add self-sign certificate to server wallet")
     run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "add", "-wallet", r'"/opt/oracle/product/19c/dbhome_1/wallet"', "-dn", r'"CN=raptor.gdemo.com"', "-keysize", "2048", "-self_signed", "-validity", "3650", "-pwd", f"{get_env_value("DEFAULT_SERVICE_PASSWORD")}"], user="oracle", text=True)
     print("\n Create client wallet")
