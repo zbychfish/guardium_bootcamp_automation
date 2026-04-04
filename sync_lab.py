@@ -1587,7 +1587,6 @@ def lab11_oracle(state):
     commands=[
         f"podman run -d --name oracle_db_21c -p 1521:1521 -p 5500:5500 -e ORACLE_EDITION=EE -e ORACLE_SID=ORCL  -e ORACLE_PDB=ORCLPDB1  -e ORACLE_CHARACTERSET=AL32UTF8 -e ORACLE_SERVICE_NAME=ORCLPDB1.localdomain -v /home/oradata:/opt/oracle/oradata -e ORACLE_PWD='{get_env_value("DEFAULT_SERVICE_PASSWORD")}' oracle/database:21.3.0-ee-oua"
     ])
-    needle = "DATABASES IS READY TO USE!"
     interval_sec = 30
     timeout_sec = 1800
     deadline = time.time() + timeout_sec
@@ -1596,22 +1595,18 @@ def lab11_oracle(state):
         res=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"),
             commands=[r"podman logs -f oracle_db_21c | grep 'DATABASES IS READY TO USE!' | wc -l"],
         )[0]
-
         out = (res.get("stdout") or "").strip()
         err = (res.get("stderr") or "").strip()
         rc = res.get("rc")
-
         last_out = out
 
         # Jeśli chcesz logować status:
         print(f"rc={rc} out={out!r} err={err[:120]!r}")
-
         # out powinno być liczbą (wynik wc -l)
         try:
             count = int(out) if out else 0
         except ValueError:
             count = 0
-
         if count >= 1:
             print("✅ Found readiness marker in logs. Exiting loop.")
             break
