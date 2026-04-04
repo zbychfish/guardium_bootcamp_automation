@@ -1622,7 +1622,7 @@ def t_create_oracle_csr_for_etap():
         with open(file_path, "w", encoding="utf-8") as f:
             f.write(csr)
         save_to_env("ETAP_CSR_ID", line_above)
-        save_to_env("ETAP_TOKEN", token)
+        save_to_env("ETAP_TOKEN_ORACLE", token)
     appliance.disconnect()
     print("\n Signing CSR by CA")
     subprocess.run(["openssl", "x509", "-sha256", "-req", "-days", "3650", "-CA", "/root/gn-trainings/ETAP/ca/ca.pem", "-CAkey", "/root/gn-trainings/ETAP/ca/ca.key", "-CAcreateserial", "-CAserial", "serial", "-in", "/root/gn-trainings/ETAP/ca/etap2.csr", "-out", "/root/gn-trainings/ETAP/ca/etap2.pem"], check=True)
@@ -1648,6 +1648,83 @@ def t_import_oracle_etap_cert():
             stap_cert=etap_cert
         )
 
+def t_start_oracle_etap():
+    etap_host = "10.10.9.70"
+    database_port = "1521"
+    token = get_env_value("ETAP_TOKEN_ORACLE")
+    db_type = "oracle"
+    etap_label = "ORACLEETAP"
+    collector_ip = "10.10.9.239"
+    etap_release = get_env_value("GUARDIUM_ETAP_VERSION")
+    listen_port = "64444"
+
+    etap_command = [
+        "podman",
+        "run",
+        "--restart",
+        "unless-stopped",
+        "--hostname",
+        "localhost-gext0-df7c55b1-a8ba-45e5-a3e8-271d17f0068a",
+        "--name",
+        "gext0-df7c55b1-a8ba-45e5-a3e8-271d17f0068a",
+        "-d",
+        "--shm-size",
+        "800M",
+        "-e",
+        "STAP_CONFIG_TAP_TAP_IP=NULL",
+        "-e",
+        "STAP_CONFIG_TAP_PRIVATE_TAP_IP=NULL",
+        "-e",
+        "STAP_CONFIG_TAP_FORCE_SERVER_IP=0",
+        "-e",
+        "STAP_CONFIG_PROXY_GROUP_UUID=df7c55b1-a8ba-45e5-a3e8-271d17f0068a",
+        "-e",
+        "STAP_CONFIG_PROXY_GROUP_MEMBER_COUNT=1",
+        "-e",
+        f"STAP_CONFIG_PROXY_DB_HOST={etap_host}",
+        "-e",
+        "STAP_CONFIG_PROXY_NUM_WORKERS=1",
+        "-e",
+        "STAP_CONFIG_PROXY_PROXY_PROTOCOL=0",
+        "-e",
+        "STAP_CONFIG_PROXY_DISCONNECT_ON_INVALID_CERTIFICATE=0",
+        "-e",
+        "STAP_CONFIG_PROXY_NOTIFY_ON_INVALID_CERTIFICATE=0",
+        "-e",
+        "STAP_CONFIG_PROXY_DETECT_SSL_WITHIN_X_PACKETS=-1",
+        "-e",
+        f"STAP_CONFIG_DB_0_REAL_DB_PORT={database_port}",
+        "-e",
+        "STAP_CONFIG_PROXY_LISTEN_PORT=8888",
+        "-e",
+        "STAP_CONFIG_PROXY_DEBUG=0",
+        "-e",
+        f"STAP_CONFIG_PROXY_SECRET={token}",
+        "-e",
+        "STAP_CONFIG_PROXY_CSR_NAME=",
+        "-e",
+        "STAP_CONFIG_PROXY_CSR_COUNTRY=",
+        "-e",
+        "STAP_CONFIG_PROXY_CSR_PROVINCE=",
+        "-e",
+        "STAP_CONFIG_PROXY_CSR_CITY=",
+        "-e",
+        "STAP_CONFIG_PROXY_CSR_ORGANIZATION=",
+        "-e",
+        "STAP_CONFIG_PROXY_CSR_KEYLENGTH=2048",
+        "-e",
+        f"STAP_CONFIG_DB_0_DB_TYPE={db_type}",
+        "-e",
+        "STAP_CONFIG_PARTICIPATE_IN_LOAD_BALANCING=0",
+        "-e",
+        f"STAP_CONFIG_TAP_TENANT_ID={etap_label}",
+        "-e",
+        f"STAP_CONFIG_SQLGUARD_0_SQLGUARD_IP={collector_ip}",
+        f"-p={listen_port}:8888/tcp",
+        f"icr.io/guardium/guardium_external_s-tap:v{etap_release}"
+    ]
+    subprocess.run(etap_command, check=True)
+
 def lab11_oracle(state):
     """
     LAB 11 - Oracle
@@ -1668,6 +1745,8 @@ def lab11_oracle(state):
     run_task('Create CSR for ETAP for oracle in container', lambda: t_create_oracle_csr_for_etap(), state)
 
     run_task('Import ETAP for oracle in container certificate', lambda: t_import_oracle_etap_cert(), state)
+
+    run_task('Start oracle ETAP', lambda: t_start_oracle_etap(), state)
     
     
 def lab10_fam(state):
