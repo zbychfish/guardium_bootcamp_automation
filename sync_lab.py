@@ -1666,6 +1666,8 @@ def lab11_oracle(state):
     run_task('Deploy Oracle in container on hana', lambda: t_deploy_oracle_in_container_on_hana(), state)
 
     run_task('Create CSR for ETAP for oracle in container', lambda: t_create_oracle_csr_for_etap(), state)
+
+    run_task('Import ETAP for oracle in container certificate', lambda: t_import_oracle_etap_cert(), state)
     
     
 def lab10_fam(state):
