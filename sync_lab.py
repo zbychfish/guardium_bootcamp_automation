@@ -1734,9 +1734,9 @@ def lab11_oracle(state):
     # run_as_user(["rm", "/tmp/server-cert.crt", "/tmp/client-cert.crt"], user="oracle", text=True)
 
     print("\nChange listener configuration")
-    subprocess.run(["cp", "-f", "guardium_bootcamp_automation/guardium_configuration_files/listener.ora", "/opt/oracle/product/19c/dbhome_1/network/admin/listener.ora"], check=True)
-    subprocess.run(["cp", "-f", "guardium_bootcamp_automation/guardium_configuration_files/tnsnames.ora", "/opt/oracle/product/19c/dbhome_1/network/admin/tnsnames.ora"], check=True)
-    subprocess.run(["cp", "-f", "guardium_bootcamp_automation/guardium_configuration_files/sqlnet.ora", "/opt/oracle/product/19c/dbhome_1/network/admin/sqlnet.ora"], check=True)
+    subprocess.run(["cp", "-f", "guardium_configuration_files/listener.ora", "/opt/oracle/product/19c/dbhome_1/network/admin/listener.ora"], check=True)
+    subprocess.run(["cp", "-f", "guardium_configuration_files/tnsnames.ora", "/opt/oracle/product/19c/dbhome_1/network/admin/tnsnames.ora"], check=True)
+    subprocess.run(["cp", "-f", "guardium_configuration_files/sqlnet.ora", "/opt/oracle/product/19c/dbhome_1/network/admin/sqlnet.ora"], check=True)
     subprocess.run(["chown", "-R", "oracle:oinstall", "/opt/oracle/product/19c/dbhome_1/network/admin/"], check=True)
 
     print("\n Restart listener")
