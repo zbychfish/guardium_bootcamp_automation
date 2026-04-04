@@ -1507,7 +1507,7 @@ def t_configure_env_for_oracle(api):
         api_target_host="10.10.9.239"
     )
 
-def t_setup_SSL_for_oracle(api):
+def t_setup_SSL_for_oracle():
     print("\n Create server wallet")
     run_as_user(["mkdir", "-p", "/opt/oracle/product/19c/dbhome_1/wallet"], user="oracle", text=True)
     run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "create", "-wallet", "/opt/oracle/product/19c/dbhome_1/wallet", "-auto_login_local", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True)
@@ -1534,6 +1534,18 @@ def t_setup_SSL_for_oracle(api):
     print("\n Restart listener")
     run_as_user(["bash","-lc", "/opt/oracle/product/19c/dbhome_1/bin/lsnrctl reload"], user="oracle", text=True)
 
+def t_setup_ATAP_for_oracle():
+    print("\n Stop oracle instance")
+    run_as_user(["bash","-lc", "/opt/oracle/product/19c/dbhome_1/bin/lsnrctl stop"], user="oracle", text=True)
+    run_as_user(["bash","-lc", r"$ORACLE_HOME/bin/dbshut $ORACLE_HOME"], user="oracle", text=True)
+    print("\n ATAP setup for oracle on raptor")
+    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "--db-user=oracle", "--db-home=/opt/oracle/product/19c/dbhome_1", "--db-base=/home/oracle", "--db-type=oracle", "--db-instance=ORCLDB", "--db-version=19", "store-conf"], check=True)
+    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "authorize-user", "oracle"], check=True)
+    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "--db-type=oracle --db-instance=ORCLDB", "activate"], check=True)
+    print("\n Start oracle instance")
+    run_as_user(["bash","-lc", r"$ORACLE_HOME/bin/dbstart $ORACLE_HOME"], user="oracle", text=True)
+    run_as_user(["bash","-lc", "/opt/oracle/product/19c/dbhome_1/bin/lsnrctl stop"], user="oracle", text=True)
+
 def lab11_oracle(state):
     """
     LAB 11 - Oracle
@@ -1545,18 +1557,10 @@ def lab11_oracle(state):
     
     run_task('Configure system for oracle lab', lambda: t_configure_env_for_oracle(api), state)
 
-    run_task('Configure SSL support for oracle on raptor', lambda: t_setup_SSL_for_oracle(api), state)
+    run_task('Configure SSL support for oracle on raptor', lambda: t_setup_SSL_for_oracle(), state)
 
-    print("\n Stop oracle instance")
-    run_as_user(["bash","-lc", "/opt/oracle/product/19c/dbhome_1/bin/lsnrctl stop"], user="oracle", text=True)
-    run_as_user(["bash","-lc", r"$ORACLE_HOME/bin/dbshut $ORACLE_HOME"], user="oracle", text=True)
-    print("\n ATAP setup for oracle on raptor")
-    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "--db-user=oracle", "--db-home=/opt/oracle/product/19c/dbhome_1", "--db-base=/home/oracle", "--db-type=oracle", "--db-instance=ORCLDB", "--db-version=19", "store-conf"], check=True)
-    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "authorize-user", "oracle"], check=True)
-    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "--db-type=oracle --db-instance=ORCLDB", "activate"], check=True)
-    print("\n Start oracle instance")
-    run_as_user(["bash","-lc", r"$ORACLE_HOME/bin/dbstart $ORACLE_HOME"], user="oracle", text=True)
-    run_as_user(["bash","-lc", "/opt/oracle/product/19c/dbhome_1/bin/lsnrctl stop"], user="oracle", text=True)
+    run_task('Configure ATAP for oracle on raptor', lambda: t_setup_ATAP_for_oracle(), state)
+    
     
     
 def lab10_fam(state):
