@@ -1741,6 +1741,7 @@ def lab11_oracle(state):
 
     print("\n Restart listener")
     run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/lsnrctl", "stop"], user="oracle", text=True)
+    time.sleep(10)
     run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/lsnrctl", "start"], user="oracle", text=True)
 
 
