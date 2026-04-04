@@ -1547,46 +1547,33 @@ def t_setup_ATAP_for_oracle():
     run_as_user(["bash","-lc", r"$ORACLE_HOME/bin/dbstart $ORACLE_HOME"], user="oracle", text=True)
     run_as_user(["bash","-lc", "/opt/oracle/product/19c/dbhome_1/bin/lsnrctl stop"], user="oracle", text=True)
 
-def lab11_oracle(state):
-    """
-    LAB 11 - Oracle
-    """
-    api = GuardiumRestAPI(
-        base_url='https://10.10.9.219:8443/',
-        client_id='BOOTCAMP'
-    )
-    
-    run_task('Configure system for oracle lab', lambda: t_configure_env_for_oracle(api), state)
-
-    run_task('Configure SSL support for oracle on raptor', lambda: t_setup_SSL_for_oracle(), state)
-
-    run_task('Configure ATAP for oracle on raptor', lambda: t_setup_ATAP_for_oracle(), state)
-    
+def t_deploy_oracle_in_container_on_hana():
     print("\n Download and setup Oracle 21c container on hana")
     unpack_cmd = "bash -lc 'gunzip -k /home/oracle19_oua_image.tar.gz 2>/dev/null || true'"
-    # result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"),
-    # commands=[
-    #     f"wget -q {get_env_value('ORACLE_OUA_IMAGE')} -O /home/oracle19_oua_image.tar.gz",
-    #     unpack_cmd,
-    #     f"rm -f /home/oracle19_oua_image.tar.gz",
-    #     "podman -q load -i /home/oracle19_oua_image.tar"
-    # ])
+    result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"),
+    commands=[
+        f"wget -q {get_env_value('ORACLE_OUA_IMAGE')} -O /home/oracle19_oua_image.tar.gz",
+        unpack_cmd,
+        f"rm -f /home/oracle19_oua_image.tar.gz",
+        "podman -q load -i /home/oracle19_oua_image.tar",
+        f"rm -f /home/oracle19_oua_image.tar"
+    ])
 
-    # print("\n Setup oracle container on hana")
-    # result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"),
-    # commands=[
-    #     "mkdir -p /home/oradata",
-    #     "chown -R 54321:54321 /home/oradata",
-    #     "chmod -R 775 /home/oradata",
-    #     "semanage fcontext -a -t container_file_t '/home/oradata(/.*)?'",
-    #     "restorecon -Rv /home/oradata"
-    # ])
+    print("\n Setup oracle container on hana")
+    result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"),
+    commands=[
+        "mkdir -p /home/oradata",
+        "chown -R 54321:54321 /home/oradata",
+        "chmod -R 775 /home/oradata",
+        "semanage fcontext -a -t container_file_t '/home/oradata(/.*)?'",
+        "restorecon -Rv /home/oradata"
+    ])
 
-    # print("\n Starting oracle container on hana")
-    # result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"),
-    # commands=[
-    #     f"podman run -d --name oracle_db_21c -p 1521:1521 -p 5500:5500 -e ORACLE_EDITION=EE -e ORACLE_SID=ORCL  -e ORACLE_PDB=ORCLPDB1  -e ORACLE_CHARACTERSET=AL32UTF8 -e ORACLE_SERVICE_NAME=ORCLPDB1.localdomain -v /home/oradata:/opt/oracle/oradata -e ORACLE_PWD='{get_env_value("DEFAULT_SERVICE_PASSWORD")}' oracle/database:21.3.0-ee-oua"
-    # ])
+    print("\n Starting oracle container on hana")
+    result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"),
+    commands=[
+        f"podman run -d --name oracle_db_21c -p 1521:1521 -p 5500:5500 -e ORACLE_EDITION=EE -e ORACLE_SID=ORCL  -e ORACLE_PDB=ORCLPDB1  -e ORACLE_CHARACTERSET=AL32UTF8 -e ORACLE_SERVICE_NAME=ORCLPDB1.localdomain -v /home/oradata:/opt/oracle/oradata -e ORACLE_PWD='{get_env_value("DEFAULT_SERVICE_PASSWORD")}' oracle/database:21.3.0-ee-oua"
+    ])
     interval_sec = 30
     timeout_sec = 1800
     deadline = time.time() + timeout_sec
@@ -1617,8 +1604,23 @@ def lab11_oracle(state):
             f"Timeout after {timeout_sec}s waiting for log marker. Last stdout={last_out!r}"
     )
 
+def lab11_oracle(state):
+    """
+    LAB 11 - Oracle
+    """
+    api = GuardiumRestAPI(
+        base_url='https://10.10.9.219:8443/',
+        client_id='BOOTCAMP'
+    )
+    
+    run_task('Configure system for oracle lab', lambda: t_configure_env_for_oracle(api), state)
 
-     
+    run_task('Configure SSL support for oracle on raptor', lambda: t_setup_SSL_for_oracle(), state)
+
+    run_task('Configure ATAP for oracle on raptor', lambda: t_setup_ATAP_for_oracle(), state)
+
+    run_task('Deploy Oracle in container on hana', lambda: t_deploy_oracle_in_container_on_hana(), state)
+    
     
 def lab10_fam(state):
     """
