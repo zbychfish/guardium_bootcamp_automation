@@ -1569,8 +1569,8 @@ def lab11_oracle(state):
     commands=[
         #f"wget -q {get_env_value('ORACLE_OUA_IMAGE')} -O /home/oracle19_oua_image.tar.gz",
         #unpack_cmd,
-        f"rm -f /home/oracle19_oua_image.tar.gz",
-        "podman load -i oracle19_oua_image.tar"
+        #f"rm -f /home/oracle19_oua_image.tar.gz",
+        "podman load -i /home/oracle19_oua_image.tar"
     ])
 
     print("\n Setup oracle container on hana")
