@@ -1501,7 +1501,7 @@ def t_configure_env_for_oracle(api):
         db_user="oracle",
         db_version="19",
         client="0.0.0.0/0.0.0.0",
-        proc_name="opt/oracle/product/19c/dbhome_1/bin/oracle",
+        proc_name="/opt/oracle/product/19c/dbhome_1/bin/oracle",
         db_install_dir="/home/oracle",
         unix_socket_marker="EXTPROC2",
         api_target_host="10.10.9.239"
@@ -1715,38 +1715,23 @@ def lab11_oracle(state):
     
     run_task('Configure system for oracle lab', lambda: t_configure_env_for_oracle(api), state)
 
-    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
-    api.create_inspection_engine(
-        stap_host="10.10.9.70",
-        protocol="oracle",
-        port_min="1521",
-        port_max="1521",
-        ktap_db_port="1521",
-        db_user="oracle",
-        db_version="19",
-        client="0.0.0.0/0.0.0.0",
-        proc_name="opt/oracle/product/19c/dbhome_1/bin/oracle",
-        db_install_dir="/home/oracle",
-        unix_socket_marker="EXTPROC2",
-        api_target_host="10.10.9.239"
-    )
     
-    # print("\n Create server wallet")
-    # run_as_user(["mkdir", "-p", "/opt/oracle/product/19c/dbhome_1/wallet"], user="oracle", text=True)
-    # run_as_user(["orapki", "wallet", "create", "-wallet", "/opt/oracle/product/19c/dbhome_1/wallet", "-auto_login_local", "-pwd", f"{get_env_value("DEFAULT_SERVICE_PASSWORD")}"], user="oracle", text=True)
-    # print("\n Add self-sign certificate to server wallet")
-    # run_as_user(["orapki", "wallet", "add", "-wallet", r'"/opt/oracle/product/19c/dbhome_1/wallet"', "-dn", r'"CN=raptor.gdemo.com"', "-keysize", "2048", "-self_signed", "-validity", "3650", "-pwd", f"{get_env_value("DEFAULT_SERVICE_PASSWORD")}"], user="oracle", text=True)
-    # print("\n Create client wallet")
-    # run_as_user(["mkdir", "-p", "/opt/oracle/product/19c/dbhome_1/client_wallet"], user="oracle", text=True)
-    # run_as_user(["orapki", "wallet", "create", "-wallet", "/opt/oracle/product/19c/dbhome_1/client_wallet", "-auto_login_local", "-pwd", f"{get_env_value("DEFAULT_SERVICE_PASSWORD")}"], user="oracle", text=True)
-    # print("\n Add self-sign certificate to client wallet")
-    # run_as_user(["orapki", "wallet", "add", "-wallet", r'"/opt/oracle/product/19c/dbhome_1/client_wallet"', "-dn", r'"CN=client"', "-keysize", "2048", "-self_signed", "-validity", "3650", "-pwd", f"{get_env_value("DEFAULT_SERVICE_PASSWORD")}"], user="oracle", text=True)
-    # print("\n Export public keys")
-    # run_as_user(["orapki", "wallet", "export", "-wallet", r'"/opt/oracle/product/19c/dbhome_1/wallet"', "-dn", r'"CN=raptor.gdemo.com"', "-cert", "/tmp/server-cert.crt", "-pwd", f"{get_env_value("DEFAULT_SERVICE_PASSWORD")}"], user="oracle", text=True)
-    # run_as_user(["orapki", "wallet", "export", "-wallet", r'"/opt/oracle/product/19c/dbhome_1/client_wallet"', "-dn", r'"CN=client"', "-cert", "/tmp/client-cert.crt", "-pwd", f"{get_env_value("DEFAULT_SERVICE_PASSWORD")}"], user="oracle", text=True)
-    # run_as_user(["orapki", "wallet", "add", "-wallet", r'"/opt/oracle/product/19c/dbhome_1/client_wallet"', "-trusted_cert", "-cert", "/tmp/server-cert.crt", "-pwd", f"{get_env_value("DEFAULT_SERVICE_PASSWORD")}"], user="oracle", text=True)
-    # run_as_user(["orapki", "wallet", "add", "-wallet", r'"/opt/oracle/product/19c/dbhome_1/wallet"', "-trusted_cert", "-cert", "/tmp/client-cert.crt", "-pwd", f"{get_env_value("DEFAULT_SERVICE_PASSWORD")}"], user="oracle", text=True)
-    # run_as_user(["rm", "/tmp/server-cert.crt", "/tmp/client-cert.crt"], user="oracle", text=True)
+    print("\n Create server wallet")
+    run_as_user(["mkdir", "-p", "/opt/oracle/product/19c/dbhome_1/wallet"], user="oracle", text=True)
+    run_as_user(["orapki", "wallet", "create", "-wallet", "/opt/oracle/product/19c/dbhome_1/wallet", "-auto_login_local", "-pwd", f"{get_env_value("DEFAULT_SERVICE_PASSWORD")}"], user="oracle", text=True)
+    print("\n Add self-sign certificate to server wallet")
+    run_as_user(["orapki", "wallet", "add", "-wallet", r'"/opt/oracle/product/19c/dbhome_1/wallet"', "-dn", r'"CN=raptor.gdemo.com"', "-keysize", "2048", "-self_signed", "-validity", "3650", "-pwd", f"{get_env_value("DEFAULT_SERVICE_PASSWORD")}"], user="oracle", text=True)
+    print("\n Create client wallet")
+    run_as_user(["mkdir", "-p", "/opt/oracle/product/19c/dbhome_1/client_wallet"], user="oracle", text=True)
+    run_as_user(["orapki", "wallet", "create", "-wallet", "/opt/oracle/product/19c/dbhome_1/client_wallet", "-auto_login_local", "-pwd", f"{get_env_value("DEFAULT_SERVICE_PASSWORD")}"], user="oracle", text=True)
+    print("\n Add self-sign certificate to client wallet")
+    run_as_user(["orapki", "wallet", "add", "-wallet", r'"/opt/oracle/product/19c/dbhome_1/client_wallet"', "-dn", r'"CN=client"', "-keysize", "2048", "-self_signed", "-validity", "3650", "-pwd", f"{get_env_value("DEFAULT_SERVICE_PASSWORD")}"], user="oracle", text=True)
+    print("\n Export public keys")
+    run_as_user(["orapki", "wallet", "export", "-wallet", r'"/opt/oracle/product/19c/dbhome_1/wallet"', "-dn", r'"CN=raptor.gdemo.com"', "-cert", "/tmp/server-cert.crt", "-pwd", f"{get_env_value("DEFAULT_SERVICE_PASSWORD")}"], user="oracle", text=True)
+    run_as_user(["orapki", "wallet", "export", "-wallet", r'"/opt/oracle/product/19c/dbhome_1/client_wallet"', "-dn", r'"CN=client"', "-cert", "/tmp/client-cert.crt", "-pwd", f"{get_env_value("DEFAULT_SERVICE_PASSWORD")}"], user="oracle", text=True)
+    run_as_user(["orapki", "wallet", "add", "-wallet", r'"/opt/oracle/product/19c/dbhome_1/client_wallet"', "-trusted_cert", "-cert", "/tmp/server-cert.crt", "-pwd", f"{get_env_value("DEFAULT_SERVICE_PASSWORD")}"], user="oracle", text=True)
+    run_as_user(["orapki", "wallet", "add", "-wallet", r'"/opt/oracle/product/19c/dbhome_1/wallet"', "-trusted_cert", "-cert", "/tmp/client-cert.crt", "-pwd", f"{get_env_value("DEFAULT_SERVICE_PASSWORD")}"], user="oracle", text=True)
+    run_as_user(["rm", "/tmp/server-cert.crt", "/tmp/client-cert.crt"], user="oracle", text=True)
 
     # print("\nChange listener configuration")
     # subprocess.run(["cp", "-f", "guardium_bootcamp_automation/guardium_configuration_files/listener.ora", "/opt/oracle/product/19c/dbhome_1/network/admin/listener.ora"], check=True)
