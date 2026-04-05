@@ -1784,40 +1784,50 @@ def t_install_stap_on_hana(api):
     # print("\n Installing oracle instant client on hana")
     # result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"), commands=[
     #     "wget -O oracle-instantclient-basic-21.12.0.0.0-1.el9.x86_64.rpm https://ibm.box.com/shared/static/6kyb3ivksqvv26bfnz2ckrojw2b34bhg.rpm",
-    #     "dnf -y install ./oracle-instantclient-basic-21.12.0.0.0-1.el9.x86_64.rpm"
+    #     "dnf -y install ./oracle-instantclient-basic-21.12.0.0.0-1.el9.x86_64.rpm",
+    #     "rm -f ./oracle-instantclient-basic-21.12.0.0.0-1.el9.x86_64.rpm"
     # ])
     # print("\n Copy files from raptor to hana")
     # scp_file_as_root(host='10.10.9.60', root_password=get_env_value("HANA_PASSWORD"),  local_path="/root/gn-trainings/gim_installers/guard-bundle-GIM-12.2.0.0_r121306_v12_2_1-rhel-9-linux-x86_64.gim.sh", remote_path=".")
     # scp_file_as_root(host='10.10.9.60', root_password=get_env_value("HANA_PASSWORD"),  local_path="guardium_configuration_files/tnsnames_hana.ora", remote_path="/usr/lib/oracle/21/client64/lib/network/admin/tnsnames.ora")
-    print("\n Install gim client on hana")
-    run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"), commands=[
-        "./guard-bundle-GIM-12.2.0.0_r121306_v12_2_1-rhel-9-linux-x86_64.gim.sh -- --dir /opt/guardium --tapip 10.10.9.60 --sqlguardip 10.10.9.219 -q"
-    ])
-    print("\n Install STAP on hana")
-    time.sleep(60)
-    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
-    api.gim_client_assign(
-        client_ip="10.10.9.60",
-        module="BUNDLE-STAP",
-        module_version="12.2.0.0_r121306_5"
-    )
-    api.gim_client_params(
-        client_ip="10.10.9.60",
-        param_name="KTAP_ENABLED",
-        param_value="0"
-    )
-    api.gim_client_params(
-        client_ip="10.10.9.60",
-        param_name="STAP_SQLGUARD_IP",
-        param_value="10.10.9.239"
-    )
-    api.gim_schedule_install(
-        client_ip="10.10.9.60",
-        date="now",
-    )
+    # print("\n Install gim client on hana")
+    # run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"), commands=[
+    #     "./guard-bundle-GIM-12.2.0.0_r121306_v12_2_1-rhel-9-linux-x86_64.gim.sh -- --dir /opt/guardium --tapip 10.10.9.60 --sqlguardip 10.10.9.219 -q"
+    # ])
+    # print("\n Install STAP on hana")
+    # time.sleep(60)
+    # token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
+    # api.gim_client_assign(
+    #     client_ip="10.10.9.60",
+    #     module="BUNDLE-STAP",
+    #     module_version="12.2.0.0_r121306_5"
+    # )
+    # api.gim_client_params(
+    #     client_ip="10.10.9.60",
+    #     param_name="KTAP_ENABLED",
+    #     param_value="0"
+    # )
+    # api.gim_client_params(
+    #     client_ip="10.10.9.60",
+    #     param_name="STAP_SQLGUARD_IP",
+    #     param_value="10.10.9.239"
+    # )
+    # api.gim_schedule_install(
+    #     client_ip="10.10.9.60",
+    #     date="now",
+    # )
 
-    print("\n STAP installation monitoring")
-    monitor_gim_module_installation(api, "10.10.9.60")
+    # print("\n STAP installation monitoring")
+    # monitor_gim_module_installation(api, "10.10.9.60")
+
+    print("\n Configure STAP to support OUA monitoring")
+    run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"), commands=[
+        "sed -i 's|^sqlc_properties_dir=.*|sqlc_properties_dir=/usr/lib/oracle/21/client64/lib/network/admin|' /opt/guardium/modules/STAP/current/guard_tap.ini",
+        "sed -i 's|^ld_library_paths=.*|ld_library_paths=/usr/lib/oracle/21/client64/lib|' /opt/guardium/modules/STAP/current/guard_tap.ini",
+        "/opt/guardium/modules/STAP/current/guard-config-update --restart STAP"
+    ])
+    
+
     
 def lab11_oracle(state):
     """
