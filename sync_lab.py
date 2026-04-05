@@ -1790,8 +1790,8 @@ def t_install_stap_on_hana(api):
     # scp_file_as_root(host='10.10.9.60', root_password=get_env_value("HANA_PASSWORD"),  local_path="/root/gn-trainings/gim_installers/guard-bundle-GIM-12.2.0.0_r121306_v12_2_1-rhel-9-linux-x86_64.gim.sh", remote_path=".")
     # scp_file_as_root(host='10.10.9.60', root_password=get_env_value("HANA_PASSWORD"),  local_path="guardium_configuration_files/tnsnames_hana.ora", remote_path="/usr/lib/oracle/21/client64/lib/network/admin/tnsnames.ora")
     print("\n Install gim client on hana")
-    result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"), commands=[
-        "./guard-bundle-GIM-12.2.0.0_r121306_v12_2_1-rhel-9-linux-x86_64.gim.sh -- --dir /opt/guardium --tapip 10.10.9.60 --sqlguardip 10.10.9.219"
+    run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"), commands=[
+        "./guard-bundle-GIM-12.2.0.0_r121306_v12_2_1-rhel-9-linux-x86_64.gim.sh -- --dir /opt/guardium --tapip 10.10.9.60 --sqlguardip 10.10.9.219 -q"
     ])
     print("\n Install STAP on hana")
     time.sleep(60)
