@@ -1555,7 +1555,7 @@ def t_deploy_oracle_in_container_on_hana():
         f"wget -q {get_env_value('ORACLE_OUA_IMAGE')} -O /home/oracle19_oua_image.tar.gz",
         unpack_cmd,
         f"rm -f /home/oracle19_oua_image.tar.gz",
-        "podman load -iq /home/oracle19_oua_image.tar",
+        "podman load -qi /home/oracle19_oua_image.tar",
         f"rm -f /home/oracle19_oua_image.tar"
     ])
 
