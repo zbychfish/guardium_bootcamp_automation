@@ -1736,12 +1736,12 @@ def t_start_oracle_etap():
 def t_setup_oracle_traffic_generator():
     password = get_env_value("DEFAULT_SERVICE_PASSWORD")
     commands = [
-        #{"cmd": ["mkdir", "-p", "/root/gn-trainings/dbtraffic"]},
-        #{"cmd": ["/usr/bin/python3.12", "-m", "venv", ".venv"], "cwd" : "/root/gn-trainings/dbtraffic"},
-        # {"cmd": ["/root/gn-trainings/dbtraffic/.venv/bin/python3", "-m", "pip", "install", "--upgrade", "pip"], "cwd" : "/root/gn-trainings/dbtraffic"},
-        # {"cmd": ["/root/gn-trainings/dbtraffic/.venv/bin/pip3", "install", "oracledb", "psycopg2_binary", "faker"], "cwd" : "/root/gn-trainings/dbtraffic"},
-        # {"cmd": ["wget", "https://ibm.box.com/shared/static/dcm5st6jt4w6ippvkz3ka5ebvb47gymi.zip", "-O", "dbtraffic.zip"], "cwd" : "/root/gn-trainings/dbtraffic"},
-        # {"cmd": ["unzip", "dbtraffic.zip"], "cwd" : "/root/gn-trainings/dbtraffic"},
+        {"cmd": ["mkdir", "-p", "/root/gn-trainings/dbtraffic"]},
+        {"cmd": ["/usr/bin/python3.12", "-m", "venv", ".venv"], "cwd" : "/root/gn-trainings/dbtraffic"},
+        {"cmd": ["/root/gn-trainings/dbtraffic/.venv/bin/python3", "-m", "pip", "install", "--upgrade", "pip"], "cwd" : "/root/gn-trainings/dbtraffic"},
+        {"cmd": ["/root/gn-trainings/dbtraffic/.venv/bin/pip3", "install", "oracledb", "psycopg2_binary", "faker"], "cwd" : "/root/gn-trainings/dbtraffic"},
+        {"cmd": ["wget", "https://ibm.box.com/shared/static/dcm5st6jt4w6ippvkz3ka5ebvb47gymi.zip", "-O", "dbtraffic.zip"], "cwd" : "/root/gn-trainings/dbtraffic"},
+        {"cmd": ["unzip", "dbtraffic.zip"], "cwd" : "/root/gn-trainings/dbtraffic"},
         {"cmd": ["sed", "-i", f"s|^password *=.*|password = {password}|", "/root/gn-trainings/dbtraffic/files/config.cfg"]},
         {"cmd": ["/root/gn-trainings/dbtraffic/.venv/bin/python3", "./gn_dbtraffic.py", "schema"], "cwd" : "/root/gn-trainings/dbtraffic"}
     ]
@@ -1752,7 +1752,6 @@ def t_setup_oracle_traffic_generator():
             check=True
         )
 
-
 def t_setup_OUA_on_oracle_on_hana():
     print("\n Create secadmin and guardium users")
     conn =  get_oracle_conn(user="system", password=get_env_value('DEFAULT_SERVICE_PASSWORD'), host="10.10.9.60", port=1521, service_name="ORCLPDB1")
@@ -1762,9 +1761,9 @@ def t_setup_OUA_on_oracle_on_hana():
     # run_sql_oracle(conn, "grant CONNECT, SELECT ANY DICTIONARY, SELECT_CATALOG_ROLE, AUDIT_ADMIN, CREATE PROCEDURE, DROP ANY PROCEDURE, AUDIT SYSTEM, AUDIT ANY, CREATE JOB to SECADMIN")
     # run_sql_oracle(conn, "GRANT CONNECT, RESOURCE to guardium")
     # run_sql_oracle(conn, "GRANT SELECT ANY DICTIONARY TO guardium")
-    run_sql_oracle(conn, r"BEGIN DBMS_NETWORK_ACL_ADMIN.APPEND_HOST_ACE(host => 'localhost', ace => xs$ace_type(privilege_list => xs$name_list('connect', 'resolve'), principal_name => 'guardium', principal_type => xs_acl.ptype_db)); END;")
-    conn.commit()
-    conn.close()
+    # run_sql_oracle(conn, r"BEGIN DBMS_NETWORK_ACL_ADMIN.APPEND_HOST_ACE(host => 'localhost', ace => xs$ace_type(privilege_list => xs$name_list('connect', 'resolve'), principal_name => 'guardium', principal_type => xs_acl.ptype_db)); END;")
+    # conn.commit()
+    # conn.close()
 
     print("\n Setup access to OUA records")
     conn =  get_oracle_conn(user="secadmin", password=f"{get_env_value('DEFAULT_SERVICE_PASSWORD')}", host="10.10.9.60", port=1521, service_name="ORCLPDB1")
@@ -1805,7 +1804,7 @@ def lab11_oracle(state):
 
     run_task('Traffic generator for Oracle', lambda: t_setup_oracle_traffic_generator(), state)
 
-    # run_task('Confgure OUA to monitor application', lambda: t_setup_OUA_on_oracle_on_hana(), state)
+    run_task('Confgure OUA to monitor application', lambda: t_setup_OUA_on_oracle_on_hana(), state)
 
     
 
