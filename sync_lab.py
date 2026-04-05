@@ -1742,6 +1742,12 @@ def t_setup_oracle_traffic_generator():
         {"cmd": ["wget", "https://ibm.box.com/shared/static/dcm5st6jt4w6ippvkz3ka5ebvb47gymi.zip", "-O", "dbtraffic.zip"], "cwd" : "/root/gn-trainings/dbtraffic"},
         {"cmd": ["unzip", "dbtraffic.zip"], "cwd" : "/root/gn-trainings/dbtraffic"}
     ]
+    for c in commands:
+        subprocess.run(
+            c["cmd"],
+            cwd=c.get("cwd"),
+            check=True
+        )
 
 
 def t_setup_OUA_on_oracle_on_hana():
