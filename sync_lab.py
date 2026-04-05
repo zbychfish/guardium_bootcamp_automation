@@ -661,8 +661,11 @@ def t_register_collector(api):
             pass  # Ignoruj timeout, kontynuuj
         
         unit_data = api.get_unit_data(api_target_host='10.10.9.239')
-        unit_data = parse_unit_summary(unit_data['Message'])
-        print(unit_data)
+        if unit_data and 'Message' in unit_data:
+            unit_data = parse_unit_summary(unit_data['Message'])
+            print(unit_data)
+        else:
+            print(f"  ⚠ Nieprawidłowa odpowiedź API: {unit_data}")
         print("  Unit type:")
         try:
             result = appliance.execute_command("show unit type")
@@ -672,8 +675,11 @@ def t_register_collector(api):
         print(f"  ✓ Collector registered ")
     else:
         unit_data = api.get_unit_data(api_target_host='10.10.9.239')
-        unit_data = parse_unit_summary(unit_data['Message'])
-        print(unit_data)
+        if unit_data and 'Message' in unit_data:
+            unit_data = parse_unit_summary(unit_data['Message'])
+            print(unit_data)
+        else:
+            print(f"  ⚠ Nieprawidłowa odpowiedź API: {unit_data}")
         print(f"  ✓ Collector is already registered ")
     return None
 
@@ -1723,6 +1729,8 @@ def t_start_oracle_etap():
         f"icr.io/guardium/guardium_external_s-tap:v{etap_release}"
     ]
     subprocess.run(etap_command, check=True)
+    time.sleep(10)
+    print("\n ETAP stopped for other part of lab")
     subprocess.run(["podman", "stop", "oracle-etap"], check=True)
 
 def t_setup_OUA_on_oracle_on_hana():
