@@ -1734,13 +1734,16 @@ def t_start_oracle_etap():
     subprocess.run(["podman", "stop", "oracle-etap"], check=True)
 
 def t_setup_oracle_traffic_generator():
+    password = get_env_value("DEFAULT_SERVICE_PASSWORD")
     commands = [
         #{"cmd": ["mkdir", "-p", "/root/gn-trainings/dbtraffic"]},
         #{"cmd": ["/usr/bin/python3.12", "-m", "venv", ".venv"], "cwd" : "/root/gn-trainings/dbtraffic"},
-        {"cmd": ["/root/gn-trainings/dbtraffic/.venv/bin/python3", "-m", "pip", "install", "--upgrade", "pip"], "cwd" : "/root/gn-trainings/dbtraffic"},
-        {"cmd": ["/root/gn-trainings/dbtraffic/.venv/bin/pip3", "install", "oracledb", "psycopg2_binary", "faker"], "cwd" : "/root/gn-trainings/dbtraffic"},
-        {"cmd": ["wget", "https://ibm.box.com/shared/static/dcm5st6jt4w6ippvkz3ka5ebvb47gymi.zip", "-O", "dbtraffic.zip"], "cwd" : "/root/gn-trainings/dbtraffic"},
-        {"cmd": ["unzip", "dbtraffic.zip"], "cwd" : "/root/gn-trainings/dbtraffic"}
+        # {"cmd": ["/root/gn-trainings/dbtraffic/.venv/bin/python3", "-m", "pip", "install", "--upgrade", "pip"], "cwd" : "/root/gn-trainings/dbtraffic"},
+        # {"cmd": ["/root/gn-trainings/dbtraffic/.venv/bin/pip3", "install", "oracledb", "psycopg2_binary", "faker"], "cwd" : "/root/gn-trainings/dbtraffic"},
+        # {"cmd": ["wget", "https://ibm.box.com/shared/static/dcm5st6jt4w6ippvkz3ka5ebvb47gymi.zip", "-O", "dbtraffic.zip"], "cwd" : "/root/gn-trainings/dbtraffic"},
+        # {"cmd": ["unzip", "dbtraffic.zip"], "cwd" : "/root/gn-trainings/dbtraffic"},
+        {"cmd": ["sed", "-i", f"s|^password *=.*|password = {password}|", "/root/gn-trainings/dbtraffic/files/config.cfg"]},
+        {"cmd": ["/root/gn-trainings/dbtraffic/.venv/bin/python3", "./gn_dbtraffic.py", "schema"], "cwd" : "/root/gn-trainings/dbtraffic"}
     ]
     for c in commands:
         subprocess.run(
