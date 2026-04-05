@@ -1832,6 +1832,7 @@ def t_install_stap_on_hana(api):
 
     print("\n Adding OUA configuration")
     print(api.create_sql_configuration(b_type="Oracle", instance="ORCLPDB1", stap_host='10.10.9.60', username='guardium', api_target_host='10.10.9.239'))
+    exit(0)
     
 def lab11_oracle(state):
     """
