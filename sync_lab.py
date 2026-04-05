@@ -1737,18 +1737,23 @@ def t_setup_OUA_on_oracle_on_hana():
     print("\n Create secadmin")
     conn =  get_oracle_conn(user="system", password=get_env_value('DEFAULT_SERVICE_PASSWORD'), host="10.10.9.60", port=1521, service_name="ORCLPDB1")
     run_sql_oracle(conn, "ALTER PROFILE DEFAULT LIMIT PASSWORD_VERIFY_FUNCTION NULL")
+    conn.commit()
     run_sql_oracle(conn, "CREATE USER secadmin IDENTIFIED BY '{}'".format(get_env_value('DEFAULT_SERVICE_PASSWORD')))
     run_sql_oracle(conn, "CREATE USER guardium IDENTIFIED BY '{}'".format(get_env_value('DEFAULT_SERVICE_PASSWORD')))
+    conn.commit()
     run_sql_oracle(conn, "grant CONNECT, SELECT ANY DICTIONARY, SELECT_CATALOG_ROLE, AUDIT_ADMIN, CREATE PROCEDURE, DROP ANY PROCEDURE, AUDIT SYSTEM, AUDIT ANY, CREATE JOB to SECADMIN")
     run_sql_oracle(conn, "GRANT CONNECT, RESOURCE to guardium")
     run_sql_oracle(conn, "GRANT SELECT ANY DICTIONARY TO guardium")
     run_sql_oracle(conn, r"exec DBMS_NETWORK_ACL_ADMIN.APPEND_HOST_ACE(host => 'localhost', ace  =>  xs$ace_type(privilege_list => xs$name_list('connect', 'resolve'),  principal_name  => 'guardium', principal_type => xs_acl.ptype_db));")
+    conn.commit()
     conn.close()
 
     print("\n Create secadmin")
     conn =  get_oracle_conn(user="secadmin", password=f"{get_env_value('DEFAULT_SERVICE_PASSWORD')}", host="10.10.9.60", port=1521, service_name="ORCLPDB1")
     run_sql_oracle(conn, r"BEGIN DECLARE v_cnt NUMBER; BEGIN SELECT COUNT(*) INTO v_cnt FROM audit_unified_policies WHERE policy_name='GAME_APP'; IF v_cnt=0 THEN EXECUTE IMMEDIATE 'CREATE AUDIT POLICY GAME_APP ACTIONS ALL ON game.customers, ALL ON game.credit_cards, ALL ON game.transactions, ALL ON game.extras, ALL ON game.features'; END IF; EXECUTE IMMEDIATE 'AUDIT POLICY GAME_APP'; END; END;")
     run_sql_oracle(conn, r"BEGIN DBMS_SCHEDULER.create_job(job_name=>'ENSURE_GAME_APP_AUDIT', job_type=>'STORED_PROCEDURE', job_action=>'ENSURE_GAME_APP_AUDIT', repeat_interval=>'FREQ=MINUTELY;INTERVAL=45', enabled=>TRUE); END;")
+    conn.commit()
+
     policies = run_sql_oracle(conn, "SELECT POLICY_NAME FROM AUDIT_UNIFIED_ENABLED_POLICIES", fetch=True)
     if policies:
         for policy in policies:
