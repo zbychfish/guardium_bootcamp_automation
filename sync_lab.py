@@ -665,7 +665,7 @@ def t_register_collector(api):
             unit_data = parse_unit_summary(unit_data['Message'])
             print(unit_data)
         else:
-            print(f"  ⚠ Nieprawidłowa odpowiedź API: {unit_data}")
+            print(f"  ⚠ Uncexpected answer from API: {unit_data}")
         print("  Unit type:")
         try:
             result = appliance.execute_command("show unit type")
@@ -679,7 +679,7 @@ def t_register_collector(api):
             unit_data = parse_unit_summary(unit_data['Message'])
             print(unit_data)
         else:
-            print(f"  ⚠ Nieprawidłowa odpowiedź API: {unit_data}")
+            print(f"  ⚠ Incorrect API answer: {unit_data}")
         print(f"  ✓ Collector is already registered ")
     return None
 
@@ -1778,6 +1778,8 @@ def lab11_oracle(state):
     run_task('Import ETAP for oracle in container certificate', lambda: t_import_oracle_etap_cert(), state)
 
     run_task('Start oracle ETAP', lambda: t_start_oracle_etap(), state)
+
+    run_task('Confgure OUA to monitor application', lambda: t_setup_OUA_on_oracle_on_hana(), state)
 
     
 
