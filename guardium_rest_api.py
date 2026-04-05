@@ -948,7 +948,7 @@ class GuardiumRestAPI:
                 username="secadmin"
             )
         """
-        url = f'{self.base_url}/restAPI/store_sql_credentials'
+        url = f'{self.base_url}/restAPI/stap'
         headers = self.get_headers()
         
         data: dict[str, Any] = {
