@@ -1746,7 +1746,7 @@ def lab11_oracle(state):
 
     run_task('Import ETAP for oracle in container certificate', lambda: t_import_oracle_etap_cert(), state)
 
-    run_task('Start oracle ETAP', lambda: t_start_oracle_etap(), state)
+    #run_task('Start oracle ETAP', lambda: t_start_oracle_etap(), state)
     
     
 
