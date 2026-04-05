@@ -1849,6 +1849,8 @@ def lab11_oracle(state):
 
     run_task('Confgure OUA to monitor application', lambda: t_setup_OUA_on_oracle_on_hana(), state)
 
+    run_task('Install STAP on hana', lambda: t_install_stap_on_hana(api), state)
+
     
 
   
