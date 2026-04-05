@@ -1831,7 +1831,7 @@ def t_install_stap_on_hana(api):
     # api.store_sql_credentials(password=get_env_value("DEFAULT_SERVICE_PASSWORD"), username="guardium", stap_host='10.10.9.60', api_target_host='10.10.9.239')
 
     print("\n Adding OUA configuration")
-    api.create_sql_configuration(b_type="Oracle", instance="ORCLPDB1", stap_host='10.10.9.60', username='guardium', api_target_host='10.10.9.239')
+    print(api.create_sql_configuration(b_type="Oracle", instance="ORCLPDB1", stap_host='10.10.9.60', username='guardium', api_target_host='10.10.9.239'))
     
 def lab11_oracle(state):
     """
