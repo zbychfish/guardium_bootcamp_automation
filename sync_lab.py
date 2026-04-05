@@ -1735,9 +1735,9 @@ def t_start_oracle_etap():
 
 def t_setup_OUA_on_oracle_on_hana():
     print("\n Create secadmin")
-    conn =  get_oracle_conn(user="system", password=f"{get_env_value('DEFAULT_SERVICE_PASSWORD')}", host="10.10.9.60", port=1521, service_name="ORCLPDB1")
-    run_sql_oracle(conn, f"CREATE USER secadmin IDENTIFIED BY '{get_env_value('DEFAULT_SERVICE_PASSWORD')}'")
-    run_sql_oracle(conn, f"CREATE USER guardium IDENTIFIED BY '{get_env_value('DEFAULT_SERVICE_PASSWORD')}'")
+    conn =  get_oracle_conn(user="system", password=get_env_value('DEFAULT_SERVICE_PASSWORD'), host="10.10.9.60", port=1521, service_name="ORCLPDB1")
+    run_sql_oracle(conn, "CREATE USER secadmin IDENTIFIED BY '{}'".format(get_env_value('DEFAULT_SERVICE_PASSWORD')))
+    run_sql_oracle(conn, "CREATE USER guardium IDENTIFIED BY '{}'".format(get_env_value('DEFAULT_SERVICE_PASSWORD')))
     run_sql_oracle(conn, "grant CONNECT, SELECT ANY DICTIONARY, SELECT_CATALOG_ROLE, AUDIT_ADMIN, CREATE PROCEDURE, DROP ANY PROCEDURE, AUDIT SYSTEM, AUDIT ANY, CREATE JOB to SECADMIN")
     run_sql_oracle(conn, "GRANT CONNECT, RESOURCE to guardium")
     run_sql_oracle(conn, "GRANT SELECT ANY DICTIONARY TO guardium")
