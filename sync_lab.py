@@ -1733,8 +1733,19 @@ def t_start_oracle_etap():
     print("\n ETAP stopped for other part of lab")
     subprocess.run(["podman", "stop", "oracle-etap"], check=True)
 
+def t_setup_oracle_traffic_generator():
+    commands = [
+        {"cmd": ["mkdir", "-p", "/root/gn-trainings/dbtraffic"]},
+        {"cmd": ["/usr/bin/python3.12", "-m", "venv", ".venv"], "cwd" : "/root/gn-trainings/dbtraffic"},
+        {"cmd": ["/root/gn-trainings/dbtraffic/.venv/bin/python3", "-m", "pip", "install" "--upgrade" "pip"], "cwd" : "/root/gn-trainings/dbtraffic"},
+        {"cmd": ["/root/gn-trainings/dbtraffic/.venv/bin/pip3", "install", "oracledb", "psycopg2_binary", "faker"], "cwd" : "/root/gn-trainings/dbtraffic"},
+        {"cmd": ["wget", "https://ibm.box.com/shared/static/dcm5st6jt4w6ippvkz3ka5ebvb47gymi.zip", "-O", "dbtraffic.zip"], "cwd" : "/root/gn-trainings/dbtraffic"},
+        {"cmd": ["unzip", "dbtraffic.zip"], "cwd" : "/root/gn-trainings/dbtraffic"}
+    ]
+
+
 def t_setup_OUA_on_oracle_on_hana():
-    print("\n Create secadmin")
+    print("\n Create secadmin and guardium users")
     conn =  get_oracle_conn(user="system", password=get_env_value('DEFAULT_SERVICE_PASSWORD'), host="10.10.9.60", port=1521, service_name="ORCLPDB1")
     # run_sql_oracle(conn, 'CREATE USER secadmin IDENTIFIED BY "{}"'.format(get_env_value('DEFAULT_SERVICE_PASSWORD')))
     # run_sql_oracle(conn, 'CREATE USER guardium IDENTIFIED BY "{}"'.format(get_env_value('DEFAULT_SERVICE_PASSWORD')))
@@ -1746,7 +1757,7 @@ def t_setup_OUA_on_oracle_on_hana():
     conn.commit()
     conn.close()
 
-    print("\n Create secadmin")
+    print("\n Setup access to OUA records")
     conn =  get_oracle_conn(user="secadmin", password=f"{get_env_value('DEFAULT_SERVICE_PASSWORD')}", host="10.10.9.60", port=1521, service_name="ORCLPDB1")
     run_sql_oracle(conn, r"BEGIN DECLARE v_cnt NUMBER; BEGIN SELECT COUNT(*) INTO v_cnt FROM audit_unified_policies WHERE policy_name='GAME_APP'; IF v_cnt=0 THEN EXECUTE IMMEDIATE 'CREATE AUDIT POLICY GAME_APP ACTIONS ALL ON game.customers, ALL ON game.credit_cards, ALL ON game.transactions, ALL ON game.extras, ALL ON game.features'; END IF; EXECUTE IMMEDIATE 'AUDIT POLICY GAME_APP'; END; END;")
     run_sql_oracle(conn, r"BEGIN DBMS_SCHEDULER.create_job(job_name=>'ENSURE_GAME_APP_AUDIT', job_type=>'STORED_PROCEDURE', job_action=>'ENSURE_GAME_APP_AUDIT', repeat_interval=>'FREQ=MINUTELY;INTERVAL=45', enabled=>TRUE); END;")
@@ -1783,7 +1794,9 @@ def lab11_oracle(state):
 
     run_task('Start oracle ETAP', lambda: t_start_oracle_etap(), state)
 
-    run_task('Confgure OUA to monitor application', lambda: t_setup_OUA_on_oracle_on_hana(), state)
+    run_task('Traffic generator for Oracle', lambda: t_setup_oracle_traffic_generator(), state)
+
+    # run_task('Confgure OUA to monitor application', lambda: t_setup_OUA_on_oracle_on_hana(), state)
 
     
 
