@@ -1820,13 +1820,15 @@ def t_install_stap_on_hana(api):
     # print("\n STAP installation monitoring")
     # monitor_gim_module_installation(api, "10.10.9.60")
 
-    print("\n Configure STAP to support OUA monitoring")
-    run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"), commands=[
-        "sed -i 's|^sqlc_properties_dir=.*|sqlc_properties_dir=/usr/lib/oracle/21/client64/lib/network/admin|' /opt/guardium/modules/STAP/current/guard_tap.ini",
-        "sed -i 's|^ld_library_paths=.*|ld_library_paths=/usr/lib/oracle/21/client64/lib|' /opt/guardium/modules/STAP/current/guard_tap.ini",
-        "/opt/guardium/modules/STAP/current/guard-config-update --restart STAP"
-    ])
+    # print("\n Configure STAP to support OUA monitoring")
+    # run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"), commands=[
+    #     "sed -i 's|^sqlc_properties_dir=.*|sqlc_properties_dir=/usr/lib/oracle/21/client64/lib/network/admin|' /opt/guardium/modules/STAP/current/guard_tap.ini",
+    #     "sed -i 's|^ld_library_paths=.*|ld_library_paths=/usr/lib/oracle/21/client64/lib|' /opt/guardium/modules/STAP/current/guard_tap.ini",
+    #     "/opt/guardium/modules/STAP/current/guard-config-update --restart STAP"
+    # ])
     
+    print("\n Add oracle user credentials to get access to OUA records")
+    api.store_sql_credentials(password=get_env_value("DEFAULT_SERVICE_PASSWORD"), username="guardium", stap_host='10.10.9.60')
 
     
 def lab11_oracle(state):

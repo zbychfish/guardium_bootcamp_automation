@@ -834,11 +834,138 @@ class GuardiumRestAPI:
             data['unixSocketMarker'] = unix_socket_marker
         if api_target_host:
             data['api_target_host'] = api_target_host
+        response = requests.post(url, json=data, headers=headers, verify=self.verify_ssl)
+        response.raise_for_status()
+        
+        return response.json()
+    
+    def create_sql_configuration(
+        self,
+        b_type: str,
+        instance: str,
+        stap_host: str,
+        username: str,
+        data_pull_interval: Optional[str] = None,
+        data_pull_rows: Optional[str] = None,
+        timeout: Optional[str] = None,
+        user_role: Optional[str] = None,
+        api_target_host: Optional[str] = None
+    ) -> dict:
+        """
+        Tworzy konfigurację SQL dla Oracle w Guardium.
+        
+        Args:
+            b_type: Typ monitorowanego repozytorium danych (wymagane)
+                   Prawidłowa wartość: "Oracle"
+            instance: Identyfikator połączenia w tnsnames.ora używany do połączenia z bazą danych (wymagane)
+            stap_host: Hostname S-TAP (wymagane)
+                      Aby uzyskać prawidłowe wartości, wywołaj create_sql_configuration z --help=true
+            username: Nazwa użytkownika do logowania do Oracle DB (wymagane)
+            data_pull_interval: Czas w sekundach między próbami pobrania danych z bazy danych (opcjonalne)
+                               Domyślnie: 30
+            data_pull_rows: Liczba wierszy danych audytowych do pobrania w jednym przebiegu (opcjonalne)
+                           Domyślnie: 100
+            timeout: Czas w sekundach na odpowiedź bazy danych (opcjonalne)
+                    Domyślnie: 300000
+            user_role: Rola do logowania do Oracle DB (opcjonalne)
+                      Prawidłowe wartości: "sysdba", "sysoper"
+                      Domyślnie: ""
+            api_target_host: Docelowy host dla API (opcjonalne)
+        
+        Returns:
+            Słownik z odpowiedzią API
+        
+        Raises:
+            RuntimeError: Jeśli token nie został jeszcze pobrany
+            requests.exceptions.RequestException: W przypadku błędu HTTP
+        
+        Example:
+            api.create_sql_configuration(
+                b_type="Oracle",
+                instance="ORCLPDB1",
+                stap_host="10.10.9.60",
+                username="secadmin",
+                data_pull_interval="30",
+                data_pull_rows="100",
+                user_role="sysdba"
+            )
+        """
+        url = f'{self.base_url}/restAPI/create_sql_configuration'
+        headers = self.get_headers()
+        
+        data: dict[str, Any] = {
+            'bType': b_type,
+            'instance': instance,
+            'stapHost': stap_host,
+            'username': username
+        }
+        
+        # Dodaj opcjonalne parametry
+        if data_pull_interval:
+            data['dataPullInterval'] = data_pull_interval
+        if data_pull_rows:
+            data['dataPullRows'] = data_pull_rows
+        if timeout:
+            data['timeout'] = timeout
+        if user_role:
+            data['userRole'] = user_role
+        if api_target_host:
+            data['api_target_host'] = api_target_host
         
         response = requests.post(url, json=data, headers=headers, verify=self.verify_ssl)
         response.raise_for_status()
         
         return response.json()
+    
+    def store_sql_credentials(
+        self,
+        password: str,
+        stap_host: str,
+        username: str,
+        api_target_host: Optional[str] = None
+    ) -> dict:
+        """
+        Przechowuje dane uwierzytelniające SQL dla Oracle w Guardium.
+        
+        Args:
+            password: Hasło do logowania do Oracle DB (wymagane)
+            stap_host: Hostname S-TAP, który łączy się z tą instancją Oracle DB (wymagane)
+                      Aby uzyskać prawidłowe wartości, wywołaj store_sql_credentials z --help=true
+            username: Nazwa użytkownika do logowania do Oracle DB (wymagane)
+            api_target_host: Docelowy host dla API (opcjonalne)
+        
+        Returns:
+            Słownik z odpowiedzią API
+        
+        Raises:
+            RuntimeError: Jeśli token nie został jeszcze pobrany
+            requests.exceptions.RequestException: W przypadku błędu HTTP
+        
+        Example:
+            api.store_sql_credentials(
+                password="SecurePassword123!",
+                stap_host="10.10.9.60",
+                username="secadmin"
+            )
+        """
+        url = f'{self.base_url}/restAPI/store_sql_credentials'
+        headers = self.get_headers()
+        
+        data: dict[str, Any] = {
+            'password': password,
+            'stapHost': stap_host,
+            'username': username
+        }
+        
+        # Dodaj opcjonalny parametr
+        if api_target_host:
+            data['api_target_host'] = api_target_host
+        
+        response = requests.post(url, json=data, headers=headers, verify=self.verify_ssl)
+        response.raise_for_status()
+        
+        return response.json()
+
 
 
 
