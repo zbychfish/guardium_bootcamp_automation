@@ -1827,11 +1827,11 @@ def t_install_stap_on_hana(api):
     #     "/opt/guardium/modules/STAP/current/guard-config-update --restart STAP"
     # ])
     
-    # print("\n Add oracle user credentials to get access to OUA records")
-    # api.store_sql_credentials(password=get_env_value("DEFAULT_SERVICE_PASSWORD"), username="guardium", stap_host='10.10.9.60', api_target_host='10.10.9.239')
+    print("\n Add oracle user credentials to get access to OUA records")
+    print(api.store_sql_credentials(password=get_env_value("DEFAULT_SERVICE_PASSWORD"), username="guardium", stap_host='10.10.9.60', api_target_host='10.10.9.239'))
 
-    print("\n Adding OUA configuration")
-    print(api.create_sql_configuration(db_type="Oracle", instance="ORCLPDB1", stap_host='10.10.9.60', username='guardium', api_target_host='10.10.9.239'))
+    # print("\n Adding OUA configuration")
+    # print(api.create_sql_configuration(db_type="Oracle", instance="ORCLPDB1", stap_host='10.10.9.60', username='guardium', api_target_host='10.10.9.239'))
     exit(0)
 
 def lab11_oracle(state):
