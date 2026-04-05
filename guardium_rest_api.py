@@ -841,7 +841,7 @@ class GuardiumRestAPI:
     
     def create_sql_configuration(
         self,
-        b_type: str,
+        db_type: str,
         instance: str,
         stap_host: str,
         username: str,
@@ -894,7 +894,7 @@ class GuardiumRestAPI:
         headers = self.get_headers()
         
         data: dict[str, Any] = {
-            'bType': b_type,
+            'dbType': db_type,
             'instance': instance,
             'stapHost': stap_host,
             'username': username
