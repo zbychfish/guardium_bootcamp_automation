@@ -1796,7 +1796,7 @@ def t_install_stap_on_hana(api):
     # ])
     # print("\n Install STAP on hana")
     # time.sleep(60)
-    # token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
+    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
     # api.gim_client_assign(
     #     client_ip="10.10.9.60",
     #     module="BUNDLE-STAP",
@@ -1828,7 +1828,7 @@ def t_install_stap_on_hana(api):
     # ])
     
     print("\n Add oracle user credentials to get access to OUA records")
-    api.store_sql_credentials(password=get_env_value("DEFAULT_SERVICE_PASSWORD"), username="guardium", stap_host='10.10.9.60')
+    api.store_sql_credentials(password=get_env_value("DEFAULT_SERVICE_PASSWORD"), username="guardium", stap_host='10.10.9.60', api_target_host='10.10.9.239')
 
     
 def lab11_oracle(state):
