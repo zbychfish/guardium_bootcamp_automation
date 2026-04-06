@@ -8,8 +8,6 @@ import os
 import requests
 from typing import Optional, Any
 from dotenv import load_dotenv
-
-# Wyłącz ostrzeżenia o niezweryfikowanych certyfikatach SSL
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
