@@ -1848,7 +1848,7 @@ def t_policy_report_1(api):
     # cur.close()
     # conn.close()
     # print("\n Enable DBF features on raptor")
-    # token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
+    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
 
     # api.gim_client_params(
     #     client_ip="10.10.9.70",
@@ -1866,9 +1866,12 @@ def t_policy_report_1(api):
     # )
     # print("\n STAP reconfiguration monitoring")
     # monitor_gim_module_installation(api, "10.10.9.70")
-    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
-    print("\n Import blocking policy")
-    result = api.import_definitions('guardium_definition_files/exp_policy_log_everything_with_blocking.sql')
+
+    # print("\n Import blocking policy")
+    # result = api.import_definitions('guardium_definition_files/exp_policy_log_everything_with_blocking.sql')
+    print("\n Install blocking Policy")
+    result = api.install_policy("Blocking Policy (Policies and Reports I)|raptor FAM policy", api_target_host="10.10.9.239")
+    
     exit(0)
 
 def lab12_policy_report1(state):
