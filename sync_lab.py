@@ -1879,7 +1879,7 @@ def t_policy_report_1(api):
     # sprawdzic czy zmiany w engine core widoczne jak nie to albo restart appliance albo restart inspection-core
 
 def t_va_api(api):
-
+    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
     print("\n Setup new dashboard - VA")
     result = api.import_definitions('guardium_definition_files/exp_dashboard_va.sql')
     print(result)
