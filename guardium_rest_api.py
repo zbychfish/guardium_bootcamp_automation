@@ -1057,7 +1057,8 @@ class GuardiumRestAPI:
         self,
         expiration_days: int = 100,
         hostname: str = "*.guard.swg.usma.ibm.com",
-        overwrite: bool = False
+        overwrite: bool = False,
+        api_target_host: Optional[str] = None
     ) -> dict:
         """
         Generuje klucz SSL dla Universal Connector.
@@ -1068,6 +1069,7 @@ class GuardiumRestAPI:
             overwrite: Czy nadpisać istniejący klucz i certyfikat (domyślnie False)
                       False (0): nie nadpisuj
                       True (1): nadpisz
+            api_target_host: Opcjonalny docelowy host API (domyślnie None)
         
         Returns:
             Słownik z odpowiedzią API
@@ -1084,6 +1086,9 @@ class GuardiumRestAPI:
             'hostname': hostname,
             'overwrite': 1 if overwrite else 0
         }
+        
+        if api_target_host is not None:
+            data['api_target_host'] = api_target_host
         
         response = requests.post(url, json=data, headers=headers, verify=self.verify_ssl)
         response.raise_for_status()

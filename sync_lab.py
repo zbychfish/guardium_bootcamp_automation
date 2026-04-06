@@ -1916,7 +1916,8 @@ def t_setup_filebeat(api):
     cert = api.generate_ssl_key_universal_connector(
         expiration_days=3650,
         hostname="*.gdemo.com",
-        overwrite=True
+        overwrite=True,
+        api_target_host='10.10.9.239',
     )
     print(cert)
     result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"),
@@ -1938,7 +1939,7 @@ def lab6_uc1(state):
 
     """
     api = GuardiumRestAPI(
-        base_url='https://10.10.9.219:8443/',
+        base_url='https://10.10.9.239:8443/',
         client_id='BOOTCAMP'
     )
     
