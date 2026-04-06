@@ -69,7 +69,7 @@ def get_postgres_conn(
 
 
 def run_sql_postgres(
-    conn: psycopg2.extensions.connection,
+    cur: psycopg2.extensions.cursor,
     sql: str,
     params: Optional[Tuple | Dict[str, Any]] = None,
     fetch: bool = False
@@ -81,13 +81,11 @@ def run_sql_postgres(
     - fetch=False -> commit (INSERT/UPDATE/DELETE/DDL)
     """
 
-    with conn.cursor() as cursor:
+    with cur as cursor:
         cursor.execute(sql, params)
 
         if fetch:
             # iterator – lazy fetch
             return cursor
-
-        conn.commit()
         return None
 
