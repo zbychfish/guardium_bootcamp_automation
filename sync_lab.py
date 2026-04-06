@@ -120,19 +120,16 @@ def wait_for_appliance(appliance_name: str, max_attempts: int = 40, interval: in
 STATE_FILE = "sync_lab_state.json"
 
 def t_password_change_on_appliances():
-    print("Password change for cli user on appliances")
     current_appliances = appliances.copy()
     del current_appliances['collector']
     for name, cfg in current_appliances.items():
-        print(f"Changing password on {name} ({cfg['host']})")
+        print(f"  ➜ Changing password on {name} ({cfg['host']})")
         ok = change_password_as_root(
             host=cfg["host"],
             root_password=get_env_value("ROOT_PASSWORD"),
             target_user="cli",
             new_password=get_env_value("COLLECTOR_PASSWORD")
         )
-        # print("    ✓ OK" if ok else "    ✗ FAILED")
-    return None
 
 def t_initial_collector_settings(appliance):
     print("Connect to collector and get network settings")
