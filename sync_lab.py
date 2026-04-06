@@ -1891,23 +1891,23 @@ def t_va_api(api):
         )
 
 def t_setup_cassandra(api):
-    # scp_file_as_root(host='10.10.9.60', root_password=get_env_value("HANA_PASSWORD"), local_path="guardium_configuration_files/cassandra.repo", remote_path="/etc/yum.repos.d/cassandra.repo")
-    # scp_file_as_root(host='10.10.9.60', root_password=get_env_value("HANA_PASSWORD"), local_path="guardium_configuration_files/cassandra_table.cql", remote_path="/root")
-    # result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"),
-    # commands=[
-        # "dnf -y install java-11-openjdk",
-        # "dnf -y install cassandra",
-        # r"sed -i '/^audit_logging_options:/,/^[[:space:]]*- class_name:/c\audit_logging_options:\n  enabled: true\n  logger:\n    - class_name: FileAuditLogger' /etc/cassandra/conf/cassandra.yaml",
-        # "sed -i '/<!-- <appender name=\"AUDIT\"/,/SizeAndTimeBasedRollingPolicy/ { s/<!-- //; s/ -->// }' /etc/cassandra/conf/logback.xml",
-        # "sed -i 's|<!-- *<fileNamePattern>\\(.*\\)</fileNamePattern> *-->|<fileNamePattern>\1</fileNamePattern>|' /etc/cassandra/conf/logback.xml",
-        # "sed -i '/<!-- *<maxFileSize>/,/<\\/appender> *-->/ { s/<!-- //; s/ -->// }' /etc/cassandra/conf/logback.xml",
-        # "sed -i '/<!-- *<logger name=\"org.apache.cassandra.audit\"/,/<\\/logger> *-->/ { s/<!-- //; s/ -->// }' /etc/cassandra/conf/logback.xml",
-        # "sed -i 's|^10\\.10\\.9\\.239[[:space:]]\\+yourcollectorname\\.gdemo\\.com[[:space:]]\\+yourcollectorname$|10.10.9.239     coll1.gdemo.com coll1|' /etc/hosts"
-        # "service cassandra start",
-        # "service cassandra start",
-        # "dnf -qy install python3-pip",
-        # "pip install --user cqlsh"
-    # ])
+    scp_file_as_root(host='10.10.9.60', root_password=get_env_value("HANA_PASSWORD"), local_path="guardium_configuration_files/cassandra.repo", remote_path="/etc/yum.repos.d/cassandra.repo")
+    scp_file_as_root(host='10.10.9.60', root_password=get_env_value("HANA_PASSWORD"), local_path="guardium_configuration_files/cassandra_table.cql", remote_path="/root")
+    result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"),
+    commands=[
+        "dnf -y install java-11-openjdk",
+        "dnf -y install cassandra",
+        r"sed -i '/^audit_logging_options:/,/^[[:space:]]*- class_name:/c\audit_logging_options:\n  enabled: true\n  logger:\n    - class_name: FileAuditLogger' /etc/cassandra/conf/cassandra.yaml",
+        "sed -i '/<!-- <appender name=\"AUDIT\"/,/SizeAndTimeBasedRollingPolicy/ { s/<!-- //; s/ -->// }' /etc/cassandra/conf/logback.xml",
+        "sed -i 's|<!-- *<fileNamePattern>\\(.*\\)</fileNamePattern> *-->|<fileNamePattern>\1</fileNamePattern>|' /etc/cassandra/conf/logback.xml",
+        "sed -i '/<!-- *<maxFileSize>/,/<\\/appender> *-->/ { s/<!-- //; s/ -->// }' /etc/cassandra/conf/logback.xml",
+        "sed -i '/<!-- *<logger name=\"org.apache.cassandra.audit\"/,/<\\/logger> *-->/ { s/<!-- //; s/ -->// }' /etc/cassandra/conf/logback.xml",
+        "sed -i 's|^10\\.10\\.9\\.239[[:space:]]\\+yourcollectorname\\.gdemo\\.com[[:space:]]\\+yourcollectorname$|10.10.9.239     coll1.gdemo.com coll1|' /etc/hosts"
+        "service cassandra start",
+        "service cassandra start",
+        "dnf -qy install python3-pip",
+        "pip install --user cqlsh"
+    ])
     time.sleep(30)
 
 
