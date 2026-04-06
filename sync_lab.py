@@ -118,6 +118,7 @@ def wait_for_appliance(appliance_name: str, max_attempts: int = 40, interval: in
 
 # State file path
 STATE_FILE = "sync_lab_state.json"
+
 def t_password_change_on_appliances():
     print("\nPassword change for cli user on appliances")
     current_appliances = appliances.copy()
@@ -130,7 +131,7 @@ def t_password_change_on_appliances():
             target_user="cli",
             new_password=get_env_value("COLLECTOR_PASSWORD")
         )
-        print("    ✓ OK" if ok else "    ✗ FAILED")
+        # print("    ✓ OK" if ok else "    ✗ FAILED")
     return None
 
 def t_initial_collector_settings(appliance):
@@ -1834,20 +1835,17 @@ def lab2_gim(state):
 
 def lab1_appliance_setup(state):
     """
-    LAB 1 - Konfiguracja appliance (collector).
+    LAB 1 - Appliance configuration (collector).
     """
     
-    run_task('cli_users_password_change_on_appliances', lambda: t_password_change_on_appliances, state, STATE_FILE)
+    run_task('Password change for cli users on appliances', lambda: t_password_change_on_appliances(), state, STATE_FILE)
+    exit(0)
     if 'other_collector_settings' not in state["completed_tasks"]:
         appliance = create_appliance('collector_unconfigured')
-        if not appliance.connect():
-            print("  ✗ Failed to connect to collector")
-            return None
-        else:
-            print("    ✓ Connected to collector - OK")
-    
-    run_task('initial_collector_settings', lambda: t_initial_collector_settings(appliance), state, STATE_FILE)
-    run_task('restart_collector', lambda: t_restart_system(appliance), state, STATE_FILE)
+
+    run_task('Initial collector setup', lambda: t_initial_collector_settings(appliance), state, STATE_FILE)
+
+    run_task('Collector restart', lambda: t_restart_system(appliance), state, STATE_FILE)
 
     appliance = None
     if 'other_collector_settings' not in state["completed_tasks"]:
