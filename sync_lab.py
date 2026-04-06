@@ -1839,43 +1839,44 @@ def t_install_stap_on_hana(api):
 
 def t_policy_report_1(api):
     print("\n Create sensitive table for lab")
-    # conn = get_postgres_conn(host='10.10.9.70', port=5432, dbname='postgres', user='jerry', password=f'{get_env_value("DEFAULT_SERVICE_PASSWORD")}')
-    # conn.autocommit = True
-    # cur = conn.cursor()
-    # cur.execute("CREATE TABLE customers (first_name VARCHAR(50),last_name VARCHAR(50),email_address VARCHAR(100),credit_card_number VARCHAR(20))")
-    # cur.execute("INSERT INTO customers VALUES ('John', 'Smith', 'john.smith@example.com', '4111 1111 1111 1111'),('Jane', 'Doe', 'jane.doe@example.com', '5500 0000 0000 0004'),('Alice', 'Johnson', 'alice.j@example.com', '3400 0000 0000 009'),('Bob', 'Brown', 'bob.brown@example.com', '6011 0000 0000 0004'),('Carol', 'Davis', 'carol.d@example.com', '4111 1111 1111 1234'),('David', 'Wilson', 'david.w@example.com', '5500 0000 0000 5678'),('Emma', 'Taylor', 'emma.t@example.com', '3400 0000 0000 4321'),('Frank', 'Miller', 'frank.m@example.com', '6011 0000 0000 8765'),('Grace', 'Lee', 'grace.l@example.com', '4111 1111 1111 9999'),('Henry', 'Clark', 'henry.c@example.com', '5500 0000 0000 8888')")
-    # cur.execute("GRANT SELECT ON customers TO PUBLIC")
-    # cur.close()
-    # conn.close()
-    # print("\n Enable DBF features on raptor")
+    conn = get_postgres_conn(host='10.10.9.70', port=5432, dbname='postgres', user='jerry', password=f'{get_env_value("DEFAULT_SERVICE_PASSWORD")}')
+    conn.autocommit = True
+    cur = conn.cursor()
+    cur.execute("CREATE TABLE customers (first_name VARCHAR(50),last_name VARCHAR(50),email_address VARCHAR(100),credit_card_number VARCHAR(20))")
+    cur.execute("INSERT INTO customers VALUES ('John', 'Smith', 'john.smith@example.com', '4111 1111 1111 1111'),('Jane', 'Doe', 'jane.doe@example.com', '5500 0000 0000 0004'),('Alice', 'Johnson', 'alice.j@example.com', '3400 0000 0000 009'),('Bob', 'Brown', 'bob.brown@example.com', '6011 0000 0000 0004'),('Carol', 'Davis', 'carol.d@example.com', '4111 1111 1111 1234'),('David', 'Wilson', 'david.w@example.com', '5500 0000 0000 5678'),('Emma', 'Taylor', 'emma.t@example.com', '3400 0000 0000 4321'),('Frank', 'Miller', 'frank.m@example.com', '6011 0000 0000 8765'),('Grace', 'Lee', 'grace.l@example.com', '4111 1111 1111 9999'),('Henry', 'Clark', 'henry.c@example.com', '5500 0000 0000 8888')")
+    cur.execute("GRANT SELECT ON customers TO PUBLIC")
+    cur.close()
+    conn.close()
+    print("\n Enable DBF features on raptor")
+
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
+    api.gim_client_params(
+        client_ip="10.10.9.70",
+        param_name="STAP_FIREWALL_INSTALLED",
+        param_value="1"
+    )
+    api.gim_client_params(
+        client_ip="10.10.9.70",
+        param_name="STAP_FIREWALL_DEFAULT_STATE",
+        param_value="1"
+    )
+    api.gim_schedule_install(
+        client_ip="10.10.9.70",
+        date="now",
+    )
+    print("\n STAP reconfiguration monitoring")
+    monitor_gim_module_installation(api, "10.10.9.70")
 
-    # api.gim_client_params(
-    #     client_ip="10.10.9.70",
-    #     param_name="STAP_FIREWALL_INSTALLED",
-    #     param_value="1"
-    # )
-    # api.gim_client_params(
-    #     client_ip="10.10.9.70",
-    #     param_name="STAP_FIREWALL_DEFAULT_STATE",
-    #     param_value="1"
-    # )
-    # api.gim_schedule_install(
-    #     client_ip="10.10.9.70",
-    #     date="now",
-    # )
-    # print("\n STAP reconfiguration monitoring")
-    # monitor_gim_module_installation(api, "10.10.9.70")
-
-    # print("\n Import blocking policy")
-    # result = api.import_definitions('guardium_definition_files/exp_policy_log_everything_with_blocking.sql')
-    # print("\n Install blocking Policy")
-    # result = api.install_policy("Blocking Policy (Policies and Reports I)|raptor FAM policy", api_target_host="10.10.9.239")
-    # print("\n Setup new dashboard - Policies and Reports I")
-    # result = api.import_definitions('guardium_definition_files/exp_dashboard_policies_and_reports_I.sql')
+    print("\n Import blocking policy")
+    result = api.import_definitions('guardium_definition_files/exp_policy_log_everything_with_blocking.sql')
+    print("\n Install blocking Policy")
+    result = api.install_policy("Blocking Policy (Policies and Reports I)|raptor FAM policy", api_target_host="10.10.9.239")
+    print("\n Setup new dashboard - Policies and Reports I")
+    result = api.import_definitions('guardium_definition_files/exp_dashboard_policies_and_reports_I.sql')
     print("\n Configure parsing engine")
     result = api.engine_config(compute_average=True, inspect_data=True, log_records=True, record_empty=True, api_target_host="10.10.9.239")
-    print(result)
+    # print(result)
+    # sprawdzic czy zmiany w engine core widoczne jak nie to albo restart appliance albo restart inspection-core
 
 
 def lab12_policy_report1(state):
