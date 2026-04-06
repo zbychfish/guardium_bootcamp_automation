@@ -268,21 +268,17 @@ def t_initial_cm_settings():
 
     print("  ➜ Set resolving for coll1.gdemo.com")
     appliance.execute_command(f"support store hosts 10.10.9.239 coll1.gdemo.com")
-    print("10.10.9.239 coll1.gdemo.com")
     appliance.disconnect()
 
 def t_create_demo_user(api):
-    print("\nCreate demo user")
     token = api.get_token(username='accessmgr', password=get_env_value('ACCESSMGR_PASSWORD'))
     users = api.get_users()
-    print("  Current users:")
     for u in users:
         status = "DISABLED" if u.get("disabled") == "true" else "ACTIVE"
         print(f"    {u['user_name']:12} | {status}")
-    
     demo_exists = any(u.get('user_name') == 'demo' for u in users)
     if not demo_exists:
-        print("\n  Creating demo user...")
+        print("  ➜ Creating demo user")
         demo_password = get_env_value('DEMOUSER_PASSWORD')
         result = api.create_user(
             username='demo',
@@ -295,18 +291,14 @@ def t_create_demo_user(api):
             disabled=False,
             disable_pwd_expiry=True
         )
-        print(f"  ✓ Demo user created")
-        print("\n  Assigning roles to demo user")    
+        print("  ➜ Assigning roles to demo user")    
         result = api.set_user_roles(username='demo', roles='admin,cli,user,vulnerability-assess')  
-        print(f"  ✓ Roles assigned to demo user")
     else:
-        print("\n  Demo user already exists")
+        print("  ℹ Demo user already exists")
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
     if not demo_exists:
-        print("\n Import Training dashboard for demo user")
+        print("  ➜ Import Training dashboard for demo user")
         result = api.import_definitions('guardium_definition_files/exp_dashboard_training.sql')
-        print(f"  ✓ Dashboard Training added to demo user UI")
-    return None
 
 def t_register_collector(api):  
     print("\nRegister collector to central manager")
@@ -1828,25 +1820,19 @@ def lab1_appliance_setup(state):
     """
     LAB 1 - Appliance configuration (collector).
     """
-    
-    run_task('Password change for cli users on appliances', lambda: t_password_change_on_appliances(), state, STATE_FILE)
-    
-    run_task('Initial collector setup', lambda: t_initial_collector_settings(), state, STATE_FILE)
-
-    run_task('Collector restart', lambda: t_restart_system(), state, STATE_FILE)
-    
-    run_task('Other collector settings', lambda: t_other_collector_settings(), state, STATE_FILE)
-   
-    run_task('Initial CM settings', lambda: t_initial_cm_settings(), state, STATE_FILE)
-    
-    exit(0)
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443',
         client_id='BOOTCAMP'
     )
-    
+    run_task('Password change for cli users on appliances', lambda: t_password_change_on_appliances(), state, STATE_FILE)
+    run_task('Initial collector setup', lambda: t_initial_collector_settings(), state, STATE_FILE)
+    run_task('Collector restart', lambda: t_restart_system(), state, STATE_FILE)
+    run_task('Other collector settings', lambda: t_other_collector_settings(), state, STATE_FILE)
+    run_task('Initial CM settings', lambda: t_initial_cm_settings(), state, STATE_FILE)
     run_task('Create demo user', lambda: t_create_demo_user(api), state, STATE_FILE)
+    exit(0)
     run_task('Register collector', lambda: t_register_collector(api), state, STATE_FILE)
+    
     run_task('Prepare appliances for patching', lambda: t_preparing_appliances_for_patching(api), state, STATE_FILE)
 
     print(f"\nRegister patches on appliances and start patching process")
@@ -1858,8 +1844,6 @@ def lab1_appliance_setup(state):
         run_task(task_number, lambda: t_monitoring_patch_installation(appliance_name), state, STATE_FILE)
 
     run_task('Policy installation on collector', lambda: t_install_policy_on_collector(api), state, STATE_FILE)
-    
-    return None
 
 def sync_lab(state, skip_below: int = 0, stop_at: int = 999):
     """
