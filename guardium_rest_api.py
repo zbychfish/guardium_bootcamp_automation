@@ -11,9 +11,7 @@ from dotenv import load_dotenv
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# Załaduj zmienne środowiskowe
 load_dotenv()
-
 
 class GuardiumRestAPI:
     """Klasa do komunikacji z Guardium przez REST API"""

@@ -5,7 +5,6 @@ import time
 import traceback
 from pathlib import Path
 from typing import Optional, List, Tuple
-
 from playwright.sync_api import sync_playwright, Page, Frame
 
 
