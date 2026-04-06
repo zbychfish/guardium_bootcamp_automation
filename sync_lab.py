@@ -133,7 +133,7 @@ def t_password_change_on_appliances():
 
 def t_initial_collector_settings(appliance):
     print(" ➜ Disabling purge")
-    output = appliance.execute_command("grdapi diable_purge")
+    output = appliance.execute_command("grdapi disable_purge")
     print(" ➜ Set time zone to Europe/Warsaw")
     output = appliance.execute_command("show system clock all")
     timezone = output.strip().splitlines()[-1]
