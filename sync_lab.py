@@ -1869,8 +1869,10 @@ def t_policy_report_1(api):
 
     # print("\n Import blocking policy")
     # result = api.import_definitions('guardium_definition_files/exp_policy_log_everything_with_blocking.sql')
-    print("\n Install blocking Policy")
-    result = api.install_policy("Blocking Policy (Policies and Reports I)|raptor FAM policy", api_target_host="10.10.9.239")
+    # print("\n Install blocking Policy")
+    # result = api.install_policy("Blocking Policy (Policies and Reports I)|raptor FAM policy", api_target_host="10.10.9.239")
+    print("\n Setup new dashboard - Policies and Reports I")
+    result = api.import_definitions('guardium_definition_files/exp_dashboard_policies_and_reports_I.sql')
     print(result)
     
     exit(0)
