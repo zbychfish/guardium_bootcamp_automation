@@ -2181,6 +2181,7 @@ def sync_lab(state, skip_below: int = 0, stop_at: int = 999):
         (10, lab10_fam, "FAM", "FAM"),
         (11, lab11_oracle, "Oracle", "Oracle"),
         (12, lab12_policy_report1, "Policy & Reports I", "Policy & Reports I"),
+        (13, lab13_va_api, "VA API", "VA API"),
     ]
     
     # Iteracja przez wszystkie LAB-y
