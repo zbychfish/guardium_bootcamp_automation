@@ -1,24 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Sync Lab - orkiestracja synchronizacji środowiska laboratoryjnego
-"""
 
-#from pexpect.FSM import Error
+
 from subprocess import SubprocessError
 import psycopg2
-#from paramiko.proxy import subprocess
 import os
 import re
 import time
 import json
 import paramiko
 from dotenv import load_dotenv
-from appliance_command import ApplianceCommand, change_password_as_root, scp_file_as_root, run_many_commands_remotely
-from manual_web_ui_processing import guardium_customer_upload_import
-from guardium_patch import install_patch
-from windows_management import run_winrm
-from guardium_rest_api import GuardiumRestAPI
 from typing import Any, Dict, List, Optional
 import urllib.request
 import sys
@@ -29,49 +20,102 @@ from pathlib import Path
 import subprocess
 from packaging.version import Version
 import pwd
+
+from appliance_command import ApplianceCommand, change_password_as_root, scp_file_as_root, run_many_commands_remotely
+from manual_web_ui_processing import guardium_customer_upload_import
+from guardium_patch import install_patch
+from windows_management import run_winrm
+from guardium_rest_api import GuardiumRestAPI
 from databases import get_oracle_conn, get_postgres_conn, run_sql_oracle, run_sql_postgres
 
 
-# Sprawdź czy plik .env istnieje
+# Check .env file existence
 env_file_path = os.path.join(os.path.dirname(__file__), '.env')
 if not os.path.exists(env_file_path):
     print("=" * 60)
-    print("ERROR: Plik .env nie został znaleziony!")
+    print("ERROR: Configuration file .env not found!")
     print("=" * 60)
-    print("\nUtwórz plik .env na podstawie .env.example:")
-    print(f"1. Skopiuj plik .env.example do .env")
-    print(f"2. Uzupełnij hasła w pliku .env")
-    print(f"\nLokalizacja: {env_file_path}")
+    print("\nCreate .env base on .env.example:")
+    print(f"1. Copy .env.example to .env")
+    print(f"2. Fill up required values in .env")
     print("=" * 60)
-    import sys
     sys.exit(1)
 
-# Załaduj zmienne środowiskowe z pliku .env
+# Load envrionment variables from .env
 load_dotenv()
 
+# functions
 def get_env_value(key: str) -> str:
-    """Pobiera wartość ze zmiennych środowiskowych"""
+    """return the value of the environment variable specified by the key argument"""
     value = os.getenv(key)
     if not value:
-        raise ValueError(f"Wartość dla {key} nie została znaleziona w pliku .env")
+        raise ValueError(f"Values for {key} not found in .env")
     return value
+
+common_config = {
+    'user': 'cli',
+    'initial_pattern': 'Last login',
+    'timeout': 120
+}
+
+appliances = {
+    'collector': {
+        'host': '10.10.9.239',
+        'prompt_regex': r'coll1\.gdemo\.com>',
+        'password': get_env_value('COLLECTOR_PASSWORD')
+    },
+    'collector_unconfigured': {
+        'host': '10.10.9.239',
+        'prompt_regex': r'guard\.yourcompany\.com>',
+        'password': get_env_value('COLLECTOR_PASSWORD'),
+        'initial_pattern': None  # Wyłącz initial_pattern dla unconfigured collector
+    },
+    'cm': {
+        'host': '10.10.9.219',
+        'prompt_regex': r'cm\.gdemo\.com>',
+        'password': get_env_value('CM_PASSWORD')
+    },
+    'toolnode': {
+        'host': '10.10.9.229',
+        'prompt_regex': r'toolnode\.gdemo\.com>',
+        'password': get_env_value('TOOLNODE_PASSWORD')
+    }
+}
+
+managed_machines: dict[str, dict[str, str]] = {
+    'raptor': {
+        'host': '10.10.9.70',
+        'prompt_regex': r'raptor\.gdemo\.com>',
+        'password': get_env_value('RAPTOR_PASSWORD')
+    },
+    'hana': {
+        'host': '10.10.9.60',
+        'prompt_regex': r'hana\.gdemo\.com>',
+        'password': get_env_value('HANA_PASSWORD')
+    },
+    'winsql': {
+        'host': '10.10.9.59',
+        'prompt_regex': r'winsql\.gdemo\.com>',
+        'password': get_env_value('WINSQL_PASSWORD')
+    },
+    'appnode': {
+        'host': '10.10.9.50',
+        'prompt_regex': r'appnode\.gdemo\.com>',
+        'password': get_env_value('APPNODE_PASSWORD')
+    }
+}
 
 def save_to_env(key: str, value: str, env_file: str = ".env") -> bool:
     """
-    Zapisuje lub aktualizuje zmienną w pliku .env
+    Saves value for key in .env file
     
     Args:
-        key: Nazwa zmiennej
-        value: Wartość zmiennej
-        env_file: Ścieżka do pliku .env
-    
-    Returns:
-        True jeśli sukces, False w przypadku błędu
+        key: variable name
+        value: variable value
+        env_file: path to .env
     """
     try:
         env_path = os.path.join(os.path.dirname(__file__), env_file)
-        
-        # Wczytaj istniejące linie
         lines = []
         key_found = False
         
@@ -79,24 +123,20 @@ def save_to_env(key: str, value: str, env_file: str = ".env") -> bool:
             with open(env_path, 'r', encoding='utf-8') as f:
                 lines = f.readlines()
             
-            # Zaktualizuj istniejący klucz lub oznacz że nie znaleziono
             for i, line in enumerate(lines):
                 if line.strip().startswith(f"{key}="):
                     lines[i] = f"{key}={value}\n"
                     key_found = True
                     break
         
-        # Jeśli klucz nie istnieje, dodaj na końcu
         if not key_found:
             if lines and not lines[-1].endswith('\n'):
                 lines.append('\n')
             lines.append(f"{key}={value}\n")
         
-        # Zapisz plik
         with open(env_path, 'w', encoding='utf-8') as f:
             f.writelines(lines)
         
-        # Zaktualizuj zmienną środowiskową w bieżącej sesji
         os.environ[key] = value
         
         return True
@@ -167,59 +207,6 @@ def run_as_user(argv, user, *, check=True, **kwargs):
         preexec_fn=demote,
         **kwargs
     )
-
-common_config = {
-    'user': 'cli',
-    'initial_pattern': 'Last login',
-    'timeout': 120
-}
-
-appliances = {
-    'collector': {
-        'host': '10.10.9.239',
-        'prompt_regex': r'coll1\.gdemo\.com>',
-        'password': get_env_value('COLLECTOR_PASSWORD')
-    },
-    'collector_unconfigured': {
-        'host': '10.10.9.239',
-        'prompt_regex': r'guard\.yourcompany\.com>',
-        'password': get_env_value('COLLECTOR_PASSWORD'),
-        'initial_pattern': None  # Wyłącz initial_pattern dla unconfigured collector
-    },
-    'cm': {
-        'host': '10.10.9.219',
-        'prompt_regex': r'cm\.gdemo\.com>',
-        'password': get_env_value('CM_PASSWORD')
-    },
-    'toolnode': {
-        'host': '10.10.9.229',
-        'prompt_regex': r'toolnode\.gdemo\.com>',
-        'password': get_env_value('TOOLNODE_PASSWORD')
-    }
-}
-
-managed_machines: dict[str, dict[str, str]] = {
-    'raptor': {
-        'host': '10.10.9.70',
-        'prompt_regex': r'raptor\.gdemo\.com>',
-        'password': get_env_value('RAPTOR_PASSWORD')
-    },
-    'hana': {
-        'host': '10.10.9.60',
-        'prompt_regex': r'hana\.gdemo\.com>',
-        'password': get_env_value('HANA_PASSWORD')
-    },
-    'winsql': {
-        'host': '10.10.9.59',
-        'prompt_regex': r'winsql\.gdemo\.com>',
-        'password': get_env_value('WINSQL_PASSWORD')
-    },
-    'appnode': {
-        'host': '10.10.9.50',
-        'prompt_regex': r'appnode\.gdemo\.com>',
-        'password': get_env_value('APPNODE_PASSWORD')
-    }
-}
 
 def create_appliance(appliance_name: str) -> ApplianceCommand:
     """Tworzy instancję ApplianceCommand dla danego appliance"""
@@ -1903,6 +1890,16 @@ def t_va_api(api):
             check=True
         )
 
+def t_setup_cassandra(api):
+    scp_file_as_root(host='10.10.9.60', root_password=get_env_value("HANA_PASSWORD"), local_path="guardium_configuration_files/cassandra.repo", remote_path="/etc/yum.repos.d/cassandra.repo")
+    
+    result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"),
+    commands=[
+        "dnf -y install java-11-openjdk",
+        "dnf -y install cassandra",
+    ])
+    exit(0)
+
 def lab6_uc1(state):
     """
     LAB 6 - UC 1.0
@@ -1913,7 +1910,7 @@ def lab6_uc1(state):
         client_id='BOOTCAMP'
     )
     
-    run_task('Setup environment for VA API lab', lambda: t_va_api(api), state)
+    run_task('Deploy cassanda on hana', lambda: t_setup_cassandra(api), state)
 
 def lab13_va_api(state):
     """
