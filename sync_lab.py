@@ -21,12 +21,21 @@ import subprocess
 from packaging.version import Version
 import pwd
 
-from appliance_command import ApplianceCommand, change_password_as_root, scp_file_as_root, run_many_commands_remotely
+from appliance_command import ApplianceCommand
 from manual_web_ui_processing import guardium_customer_upload_import
 from guardium_patch import install_patch
 from windows_management import run_winrm
 from guardium_rest_api import GuardiumRestAPI
-from databases import get_oracle_conn, get_postgres_conn, run_sql_oracle, run_sql_postgres
+from utils import (
+    get_env_value, save_to_env, parse_unit_summary, run_as_user,
+    to_valid_json, parse_mus_from_message_dict,
+    parse_patch_list, get_patch_line_numbers, load_state, save_state,
+    run_task, monitor_gim_module_installation, change_password_as_root,
+    scp_file_as_root, run_many_commands_remotely, get_oracle_conn,
+    get_postgres_conn, run_sql_oracle, run_sql_postgres,
+    create_appliance as utils_create_appliance,
+    wait_for_appliance as utils_wait_for_appliance
+)
 
 
 # Check .env file existence
@@ -41,17 +50,10 @@ if not os.path.exists(env_file_path):
     print("=" * 60)
     sys.exit(1)
 
-# Load envrionment variables from .env
+# Load environment variables from .env
 load_dotenv()
 
-# functions
-def get_env_value(key: str) -> str:
-    """return the value of the environment variable specified by the key argument"""
-    value = os.getenv(key)
-    if not value:
-        raise ValueError(f"Values for {key} not found in .env")
-    return value
-
+# Configuration
 common_config = {
     'user': 'cli',
     'initial_pattern': 'Last login',
@@ -68,7 +70,7 @@ appliances = {
         'host': '10.10.9.239',
         'prompt_regex': r'guard\.yourcompany\.com>',
         'password': get_env_value('COLLECTOR_PASSWORD'),
-        'initial_pattern': None  # Wyłącz initial_pattern dla unconfigured collector
+        'initial_pattern': None  # Disable initial_pattern for unconfigured collector
     },
     'cm': {
         'host': '10.10.9.219',
@@ -105,324 +107,17 @@ managed_machines: dict[str, dict[str, str]] = {
     }
 }
 
-def save_to_env(key: str, value: str, env_file: str = ".env") -> bool:
-    """
-    Saves value for key in .env file
-    
-    Args:
-        key: variable name
-        value: variable value
-        env_file: path to .env
-    """
-    try:
-        env_path = os.path.join(os.path.dirname(__file__), env_file)
-        lines = []
-        key_found = False
-        
-        if os.path.exists(env_path):
-            with open(env_path, 'r', encoding='utf-8') as f:
-                lines = f.readlines()
-            
-            for i, line in enumerate(lines):
-                if line.strip().startswith(f"{key}="):
-                    lines[i] = f"{key}={value}\n"
-                    key_found = True
-                    break
-        
-        if not key_found:
-            if lines and not lines[-1].endswith('\n'):
-                lines.append('\n')
-            lines.append(f"{key}={value}\n")
-        
-        with open(env_path, 'w', encoding='utf-8') as f:
-            f.writelines(lines)
-        
-        os.environ[key] = value
-        
-        return True
-    except Exception as e:
-        print(f"  ✗ Error saving to .env: {e}")
-        return False
-
-def parse_unit_summary(text: str) -> dict:
-    """
-    Ekstrahuje z luźnego tekstu:
-      - host (z 'Unit Host=...'; jeśli brak, użyje pierwszego FQDN w tekście),
-      - ip (z 'IP=...'),
-      - unit_type (z 'Unit Type=...'),
-      - online (z 'Online=true/false' -> bool).
-    Zwraca słownik.
-    """
-    # Bezpiecznie spłaszcz spacje
-    t = re.sub(r"\s+", " ", text.strip())
-
-    def grab(pattern, flags=0, group=1):
-        m = re.search(pattern, t, flags)
-        return m.group(group) if m else None
-
-    # Host: preferuj 'Unit Host=...' ; fallback: pierwszy FQDN na początku linii
-    host = grab(r"\bUnit\s+Host=([A-Za-z0-9._-]+)")
-    if not host:
-        host = grab(r"\b([A-Za-z0-9.-]+\.[A-Za-z]{2,})\b")  # np. coll1.gdemo.com
-
-    # IP (pierwszy po 'IP=')
-    ip = grab(r"\bIP=(\d{1,3}(?:\.\d{1,3}){3})\b")
-
-    # Unit Type
-    unit_type = grab(r"\bUnit\s+Type=([A-Za-z0-9._-]+)")
-
-    # Online (jako bool)
-    online_str = grab(r"\bOnline=(true|false)\b", flags=re.IGNORECASE)
-    online = None
-    if online_str is not None:
-        online = online_str.lower() == "true"
-
-    return {
-        "host": host,
-        "ip": ip,
-        "unit_type": unit_type,
-        "online": online,
-    }
-
-def run_as_user(argv, user, *, check=True, **kwargs):
-    pw = pwd.getpwnam(user)
-    uid, gid = pw.pw_uid, pw.pw_gid
-    home = pw.pw_dir
-
-    def demote():
-        # ustaw grupę i uid procesu dziecka
-        os.setgid(gid)
-        os.setuid(uid)
-        # opcjonalnie: czyść umask / env itp.
-
-    env = dict(os.environ)
-    env["HOME"] = home
-    env["USER"] = user
-    env["LOGNAME"] = user
-
-    return subprocess.run(
-        argv,
-        check=check,
-        env=env,
-        preexec_fn=demote,
-        **kwargs
-    )
-
+# Helper functions to wrap utils functions with local config
 def create_appliance(appliance_name: str) -> ApplianceCommand:
-    """Tworzy instancję ApplianceCommand dla danego appliance"""
-    appliance_config = appliances[appliance_name]
-    
-    # Użyj initial_pattern z appliance_config jeśli istnieje, w przeciwnym razie z common_config
-    initial_pattern = appliance_config.get('initial_pattern', common_config['initial_pattern'])
-    
-    return ApplianceCommand(
-        host=appliance_config['host'],
-        user=common_config['user'],
-        password=appliance_config['password'],
-        prompt_regex=appliance_config['prompt_regex'],
-        initial_pattern=initial_pattern,
-        timeout=common_config['timeout']
-    )
+    """Create ApplianceCommand instance for given appliance"""
+    return utils_create_appliance(appliance_name, appliances, common_config)
 
 def wait_for_appliance(appliance_name: str, max_attempts: int = 40, interval: int = 15) -> ApplianceCommand:
-    """
-    Czeka aż appliance będzie dostępny i nawiąże połączenie.
-    
-    Args:
-        appliance_name: Nazwa appliance z konfiguracji
-        max_attempts: Maksymalna liczba prób połączenia
-        interval: Odstęp między próbami w sekundach
-    
-    Returns:
-        Połączony obiekt ApplianceCommand
-    
-    Raises:
-        RuntimeError: Jeśli nie udało się połączyć po wszystkich próbach
-    """
-    print(f"\n[INFO] Oczekiwanie na dostępność appliance '{appliance_name}'...")
-    
-    for attempt in range(1, max_attempts + 1):
-        print(f"[INFO] Próba połączenia {attempt}/{max_attempts}...")
-        
-        try:
-            appliance = create_appliance(appliance_name)
-            if appliance.connect():
-                print(f"[INFO] ✓ Połączono z '{appliance_name}' po {attempt} próbach")
-                return appliance
-        except Exception as e:
-            print(f"[INFO] ✗ Próba {attempt} nieudana: {e}")
-        
-        if attempt < max_attempts:
-            print(f"[INFO] Oczekiwanie {interval} sekund przed kolejną próbą...")
-            time.sleep(interval)
-    
-    raise RuntimeError(f"Nie udało się połączyć z '{appliance_name}' po {max_attempts} próbach")
+    """Wait until appliance is available and establish connection"""
+    return utils_wait_for_appliance(appliance_name, appliances, common_config, max_attempts, interval)
 
-def to_valid_json(src: str) -> str:
-    s = src
-
-    # a) Cytuj klucze: {hostName: ... , port: ...} -> {"hostName": ..., "port": ...}
-    s = re.sub(r'([{\s,])([A-Za-z_]\w*)\s*:', r'\1"\2":', s)
-
-    # b) Cytuj znane wartości tekstowe (hostName, unitType, guardRelease, ip, lastInstalledPatch)
-    #    Używamy osobnych wzorców, żeby nie ruszać liczb, [] ani {}.
-    def quote_value_for(key: str, text: str) -> str:
-        # dopasuj:  "<key>" : <wartość-niecytowana>  kończąca się na  , ] }
-        pattern = rf'("{key}"\s*:\s*)([^"\s\[\]{{}},][^,\]}}]*)'
-        def repl(m):
-            g1, val = m.group(1), m.group(2).strip()
-            return f'{g1}"{val}"'
-        return re.sub(pattern, repl, text)
-
-    for k in ("hostName", "unitType", "guardRelease", "ip", "lastInstalledPatch"):
-        s = quote_value_for(k, s)
-
-    # c) Ewentualnie usuń podwójne spacje/przecinki z artefaktów
-    s = re.sub(r'\s+', ' ', s)
-    return s
-
-def parse_mus_from_message_dict(dct: Dict[str, Any]) -> List[Dict[str, Any]]:
-    raw = dct.get("Message") or dct.get("message")
-    if not raw:
-        return []
-    fixed = to_valid_json(raw)
-    obj = json.loads(fixed)  # tu może polecieć ValueError, jeśli format jest inny niż zakładany
-    mus = obj.get("mus")
-    if not isinstance(mus, list):
-        return []
-    # W tym miejscu 'mus' to już zwykła lista dictów JSON-owych
-    return mus
-
-def parse_patch_list(output: str) -> dict[int, int]:
-    """
-    Parsuje output z listą patchy i zwraca mapowanie: numer_patcha -> numer_linii.
-    
-    Args:
-        output: Output z komendy 'store system patch install sys' zawierający listę patchy
-    
-    Returns:
-        Słownik mapujący numer patcha na numer linii (1-based), np. {9997: 1, 4015: 2}
-    
-    Example:
-        >>> output = '''Attempting to retrieve the patch information...
-        ... P#      Description                                   Version Md5sum
-        ... 9997    Health Check for GPU and Bundle installation  12.0    de27af692f57b738e50c829a4f1d6800
-        ... 4015    Snif Update (Nov 20 2025)                     12.0    4ff4686f434c68c261ba52933bef1d0d'''
-        >>> parse_patch_list(output)
-        {9997: 1, 4015: 2}
-    """
-    patch_map = {}
-    line_number = 0
-    
-    for line in output.splitlines():
-        # Pomiń puste linie i nagłówki
-        line = line.strip()
-        if not line or line.startswith('Attempting') or line.startswith('P#') or 'Please wait' in line:
-            continue
-        
-        # Sprawdź czy linia zaczyna się od numeru (patch number)
-        parts = line.split(None, 1)  # Split na pierwszej spacji
-        if parts and parts[0].isdigit():
-            patch_number = int(parts[0])
-            line_number += 1
-            patch_map[patch_number] = line_number
-    
-    return patch_map
-
-def get_patch_line_numbers(output: str) -> list[int]:
-    """
-    Zwraca numery linii dla patchy zdefiniowanych w zmiennej środowiskowej PATCH_LIST.
-    
-    Args:
-        output: Output z komendy 'store system patch install sys' zawierający listę patchy
-    
-    Returns:
-        Lista numerów linii (1-based) odpowiadających patchom z PATCH_LIST w kolejności
-    
-    Example:
-        Jeśli PATCH_LIST="9997,4015" w pliku .env:
-        >>> output = '''...
-        ... 9997    Health Check for GPU and Bundle installation  12.0    de27af692f57b738e50c829a4f1d6800
-        ... 4015    Snif Update (Nov 20 2025)                     12.0    4ff4686f434c68c261ba52933bef1d0d'''
-        >>> get_patch_line_numbers(output)
-        [1, 2]
-    """
-    # Pobierz PATCH_LIST ze zmiennych środowiskowych
-    patch_list_str = get_env_value('PATCH_LIST')
-    
-    # Parsuj string na listę intów (np. "9997,4015" -> [9997, 4015])
-    patch_numbers = [int(p.strip()) for p in patch_list_str.split(',') if p.strip()]
-    
-    # Parsuj output i stwórz mapowanie patch_number -> line_number
-    patch_map = parse_patch_list(output)
-    
-    # Konwertuj numery patchy na numery linii w kolejności z PATCH_LIST
-    line_numbers = []
-    for patch_num in patch_numbers:
-        if patch_num in patch_map:
-            line_numbers.append(patch_map[patch_num])
-        else:
-            raise ValueError(f"Patch number {patch_num} not found in output")
-    
-    return line_numbers
-
-def load_state():
-    if not os.path.exists(STATE_FILE):
-        return {"completed_tasks": []}
-    with open(STATE_FILE, "r") as f:
-        return json.load(f)
-
-def save_state(state):
-    with open(STATE_FILE, "w") as f:
-        json.dump(state, f, indent=2)
-
-def run_task(task_id, task_fn, state):
-    if task_id in state["completed_tasks"]:
-        print(f"Skipping {task_id}")
-        return        
-    print(f"Running {task_id}")
-    output = task_fn()
-    state["completed_tasks"].append(task_id)
-    save_state(state)
-    return output
-
-def monitor_gim_module_installation(api, client_ip):
-    pending = ["initial"]  # Inicjalizacja aby wejść do pętli
-    while pending:
-        modules = api.gim_list_client_modules(client_ip=client_ip)
-        msg = modules["Message"]
-
-        entries = [
-            e.strip()
-            for e in re.split(r"#+\s*ENTRY\s+\d+\s*#+", msg)
-            if e.strip()
-        ]
-
-        result = []
-
-        for e in entries:
-            def g(p):
-                m = re.search(p, e)
-                return m.group(1) if m else None
-
-            result.append({
-                "module_id": g(r"MODULE_ID:\s+(-?\d+)"),
-                "name": g(r"NAME:\s+([A-Z0-9\-]+)"),
-                "installed_version": g(r"INSTALLED_VERSION\s+([0-9][^\s]+)"),
-                "scheduled_version": g(r"SCHEDULED_VERSION\s+([0-9][^\s]+)"),
-                "state": g(r"STATE:\s+([A-Z\-]+)"),
-                "is_scheduled": g(r"IS_SCHEDULED:\s+([NY])"),
-                "schedule_time": g(r"IS_SCHEDULED:\s+[NY]\s+\(([^)]+)\)")
-            })
-        
-        pending = [m for m in result if m["state"] != "INSTALLED"]
-        
-        if pending:
-            print("Waiting 30 seconds before next check...")
-            time.sleep(30)
-        else:
-            print("All modules installed successfully!")
-
+# State file path
+STATE_FILE = "sync_lab_state.json"
 def t_password_change_on_appliances():
     print("\nPassword change for cli user on appliances")
     current_appliances = appliances.copy()
@@ -1945,7 +1640,7 @@ def lab13_va_api(state):
         client_id='BOOTCAMP'
     )
     
-    run_task('Setup environment for VA API lab', lambda: t_va_api(api), state)
+    run_task('Setup environment for VA API lab', lambda: t_va_api(api), state, STATE_FILE)
 
 def lab12_policy_report1(state):
     """
@@ -1957,7 +1652,7 @@ def lab12_policy_report1(state):
         client_id='BOOTCAMP'
     )
     
-    run_task('Setup environment for policies and report lab', lambda: t_policy_report_1(api), state)
+    run_task('Setup environment for policies and report lab', lambda: t_policy_report_1(api), state, STATE_FILE)
 
 def lab11_oracle(state):
     """
@@ -1968,25 +1663,25 @@ def lab11_oracle(state):
         client_id='BOOTCAMP'
     )
     
-    run_task('Configure system for oracle lab', lambda: t_configure_env_for_oracle(api), state)
+    run_task('Configure system for oracle lab', lambda: t_configure_env_for_oracle(api), state, STATE_FILE)
 
-    run_task('Configure SSL support for oracle on raptor', lambda: t_setup_SSL_for_oracle(), state)
+    run_task('Configure SSL support for oracle on raptor', lambda: t_setup_SSL_for_oracle(), state, STATE_FILE)
 
-    run_task('Configure ATAP for oracle on raptor', lambda: t_setup_ATAP_for_oracle(), state)
+    run_task('Configure ATAP for oracle on raptor', lambda: t_setup_ATAP_for_oracle(), state, STATE_FILE)
 
-    run_task('Deploy Oracle in container on hana', lambda: t_deploy_oracle_in_container_on_hana(), state)
+    run_task('Deploy Oracle in container on hana', lambda: t_deploy_oracle_in_container_on_hana(), state, STATE_FILE)
 
-    run_task('Create CSR for ETAP for oracle in container', lambda: t_create_oracle_csr_for_etap(), state)
+    run_task('Create CSR for ETAP for oracle in container', lambda: t_create_oracle_csr_for_etap(), state, STATE_FILE)
 
-    run_task('Import ETAP for oracle in container certificate', lambda: t_import_oracle_etap_cert(), state)
+    run_task('Import ETAP for oracle in container certificate', lambda: t_import_oracle_etap_cert(), state, STATE_FILE)
 
-    run_task('Start oracle ETAP', lambda: t_start_oracle_etap(), state)
+    run_task('Start oracle ETAP', lambda: t_start_oracle_etap(), state, STATE_FILE)
 
-    run_task('Traffic generator for Oracle', lambda: t_setup_oracle_traffic_generator(), state)
+    run_task('Traffic generator for Oracle', lambda: t_setup_oracle_traffic_generator(), state, STATE_FILE)
 
-    run_task('Confgure OUA to monitor application', lambda: t_setup_OUA_on_oracle_on_hana(), state)
+    run_task('Confgure OUA to monitor application', lambda: t_setup_OUA_on_oracle_on_hana(), state, STATE_FILE)
 
-    run_task('Install STAP on hana', lambda: t_install_stap_on_hana(api), state)
+    run_task('Install STAP on hana', lambda: t_install_stap_on_hana(api), state, STATE_FILE)
 
 def lab10_fam(state):
     """
@@ -1997,13 +1692,13 @@ def lab10_fam(state):
         client_id='BOOTCAMP'
     )
     
-    run_task('Enable FAM on raptor', lambda: t_enable_fam_on_raptor(api), state)
+    run_task('Enable FAM on raptor', lambda: t_enable_fam_on_raptor(api), state, STATE_FILE)
 
-    run_task('Enable FAM on winsql', lambda: t_install_enable_fam_on_winsql(api), state)
+    run_task('Enable FAM on winsql', lambda: t_install_enable_fam_on_winsql(api), state, STATE_FILE)
 
-    run_task('Import FAM definitions', lambda: t_import_fam_definitions(api), state)
+    run_task('Import FAM definitions', lambda: t_import_fam_definitions(api), state, STATE_FILE)
 
-    run_task('Install FAM policy on collector', lambda: t_install_fam_policy(api), state)
+    run_task('Install FAM policy on collector', lambda: t_install_fam_policy(api), state, STATE_FILE)
 
 def lab9_winstap(state):
     """
@@ -2015,27 +1710,27 @@ def lab9_winstap(state):
         client_id='BOOTCAMP'
     )
     
-    run_task('Install GIM client on winsql', lambda: t_install_gim_on_winsql(), state)
+    run_task('Install GIM client on winsql', lambda: t_install_gim_on_winsql(), state, STATE_FILE)
 
-    run_task('Install STAP on winsql', lambda: t_install_stap_on_winsql(api), state)
+    run_task('Install STAP on winsql', lambda: t_install_stap_on_winsql(api), state, STATE_FILE)
 
 def lab8_va(state):
     """
     LAB 8 - VA
     """
 
-    run_task('Configure raptor for VA', lambda: t_configure_raptor_for_va(), state)
+    run_task('Configure raptor for VA', lambda: t_configure_raptor_for_va(), state, STATE_FILE)
 
-    run_task('Configure VA scanner', lambda: t_setup_vascanner(), state)
+    run_task('Configure VA scanner', lambda: t_setup_vascanner(), state, STATE_FILE)
 
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443/',
         client_id='BOOTCAMP'
     )
     
-    run_task('Import VA process for postgres', lambda: t_import_va_process_for_postgres(api), state)
+    run_task('Import VA process for postgres', lambda: t_import_va_process_for_postgres(api), state, STATE_FILE)
 
-    run_task('Import DPS', lambda: t_import_DPS(), state)
+    run_task('Import DPS', lambda: t_import_DPS(), state, STATE_FILE)
 
 def lab7_etap(state):
     """
@@ -2046,17 +1741,17 @@ def lab7_etap(state):
         base_url='https://10.10.9.219:8443',
         client_id='BOOTCAMP'
     )
-    run_task('Setup raptor for ETAP', lambda: t_setup_raptor_to_deploy_etap(), state)
+    run_task('Setup raptor for ETAP', lambda: t_setup_raptor_to_deploy_etap(), state, STATE_FILE)
 
-    run_task('Deploy CA on raptor', lambda: t_deploy_ca_on_raptor(), state)
+    run_task('Deploy CA on raptor', lambda: t_deploy_ca_on_raptor(), state, STATE_FILE)
 
-    run_task('Create CSR for ETAP for mysql', lambda: t_create_mysql_csr_for_etap(), state)
+    run_task('Create CSR for ETAP for mysql', lambda: t_create_mysql_csr_for_etap(), state, STATE_FILE)
 
-    run_task('Import CA cert for ETAP', lambda: t_import_etap_ca_cert(), state)
+    run_task('Import CA cert for ETAP', lambda: t_import_etap_ca_cert(), state, STATE_FILE)
 
-    run_task('Import mysql ETAP cert', lambda: t_import_etap_cert(), state)
+    run_task('Import mysql ETAP cert', lambda: t_import_etap_cert(), state, STATE_FILE)
 
-    run_task('Start mysql ETAP on raptor', lambda: t_start_etap(), state)
+    run_task('Start mysql ETAP on raptor', lambda: t_start_etap(), state, STATE_FILE)
 
 def lab6_uc1(state):
     """
@@ -2068,9 +1763,9 @@ def lab6_uc1(state):
         client_id='BOOTCAMP'
     )
     
-    run_task('Deploy cassandra on hana', lambda: t_setup_cassandra(), state)
+    run_task('Deploy cassandra on hana', lambda: t_setup_cassandra(), state, STATE_FILE)
 
-    run_task('Deploy filebeat on hana', lambda: t_setup_filebeat(api), state)
+    run_task('Deploy filebeat on hana', lambda: t_setup_filebeat(api), state, STATE_FILE)
 
 def lab5_exit(state):
     """
@@ -2082,38 +1777,38 @@ def lab5_exit(state):
         client_id='BOOTCAMP'
     )
 
-    run_task('Setup EXIT for DB2 on raptor', lambda: t_exit_for_db2_setup(api), state)
+    run_task('Setup EXIT for DB2 on raptor', lambda: t_exit_for_db2_setup(api), state, STATE_FILE)
 
 def lab4_atap(state):
     """
     LAB 4 - ATAP
     """
 
-    run_task('installing psql on raptor', lambda: t_postgres_installation(), state)
+    run_task('installing psql on raptor', lambda: t_postgres_installation(), state, STATE_FILE)
 
-    run_task('create postgres admin users', lambda: t_create_postgres_admin_users(), state)
+    run_task('create postgres admin users', lambda: t_create_postgres_admin_users(), state, STATE_FILE)
 
-    run_task('install gim client on raptor', lambda: t_install_gim_on_raptor(), state)
+    run_task('install gim client on raptor', lambda: t_install_gim_on_raptor(), state, STATE_FILE)
 
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443',
         client_id='BOOTCAMP'
     )
 
-    run_task('install_stap_on_raptor', lambda: t_install_stap_on_raptor(api), state)
+    run_task('install_stap_on_raptor', lambda: t_install_stap_on_raptor(api), state, STATE_FILE)
 
-    run_task('configure_atap_for_postgres_on_raptor', lambda: t_enable_atap_for_postgres_on_raptor(), state)
+    run_task('configure_atap_for_postgres_on_raptor', lambda: t_enable_atap_for_postgres_on_raptor(), state, STATE_FILE)
     
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443',
         client_id='BOOTCAMP'
     )
 
-    run_task('Correct mysql IE\'s', lambda: t_correct_mysql_ie(api), state)
+    run_task('Correct mysql IE\'s', lambda: t_correct_mysql_ie(api), state, STATE_FILE)
 
-    run_task('Configure SSL for Mongo', lambda: t_configure_ssl_for_mongo(), state)
+    run_task('Configure SSL for Mongo', lambda: t_configure_ssl_for_mongo(), state, STATE_FILE)
 
-    run_task('Enable ATAP for Mongo', lambda: t_enable_atap_for_mongo(), state)
+    run_task('Enable ATAP for Mongo', lambda: t_enable_atap_for_mongo(), state, STATE_FILE)
 
 def lab2_gim(state):
     """
@@ -2131,18 +1826,18 @@ def lab2_gim(state):
         client_id='BOOTCAMP'
     )
 
-    run_task('resolving_collector_on_raptor', lambda: t_set_collector_resolving_on_raptor(), state)
+    run_task('resolving_collector_on_raptor', lambda: t_set_collector_resolving_on_raptor(), state, STATE_FILE)
 
-    run_task('getting_gim_files', lambda: t_getting_gim_files(), state)
+    run_task('getting_gim_files', lambda: t_getting_gim_files(), state, STATE_FILE)
 
-    run_task('import_gim_files_on_cm', lambda: t_import_gim_modules(api), state)
+    run_task('import_gim_files_on_cm', lambda: t_import_gim_modules(api), state, STATE_FILE)
 
 def lab1_appliance_setup(state):
     """
     LAB 1 - Konfiguracja appliance (collector).
     """
     
-    run_task('cli_users_password_change_on_appliances', lambda: t_password_change_on_appliances, state)
+    run_task('cli_users_password_change_on_appliances', lambda: t_password_change_on_appliances, state, STATE_FILE)
     if 'other_collector_settings' not in state["completed_tasks"]:
         appliance = create_appliance('collector_unconfigured')
         if not appliance.connect():
@@ -2151,8 +1846,8 @@ def lab1_appliance_setup(state):
         else:
             print("    ✓ Connected to collector - OK")
     
-    run_task('initial_collector_settings', lambda: t_initial_collector_settings(appliance), state)
-    run_task('restart_collector', lambda: t_restart_system(appliance), state)
+    run_task('initial_collector_settings', lambda: t_initial_collector_settings(appliance), state, STATE_FILE)
+    run_task('restart_collector', lambda: t_restart_system(appliance), state, STATE_FILE)
 
     appliance = None
     if 'other_collector_settings' not in state["completed_tasks"]:
@@ -2163,7 +1858,7 @@ def lab1_appliance_setup(state):
         else:
             print("    ✓ Connected to collector - OK")
 
-        run_task('other_collector_settings', lambda: t_other_collector_settings(appliance), state)
+        run_task('other_collector_settings', lambda: t_other_collector_settings(appliance), state, STATE_FILE)
    
         if appliance:
             appliance.disconnect()
@@ -2175,7 +1870,7 @@ def lab1_appliance_setup(state):
     else:
         print("    ✓ Connected to CM - OK")
     
-    run_task('initial_cm_settings', lambda: t_initial_cm_settings(appliance), state)
+    run_task('initial_cm_settings', lambda: t_initial_cm_settings(appliance), state, STATE_FILE)
     
     appliance.disconnect
 
@@ -2184,19 +1879,19 @@ def lab1_appliance_setup(state):
         client_id='BOOTCAMP'
     )
     
-    run_task('create_demo_user', lambda: t_create_demo_user(api), state)
-    run_task('register_collector', lambda: t_register_collector(api), state)
-    run_task('prepare_appliances_for_patching', lambda: t_preparing_appliances_for_patching(api), state)
+    run_task('create_demo_user', lambda: t_create_demo_user(api), state, STATE_FILE)
+    run_task('register_collector', lambda: t_register_collector(api), state, STATE_FILE)
+    run_task('prepare_appliances_for_patching', lambda: t_preparing_appliances_for_patching(api), state, STATE_FILE)
 
     print(f"\nRegister patches on appliances and start patching process")
     for appliance_name, appliance_ip, password, task_number in [('cm', '10.10.9.219', get_env_value('CM_PASSWORD'), 'register_patches_on_cm'), ('collector', '10.10.9.239', get_env_value('COLLECTOR_PASSWORD'), 'register_patches_on_collector')]:
-        run_task(task_number, lambda: t_registering_patches_installation(appliance_name, appliance_ip, password), state)
+        run_task(task_number, lambda: t_registering_patches_installation(appliance_name, appliance_ip, password), state, STATE_FILE)
 
     print("\nMonitoring patch installation on appliances")
     for appliance_name, task_number in [('cm', 'monitor_patch_installation_on_cm'), ('collector', 'monitor_patch_installation_on_collector')]:
-        run_task(task_number, lambda: t_monitoring_patch_installation(appliance_name), state)
+        run_task(task_number, lambda: t_monitoring_patch_installation(appliance_name), state, STATE_FILE)
 
-    run_task('policy_installation_on_collector', lambda: t_install_policy_on_collector(api), state)
+    run_task('policy_installation_on_collector', lambda: t_install_policy_on_collector(api), state, STATE_FILE)
     
     return None
 
@@ -2251,7 +1946,7 @@ if __name__ == "__main__":
     import argparse
 
     STATE_FILE = "state.json"
-    state = load_state()
+    state = load_state(STATE_FILE)
 
 
     parser = argparse.ArgumentParser(description="Sync Lab - synchronizacja środowiska laboratoryjnego")

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Appliance Command - klasa do wykonywania poleceń na urządzeniach CLI przez SSH
+Appliance Command - Class for executing commands on CLI devices via SSH
 """
 
 import re
@@ -12,176 +12,11 @@ from typing import List, Optional, Tuple
 
 import paramiko
 
-
-ANSI_RE = re.compile(r"\x1B\[[0-9;?]*[ -/]*[@-~]")
-
-
-def strip_ansi(s: str) -> str:
-    """Usuwa sekwencje ANSI z tekstu"""
-    return ANSI_RE.sub("", s)
-
-
-def _find_last_prompt_span(text: str, prompt_re: re.Pattern) -> Optional[Tuple[int, int]]:
-    """Zwraca (start, end) ostatniego dopasowania promptu"""
-    last = None
-    for m in prompt_re.finditer(text):
-        last = (m.start(), m.end())
-    return last
-
-
-def run_many_commands_remotely(host, commands, port=22, key_file=None, password=None):
-    client = paramiko.SSHClient()
-    client.load_system_host_keys()
-    client.set_missing_host_key_policy(paramiko.RejectPolicy())
-
-    client.connect(
-        hostname=host,
-        port=port,
-        username="root",
-        key_filename=key_file,
-        password=password,
-        look_for_keys=True,
-        allow_agent=True,
-        timeout=15,
-    )
-
-    results = []
-    for cmd in commands:
-        stdin, stdout, stderr = client.exec_command(cmd, timeout=60)
-        rc = stdout.channel.recv_exit_status()
-        out = stdout.read().decode("utf-8", errors="replace")
-        err = stderr.read().decode("utf-8", errors="replace")
-        results.append({"cmd": cmd, "rc": rc, "stdout": out, "stderr": err})
-
-    client.close()
-    return results
-
-
-def change_password_as_root(
-    host: str,
-    root_password: str,
-    target_user: str,
-    new_password: str,
-    port: int = 22,
-    timeout: int = 10,
-    ) -> bool:
-    """
-    Loguje się jako root przez SSH (hasłem) i zmienia hasło target_user.
-    Zwraca True jeśli OK, False jeśli błąd.
-    """
-
-    client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-    try:
-        client.connect(
-            hostname=host,
-            port=port,
-            username="root",
-            password=root_password,
-            look_for_keys=False,
-            allow_agent=False,
-            timeout=timeout,
-            banner_timeout=timeout,
-            auth_timeout=timeout,
-        )
-
-        # chpasswd czyta z stdin: user:new_password
-        cmd = "chpasswd"
-        stdin, stdout, stderr = client.exec_command(cmd)
-
-        stdin.write(f"{target_user}:{new_password}\n")
-        stdin.flush()
-        stdin.close()
-
-        exit_code = stdout.channel.recv_exit_status()
-        client.close()
-
-        return exit_code == 0
-
-    except (paramiko.SSHException, socket.error) as e:
-        print(f"SSH error on {host}: {e}")
-        return False
-
-
-def scp_file_as_root(
-    host: str,
-    root_password: str,
-    local_path: str,
-    remote_path: str,
-    port: int = 22,
-    timeout: int = 30,
-    direction: str = "put"
-) -> bool:
-    """
-    Przesyła plik przez SCP jako root używając sshpass + scp.
-    
-    Args:
-        host: Adres IP/hostname
-        root_password: Hasło root
-        local_path: Ścieżka do lokalnego pliku (dla 'put') lub zdalnego (dla 'get')
-        remote_path: Ścieżka docelowa na serwerze (dla 'put') lub lokalna (dla 'get')
-        port: Port SSH (domyślnie 22)
-        timeout: Timeout w sekundach
-        direction: Kierunek transferu - 'put' (upload) lub 'get' (download)
-    
-    Returns:
-        True jeśli sukces, False w przypadku błędu
-    """
-    import subprocess
-    
-    try:
-        if direction == "put":
-            # Upload: local -> remote
-            cmd = [
-                "sshpass", "-p", root_password,
-                "scp",
-                "-o", "StrictHostKeyChecking=no",
-                "-o", "UserKnownHostsFile=/dev/null",
-                "-P", str(port),
-                local_path,
-                f"root@{host}:{remote_path}"
-            ]
-        elif direction == "get":
-            # Download: remote -> local
-            cmd = [
-                "sshpass", "-p", root_password,
-                "scp",
-                "-o", "StrictHostKeyChecking=no",
-                "-o", "UserKnownHostsFile=/dev/null",
-                "-P", str(port),
-                f"root@{host}:{local_path}",
-                remote_path
-            ]
-        else:
-            raise ValueError(f"Invalid direction: {direction}. Use 'put' or 'get'")
-        
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=timeout
-        )
-        
-        if result.returncode == 0:
-            return True
-        else:
-            print(f"  SCP error on {host}: {result.stderr.strip()}")
-            return False
-            
-    except FileNotFoundError:
-        print(f"  SCP error on {host}: sshpass not found. Install: apt-get install sshpass")
-        return False
-    except subprocess.TimeoutExpired:
-        print(f"  SCP error on {host}: Timeout after {timeout}s")
-        return False
-    except Exception as e:
-        print(f"  SCP error on {host}: {e}")
-        return False
+from utils import strip_ansi, _find_last_prompt_span
 
 
 class ApplianceCommand:
-    """Klasa do wykonywania poleceń na urządzeniach CLI przez SSH"""
+    """Class for executing commands on CLI devices via SSH"""
     
     def __init__(
         self,
@@ -213,7 +48,7 @@ class ApplianceCommand:
         self.channel: Optional[paramiko.Channel] = None
     
     def connect(self) -> bool:
-        """Nawiązuje połączenie SSH i otwiera shell"""
+        """Establish SSH connection and open shell"""
         try:
             self.client = paramiko.SSHClient()
             self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -261,7 +96,7 @@ class ApplianceCommand:
         echo: bool = False,
         timeout: Optional[int] = None
     ) -> str:
-        """Czyta output do momentu dopasowania regex"""
+        """Read output until regex match"""
         if not self.channel:
             raise RuntimeError("No channel available")
         
@@ -297,16 +132,16 @@ class ApplianceCommand:
         confirm_idle: float = 0.2
     ) -> str:
         """
-        Wykonuje polecenie, które wymaga interaktywnego potwierdzenia.
+        Execute command that requires interactive confirmation.
         
         Args:
-            command: Polecenie do wykonania
-            confirmation_pattern: Regex pattern dla pytania o potwierdzenie
-            response: Odpowiedź do wysłania (np. 'y', 'n')
-            confirm_idle: Czas oczekiwania na idle przed wysłaniem odpowiedzi (sekundy)
+            command: Command to execute
+            confirmation_pattern: Regex pattern for confirmation prompt
+            response: Response to send (e.g. 'y', 'n')
+            confirm_idle: Wait time for idle before sending response (seconds)
         
         Returns:
-            Pełny output polecenia
+            Full command output
         """
         if not self.channel:
             raise RuntimeError("Not connected")
@@ -388,16 +223,16 @@ class ApplianceCommand:
         confirm_idle: float = 0.2
     ) -> str:
         """
-        Wykonuje restart systemu z warunkiem - sprawdza czy MySQL jest busy.
+        Execute system restart with condition - checks if MySQL is busy.
         
         Args:
-            command: Polecenie restartu
-            confirmation_pattern: Regex pattern dla pytania o potwierdzenie
-            busy_pattern: Regex pattern dla komunikatu o busy MySQL
-            confirm_idle: Czas oczekiwania na idle przed wysłaniem odpowiedzi
+            command: Restart command
+            confirmation_pattern: Regex pattern for confirmation prompt
+            busy_pattern: Regex pattern for MySQL busy message
+            confirm_idle: Wait time for idle before sending response
         
         Returns:
-            Komunikat o wyniku operacji
+            Message about operation result
         """
         if not self.channel:
             raise RuntimeError("Not connected")
@@ -453,7 +288,7 @@ class ApplianceCommand:
                     except TimeoutError:
                         pass
                     
-                    return "Restart odrzucony - MySQL is busy updating the database"
+                    return "Restart rejected - MySQL is busy updating the database"
                 else:
                     if self.debug:
                         print("[DEBUG] No busy detected, sending 'y' - system will restart", file=sys.stderr)
@@ -488,14 +323,14 @@ class ApplianceCommand:
     
     def execute_command(self, command: str, timeout: Optional[int] = None) -> str:
         """
-        Wykonuje pojedyncze polecenie i zwraca output.
+        Execute single command and return output.
         
         Args:
-            command: Polecenie do wykonania
-            timeout: Opcjonalny timeout w sekundach (jeśli None, używa self.timeout)
+            command: Command to execute
+            timeout: Optional timeout in seconds (if None, uses self.timeout)
         
         Returns:
-            Output polecenia
+            Command output
         """
         if not self.channel:
             raise RuntimeError("Not connected")
@@ -543,7 +378,7 @@ class ApplianceCommand:
         return "\n".join(filtered_lines)
     
     def execute_commands(self, commands: List[str]) -> List[str]:
-        """Wykonuje listę poleceń i zwraca listę outputów"""
+        """Execute list of commands and return list of outputs"""
         results = []
         for cmd in commands:
             output = self.execute_command(cmd)
@@ -559,19 +394,19 @@ class ApplianceCommand:
         timeout: Optional[int] = None
     ) -> str:
         """
-        Wykonuje instalację patcha z obsługą dwóch pytań:
+        Execute patch installation with handling of two prompts:
         1. "Please choose patches to install (1-2, or multiple numbers separated by ",", or q to quit):"
-        2. "Do you really want to install again (yes or no)?" (opcjonalne)
+        2. "Do you really want to install again (yes or no)?" (optional)
         
         Args:
-            command: Polecenie instalacji patcha (domyślnie "store system patch install sys")
-            patch_selection: Wybór patchy (np. "1-2", "1,3", "1", "2")
-            reinstall_answer: Odpowiedź na pytanie o reinstalację ("y", "yes", "n", "no")
-            live_output: Czy wyświetlać output na bieżąco (domyślnie True)
-            timeout: Opcjonalny timeout w sekundach (jeśli None, używa self.timeout)
+            command: Patch installation command (default "store system patch install sys")
+            patch_selection: Patch selection (e.g. "1-2", "1,3", "1", "2")
+            reinstall_answer: Answer to reinstallation question ("y", "yes", "n", "no")
+            live_output: Whether to display output live (default True)
+            timeout: Optional timeout in seconds (if None, uses self.timeout)
         
         Returns:
-            Output z instalacji patcha
+            Output from patch installation
         """
         if not self.channel:
             raise RuntimeError("Not connected")
@@ -612,14 +447,14 @@ class ApplianceCommand:
                         
                         buf_clean = strip_ansi(buf) if self.strip_ansi_flag else buf
                         
-                        # Sprawdź czy jest pytanie o wybór patcha
+                        # Check if there's a patch selection prompt
                         if not patch_selected and ("Please choose patches" in buf_clean or "or q to quit" in buf_clean):
-                            # Sprawdź czy linia kończy się dwukropkiem (pytanie jest kompletne)
+                            # Check if line ends with colon (prompt is complete)
                             last_line = buf_clean.strip().split('\n')[-1]
                             if last_line.endswith(':'):
-                                # Poczekaj jeszcze chwilę aby upewnić się że to koniec pytania
+                                # Wait a bit more to ensure this is the end of the prompt
                                 time.sleep(1.0)
-                                # Sprawdź czy nie ma więcej danych
+                                # Check if there's more data
                                 try:
                                     extra = self.channel.recv(65535).decode(errors="replace")
                                     if extra:
@@ -639,13 +474,13 @@ class ApplianceCommand:
                                 last_activity = time.time()
                                 time.sleep(0.5)
                         
-                        # Sprawdź czy jest pytanie o reinstalację
+                        # Check if there's a reinstallation prompt
                         if patch_selected and not reinstall_answered and "Do you really want to install again" in buf_clean:
-                            # Sprawdź czy pytanie jest kompletne - szukaj "(yes or no)?"
+                            # Check if prompt is complete - look for "(yes or no)?"
                             if "(yes or no)?" in buf_clean:
-                                # Poczekaj jeszcze chwilę aby upewnić się że to koniec pytania
+                                # Wait a bit more to ensure this is the end of the prompt
                                 time.sleep(1.0)
-                                # Sprawdź czy nie ma więcej danych
+                                # Check if there's more data
                                 try:
                                     extra = self.channel.recv(65535).decode(errors="replace")
                                     if extra:
@@ -665,9 +500,9 @@ class ApplianceCommand:
                                 last_activity = time.time()
                                 time.sleep(0.5)
                         
-                        # Sprawdź czy wróciliśmy do promptu
+                        # Check if we returned to prompt
                         if patch_selected and self.prompt_re.search(buf_clean):
-                            # Poczekaj chwilę na ewentualny dodatkowy output
+                            # Wait a bit for any additional output
                             time.sleep(1)
                             try:
                                 while self.channel.recv_ready():
@@ -699,13 +534,13 @@ class ApplianceCommand:
                             return "\n".join(lines).strip()
                             
                 except socket.timeout:
-                    # Timeout jest normalny - po prostu nie ma danych
-                    # Sprawdź czy nie minęło zbyt dużo czasu bez aktywności
-                    if time.time() - last_activity > 300:  # 5 minut bez aktywności
+                    # Timeout is normal - just no data available
+                    # Check if too much time passed without activity
+                    if time.time() - last_activity > 300:  # 5 minutes without activity
                         raise TimeoutError("No activity for 5 minutes")
                     time.sleep(0.1)
                 
-                # Sprawdź czy nadal połączeni
+                # Check if still connected
                 if self.channel.closed:
                     raise RuntimeError("Channel closed")
             
@@ -734,38 +569,38 @@ class ApplianceCommand:
         prompt_timeout_sec: int = 20
     ) -> Tuple[str, str, str]:
         """
-        Generuje CSR dla Guardium External S-TAP używając istniejącego połączenia.
+        Generate CSR for Guardium External S-TAP using existing connection.
         
         Args:
-            alias: Alias CSR (np. mysql-etap)
-            common_name: CN certyfikatu
-            san1: Pierwsza wartość SAN
-            organizational_unit: Jednostka organizacyjna (domyślnie "Training")
-            organization: Organizacja (domyślnie "Demo")
-            locality: Miasto/lokalizacja (domyślnie puste - skip)
-            state: Stan/prowincja (domyślnie puste - skip)
-            country: Dwuliterowy kod kraju (domyślnie "PL")
-            email: Adres email (domyślnie puste - skip)
-            encryption_algorithm: Algorytm szyfrowania (domyślnie "2")
-            keysize: Rozmiar klucza (domyślnie "2")
-            san2: Druga wartość SAN (domyślnie puste)
-            timeout_sec: Globalny timeout w sekundach (domyślnie 180)
-            prompt_timeout_sec: Timeout dla pojedynczego promptu (domyślnie 20)
+            alias: CSR alias (e.g. mysql-etap)
+            common_name: Certificate CN
+            san1: First SAN value
+            organizational_unit: Organizational unit (default "Training")
+            organization: Organization (default "Demo")
+            locality: City/location (default empty - skip)
+            state: State/province (default empty - skip)
+            country: Two-letter country code (default "PL")
+            email: Email address (default empty - skip)
+            encryption_algorithm: Encryption algorithm (default "2")
+            keysize: Key size (default "2")
+            san2: Second SAN value (default empty)
+            timeout_sec: Global timeout in seconds (default 180)
+            prompt_timeout_sec: Timeout for single prompt (default 20)
         
         Returns:
             Tuple[str, str, str]: (csr_pem, deployment_token, line_above_token)
         
         Raises:
-            RuntimeError: Jeśli nie połączono lub wystąpił błąd
-            TimeoutError: Jeśli przekroczono timeout
+            RuntimeError: If not connected or error occurred
+            TimeoutError: If timeout exceeded
         """
         if not self.channel:
             raise RuntimeError("Not connected")
         
-        # Type assertion dla type checkera
+        # Type assertion for type checker
         assert self.channel is not None
         
-        # Definicja kroków wizarda - dokładnie jak w csr.py
+        # Wizard steps definition - exactly as in csr.py
         steps = [
             ("alias", "Please enter the hostname as the alias", alias),
             ("CN", "What is the Common Name", common_name),
@@ -789,7 +624,7 @@ class ApplianceCommand:
             print(f"[DEBUG] Starting External S-TAP CSR generation", file=sys.stderr)
             print(f"[DEBUG] Alias={alias}, CN={common_name}, SAN1={san1}", file=sys.stderr)
         
-        # Funkcja pomocnicza do odczytu outputu
+        # Helper function to read output
         def read_output() -> str:
             assert self.channel is not None
             buf = ""
@@ -800,14 +635,14 @@ class ApplianceCommand:
                 buf += chunk
             return buf
         
-        # Funkcja pomocnicza do wysyłania
+        # Helper function to send
         def send(text: str) -> None:
             assert self.channel is not None
             if self.debug:
                 print(f"[DEBUG] SEND >>> {text!r}", file=sys.stderr)
             self.channel.send((text + "\n").encode("utf-8"))
         
-        # Wyślij komendę
+        # Send command
         send("create csr external_stap")
         if self.debug:
             print("[DEBUG] Command sent: create csr external_stap", file=sys.stderr)
@@ -817,7 +652,7 @@ class ApplianceCommand:
         start_time = time.time()
         last_activity = time.time()
         
-        # Główna pętla - dokładnie jak w csr.py
+        # Main loop - exactly as in csr.py
         while True:
             if time.time() - start_time > timeout_sec:
                 raise TimeoutError("GLOBAL TIMEOUT: CSR generation took too long")
@@ -827,7 +662,7 @@ class ApplianceCommand:
                 full_output += out
                 last_activity = time.time()
             
-            # CSR już istnieje → wybór opcji [2]
+            # CSR already exists → select option [2]
             if (
                 "CSR for this alias already exists" in full_output
                 or "How would you like to proceed?" in full_output
@@ -838,13 +673,13 @@ class ApplianceCommand:
                 full_output = ""
                 continue
             
-            # Koniec – token
+            # End – token
             if "To deploy the external_stap, use the following token:" in full_output:
                 if self.debug:
                     print("[DEBUG] Wizard completed – token detected", file=sys.stderr)
                 break
             
-            # Standardowy flow
+            # Standard flow
             if step_idx < len(steps):
                 step_name, expected_prompt, answer = steps[step_idx]
                 
@@ -872,7 +707,7 @@ class ApplianceCommand:
         if self.debug:
             print("[DEBUG] CSR generation completed", file=sys.stderr)
         
-        # Ekstrakcja CSR
+        # Extract CSR
         csr_match = re.search(
             r"-----BEGIN NEW CERTIFICATE REQUEST-----(.*?)-----END NEW CERTIFICATE REQUEST-----",
             full_output,
@@ -887,7 +722,7 @@ class ApplianceCommand:
             + "-----END NEW CERTIFICATE REQUEST-----"
         )
         
-        # Ekstrakcja tokenu i linii powyżej
+        # Extract token and line above
         lines = full_output.splitlines()
         token: Optional[str] = None
         line_above: Optional[str] = None
@@ -918,26 +753,26 @@ class ApplianceCommand:
         ignore_time_parse_error: bool = True
     ) -> None:
         """
-        Importuje certyfikat CA do Guardium External S-TAP keystore używając istniejącego połączenia.
+        Import CA certificate to Guardium External S-TAP keystore using existing connection.
         
         Flow:
           - store certificate keystore_external_stap
           - alias
-          - wklejenie certyfikatu PEM
+          - paste PEM certificate
           - ENTER
           - CTRL+D
-          - SUCCESS + opcjonalny błąd 'Error parsing time' → ignorowany
+          - SUCCESS + optional 'Error parsing time' error → ignored
         
         Args:
-            alias: Alias dla certyfikatu CA
-            ca_cert: Certyfikat CA w formacie PEM (string)
-            timeout_sec: Globalny timeout w sekundach (domyślnie 120)
-            prompt_timeout_sec: Timeout dla pojedynczego promptu (domyślnie 20)
-            ignore_time_parse_error: Czy ignorować błąd "Error parsing time" (domyślnie True)
+            alias: Alias for CA certificate
+            ca_cert: CA certificate in PEM format (string)
+            timeout_sec: Global timeout in seconds (default 120)
+            prompt_timeout_sec: Timeout for single prompt (default 20)
+            ignore_time_parse_error: Whether to ignore "Error parsing time" error (default True)
         
         Raises:
-            RuntimeError: Jeśli nie połączono lub wystąpił błąd
-            TimeoutError: Jeśli przekroczono timeout
+            RuntimeError: If not connected or error occurred
+            TimeoutError: If timeout exceeded
         """
         if not self.channel:
             raise RuntimeError("Not connected")
@@ -949,7 +784,7 @@ class ApplianceCommand:
             print(f"[DEBUG] Starting External S-TAP CA certificate import", file=sys.stderr)
             print(f"[DEBUG] Alias: {alias}", file=sys.stderr)
         
-        # Funkcje pomocnicze
+        # Helper functions
         def send(text: str) -> None:
             assert self.channel is not None
             if self.debug:
@@ -978,7 +813,7 @@ class ApplianceCommand:
                 buf += chunk
             return buf
         
-        # Wyślij komendę
+        # Send command
         send("store certificate keystore_external_stap")
         if self.debug:
             print("[DEBUG] Command sent: store certificate keystore_external_stap", file=sys.stderr)
@@ -987,7 +822,7 @@ class ApplianceCommand:
         start_time = time.time()
         last_activity = time.time()
         
-        # Główna pętla - dokładnie jak w csr.py
+        # Main loop - exactly as in csr.py
         while True:
             if time.time() - start_time > timeout_sec:
                 raise TimeoutError("GLOBAL TIMEOUT during CA certificate import")
@@ -1043,28 +878,28 @@ class ApplianceCommand:
         ignore_time_parse_error: bool = True
     ) -> None:
         """
-        Importuje certyfikat External S-TAP (end-entity) do Guardium używając istniejącego połączenia.
+        Import External S-TAP certificate (end-entity) to Guardium using existing connection.
         
         Flow:
           - store certificate external_stap
-          - alias (pełna linia: <alias> proxy_keycert <UUID>)
-          - potwierdzenie zgodności z CSR (y)
-          - wklejenie certyfikatu PEM
+          - alias (full line: <alias> proxy_keycert <UUID>)
+          - confirm CSR correspondence (y)
+          - paste PEM certificate
           - ENTER
           - CTRL+D
           - SUCCESS
-          - opcjonalny błąd: 'Error parsing time' → ignorowany
+          - optional error: 'Error parsing time' → ignored
         
         Args:
-            alias_line: Pełna linia aliasu (np. "mysql-etap proxy_keycert 02717b9d-2a87-11f1-af30-c4df3d41f195")
-            stap_cert: Certyfikat External S-TAP w formacie PEM (string)
-            timeout_sec: Globalny timeout w sekundach (domyślnie 180)
-            prompt_timeout_sec: Timeout dla pojedynczego promptu (domyślnie 30)
-            ignore_time_parse_error: Czy ignorować błąd "Error parsing time" (domyślnie True)
+            alias_line: Full alias line (e.g. "mysql-etap proxy_keycert 02717b9d-2a87-11f1-af30-c4df3d41f195")
+            stap_cert: External S-TAP certificate in PEM format (string)
+            timeout_sec: Global timeout in seconds (default 180)
+            prompt_timeout_sec: Timeout for single prompt (default 30)
+            ignore_time_parse_error: Whether to ignore "Error parsing time" error (default True)
         
         Raises:
-            RuntimeError: Jeśli nie połączono lub wystąpił błąd
-            TimeoutError: Jeśli przekroczono timeout
+            RuntimeError: If not connected or error occurred
+            TimeoutError: If timeout exceeded
         """
         if not self.channel:
             raise RuntimeError("Not connected")
@@ -1076,7 +911,7 @@ class ApplianceCommand:
             print(f"[DEBUG] Starting External S-TAP certificate import", file=sys.stderr)
             print(f"[DEBUG] Alias line: {alias_line}", file=sys.stderr)
         
-        # Funkcje pomocnicze
+        # Helper functions
         def send(text: str) -> None:
             assert self.channel is not None
             if self.debug:
@@ -1105,7 +940,7 @@ class ApplianceCommand:
                 buf += chunk
             return buf
         
-        # Wyślij komendę
+        # Send command
         send("store certificate external_stap")
         if self.debug:
             print("[DEBUG] Command sent: store certificate external_stap", file=sys.stderr)
@@ -1116,7 +951,7 @@ class ApplianceCommand:
         csr_confirmed = False
         cert_sent = False
         
-        # Główna pętla - dokładnie jak w csr.py
+        # Main loop - exactly as in csr.py
         while True:
             if time.time() - start_time > timeout_sec:
                 raise TimeoutError("GLOBAL TIMEOUT during External S-TAP cert import")
@@ -1191,7 +1026,7 @@ class ApplianceCommand:
             print("[DEBUG] CA import completed successfully", file=sys.stderr)
         
     def disconnect(self):
-        """Zamyka połączenie"""
+        """Close connection"""
         try:
             if self.channel:
                 self.channel.send((self.logout_command + "\r\n").encode())
