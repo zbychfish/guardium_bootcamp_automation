@@ -1891,13 +1891,19 @@ def t_va_api(api):
         )
 
 def t_setup_cassandra(api):
-    scp_file_as_root(host='10.10.9.60', root_password=get_env_value("HANA_PASSWORD"), local_path="guardium_configuration_files/cassandra.repo", remote_path="/etc/yum.repos.d/cassandra.repo")
+    # scp_file_as_root(host='10.10.9.60', root_password=get_env_value("HANA_PASSWORD"), local_path="guardium_configuration_files/cassandra.repo", remote_path="/etc/yum.repos.d/cassandra.repo")
     
     result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"),
     commands=[
-        "dnf -y install java-11-openjdk",
-        "dnf -y install cassandra",
+        # "dnf -y install java-11-openjdk",
+        # "dnf -y install cassandra",
+        "sed -i '/^audit_logging_options:/,/^[^ ]/c\audit_logging_options:\n  enabled: true\n  logger:\n    - class_name: FileAuditLogger' /etc/cassandra/conf/cassandra.yaml",
+        "sed -i '/<!-- <appender name=\"AUDIT\"/,/SizeAndTimeBasedRollingPolicy/ { s/<!-- //; s/ -->// }' /etc/cassandra/conf/logback.xml",
+        "sed -i 's|<!-- *<fileNamePattern>\(.*\)</fileNamePattern> *-->|<fileNamePattern>\1</fileNamePattern>|' /etc/cassandra/conf/logback.xml",
+        "sed -i '/<!-- *<maxFileSize>/,/<\/appender> *-->/ { s/<!-- //; s/ -->// }' /etc/cassandra/conf/logback.xml",
+        "sed -i '/<!-- *<logger name=\"org.apache.cassandra.audit\"/,/<\\/logger> *-->/ { s/<!-- //; s/ -->// }' /etc/cassandra/conf/logback.xml"
     ])
+    
     exit(0)
 
 def lab6_uc1(state):
@@ -1910,7 +1916,7 @@ def lab6_uc1(state):
         client_id='BOOTCAMP'
     )
     
-    run_task('Deploy cassanda on hana', lambda: t_setup_cassandra(api), state)
+    run_task('Deploy cassandra on hana', lambda: t_setup_cassandra(api), state)
 
 def lab13_va_api(state):
     """
