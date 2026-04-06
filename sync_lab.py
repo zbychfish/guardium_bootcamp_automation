@@ -1839,7 +1839,9 @@ def t_install_stap_on_hana(api):
 
 def t_policy_report_1(api):
     conn = get_postgres_conn(host='10.10.9.70', port=5432, dbname='postgres', user='jerry', password=f'{get_env_value("DEFAULT_SERVICE_PASSWORD")}')
-    print(run_sql_postgres(conn, "SELECT 1"))
+    print(run_sql_postgres(conn, "SELECT 1", fetch=True))
+    conn.close()
+
     exit(0)
 
 def lab12_policy_report1(state):
