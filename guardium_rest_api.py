@@ -1053,6 +1053,43 @@ class GuardiumRestAPI:
         response.raise_for_status()
         
         return response.json()
+    def generate_ssl_key_universal_connector(
+        self,
+        expiration_days: int = 100,
+        hostname: str = "*.guard.swg.usma.ibm.com",
+        overwrite: bool = False
+    ) -> dict:
+        """
+        Generuje klucz SSL dla Universal Connector.
+        
+        Args:
+            expiration_days: Liczba dni ważności certyfikatu (domyślnie 100)
+            hostname: Hostname maszyny Guardium lub wildcard (domyślnie '*.guard.swg.usma.ibm.com')
+            overwrite: Czy nadpisać istniejący klucz i certyfikat (domyślnie False)
+                      False (0): nie nadpisuj
+                      True (1): nadpisz
+        
+        Returns:
+            Słownik z odpowiedzią API
+        
+        Raises:
+            RuntimeError: Jeśli token nie został jeszcze pobrany
+            requests.exceptions.RequestException: W przypadku błędu HTTP
+        """
+        url = f'{self.base_url}/restAPI/generateSSLKeyUniversalConnector'
+        headers = self.get_headers()
+        
+        data = {
+            'expiration_days': expiration_days,
+            'hostname': hostname,
+            'overwrite': 1 if overwrite else 0
+        }
+        
+        response = requests.post(url, json=data, headers=headers, verify=self.verify_ssl)
+        response.raise_for_status()
+        
+        return response.json()
+
 
 
 
