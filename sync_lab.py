@@ -1897,11 +1897,15 @@ def t_setup_cassandra(api):
     commands=[
         # "dnf -y install java-11-openjdk",
         # "dnf -y install cassandra",
-        r"sed -i '/^audit_logging_options:/,/^[[:space:]]*- class_name:/c\audit_logging_options:\n  enabled: true\n  logger:\n    - class_name: FileAuditLogger' /etc/cassandra/conf/cassandra.yaml",
+        # r"sed -i '/^audit_logging_options:/,/^[[:space:]]*- class_name:/c\audit_logging_options:\n  enabled: true\n  logger:\n    - class_name: FileAuditLogger' /etc/cassandra/conf/cassandra.yaml",
         # "sed -i '/<!-- <appender name=\"AUDIT\"/,/SizeAndTimeBasedRollingPolicy/ { s/<!-- //; s/ -->// }' /etc/cassandra/conf/logback.xml",
         # "sed -i 's|<!-- *<fileNamePattern>\\(.*\\)</fileNamePattern> *-->|<fileNamePattern>\1</fileNamePattern>|' /etc/cassandra/conf/logback.xml",
         # "sed -i '/<!-- *<maxFileSize>/,/<\\/appender> *-->/ { s/<!-- //; s/ -->// }' /etc/cassandra/conf/logback.xml",
-        # "sed -i '/<!-- *<logger name=\"org.apache.cassandra.audit\"/,/<\\/logger> *-->/ { s/<!-- //; s/ -->// }' /etc/cassandra/conf/logback.xml"
+        # "sed -i '/<!-- *<logger name=\"org.apache.cassandra.audit\"/,/<\\/logger> *-->/ { s/<!-- //; s/ -->// }' /etc/cassandra/conf/logback.xml",
+        "service cassandra start",
+        "service cassandra start",
+        "dnf -qy install python3-pip",
+        "pip install --user cqlsh"
     ])
     
     exit(0)
