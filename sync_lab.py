@@ -132,9 +132,9 @@ def t_password_change_on_appliances():
         )
 
 def t_initial_collector_settings(appliance):
-    print(" ➜ Disabling purge")
+    print("  ➜ Disabling purge")
     output = appliance.execute_command("grdapi disable_purge")
-    print(" ➜ Set time zone to Europe/Warsaw")
+    print("  ➜ Set time zone to Europe/Warsaw")
     output = appliance.execute_command("show system clock all")
     timezone = output.strip().splitlines()[-1]
     if timezone != "Europe/Warsaw":
@@ -143,31 +143,30 @@ def t_initial_collector_settings(appliance):
             response="y",
             confirmation_pattern=r"Do you want to proceed\?\s*\(y/n\)\s*"
         )
-        print(" ⓘ New TZ is:")
+        print("  ℹ New TZ is:")
         output = appliance.execute_command("show system clock all")
         print(output)
     else:
-        print(f" ⓘ Time zone already set to {timezone}")
+        print(f"  ℹ Time zone already set to {timezone}")
     print(" ➜ Configure NTP servers")
     appliance.execute_command("store system time_server hostname 0.pool.ntp.org 1.pool.ntp.org 2.pool.ntp.org")
     print(" ➜ Enabling time synchronization")
     appliance.execute_command("store system time_server state on")
-    exit(0)
 
 def t_restart_system(appliance):
-    print("\nRestart system")
+    print(" ➜ Restart system")
     result = appliance.execute_restart_with_check()
-    print(f"  {result}")
+    #print(f"  {result}")
     appliance.disconnect()
     
     if "System is restarting - connection broke" in result:
-        print("\nWaiting for system availability...")
+        print(" ⌛ Waiting for system availability...")
         appliance = wait_for_appliance('collector_unconfigured')
-        print("  ✓ Appliance available")
+        print("  ✔ Appliance available")
     else:
         print("  ✗ Could not restart - MYSQL is busy")
         print("  ✗ Run script again in 1 minute or restart collector manually and then start again")
-    return None
+
 
 def t_other_collector_settings(appliance):
     print("\nSetup collector name and domain")
@@ -1830,22 +1829,18 @@ def lab1_appliance_setup(state):
     appliance = create_appliance('collector_unconfigured')
     if not appliance.connect():
         print("  ✗ Failed to connect to collector")
-        return None
-    else:
-        print("    ✓ Connected to collector - OK")
-
+        exit(1)
+    
     run_task('Initial collector setup', lambda: t_initial_collector_settings(appliance), state, STATE_FILE)
 
     run_task('Collector restart', lambda: t_restart_system(appliance), state, STATE_FILE)
-
+    exit(0)
     appliance = None
     if 'other_collector_settings' not in state["completed_tasks"]:
         appliance = create_appliance('collector_unconfigured')
         if not appliance.connect():
             print("  ✗ Failed to connect to collector")
-            return None
-        else:
-            print("    ✓ Connected to collector - OK")
+            exit(1)
 
         run_task('Other collector settings', lambda: t_other_collector_settings(appliance), state, STATE_FILE)
    
@@ -1855,9 +1850,7 @@ def lab1_appliance_setup(state):
     appliance = create_appliance('cm')
     if not appliance.connect():
         print("  ✗ Failed to connect to CM")
-        return None
-    else:
-        print("    ✓ Connected to CM - OK")
+        exit(1)
     
     run_task('Initial CM settings', lambda: t_initial_cm_settings(appliance), state, STATE_FILE)
     
