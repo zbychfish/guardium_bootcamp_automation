@@ -1878,10 +1878,49 @@ def t_policy_report_1(api):
     # print(result)
     # sprawdzic czy zmiany w engine core widoczne jak nie to albo restart appliance albo restart inspection-core
 
+def t_va_api(api):
+
+    print("\n Setup new dashboard - VA")
+    result = api.import_definitions('guardium_definition_files/exp_dashboard_va.sql')
+    print(result)
+    print("\n Import oracle VA definition")
+    result = api.import_definitions('guardium_definition_files/exp_security_assessment_va_oracle.sql')
+    print(result)
+
+    # password = get_env_value("DEFAULT_SERVICE_PASSWORD")
+    # commands = [
+    #     {"cmd": ["mkdir", "-p", "/root/gn-trainings/dbtraffic"]},
+    #     {"cmd": ["/usr/bin/python3.12", "-m", "venv", ".venv"], "cwd" : "/root/gn-trainings/dbtraffic"},
+    #     {"cmd": ["/root/gn-trainings/dbtraffic/.venv/bin/python3", "-m", "pip", "install", "--upgrade", "pip"], "cwd" : "/root/gn-trainings/dbtraffic"},
+    #     {"cmd": ["/root/gn-trainings/dbtraffic/.venv/bin/pip3", "install", "oracledb", "psycopg2_binary", "faker"], "cwd" : "/root/gn-trainings/dbtraffic"},
+    #     {"cmd": ["wget", "https://ibm.box.com/shared/static/dcm5st6jt4w6ippvkz3ka5ebvb47gymi.zip", "-O", "dbtraffic.zip"], "cwd" : "/root/gn-trainings/dbtraffic"},
+    #     {"cmd": ["unzip", "dbtraffic.zip"], "cwd" : "/root/gn-trainings/dbtraffic"},
+    #     {"cmd": ["sed", "-i", f"s|^password *=.*|password = {password}|", "/root/gn-trainings/dbtraffic/files/config.cfg"]},
+    #     {"cmd": ["/root/gn-trainings/dbtraffic/.venv/bin/python3", "./gn_dbtraffic.py", "schema"], "cwd" : "/root/gn-trainings/dbtraffic"}
+    # ]
+    # for c in commands:
+    #     subprocess.run(
+    #         c["cmd"],
+    #         cwd=c.get("cwd"),
+    #         check=True
+    #     )
+
+def lab13_va_api(state):
+    """
+    LAB 13 - VA API
+
+    """
+    api = GuardiumRestAPI(
+        base_url='https://10.10.9.219:8443/',
+        client_id='BOOTCAMP'
+    )
+    
+    run_task('Setup environment for VA API lab', lambda: t_va_api(api), state)
 
 def lab12_policy_report1(state):
     """
-    LAB 10 - FAM
+    LAB 12 - Policies and Reports I
+
     """
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443/',
