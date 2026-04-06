@@ -314,29 +314,38 @@ def t_register_collector(api):
         appliance = create_appliance('collector')
         if not appliance.connect():
             print("  ✗ Failed to connect to collector")
-
+            exit(1)
         print("  Unit type:")
         result = appliance.execute_command("show unit type")
-        print(f"  ℹ {result}")
+        print(f"  ℹ ", result)
 
         try:
+            print("⌛ Registering collector, it can take few minutes")
+
             result = appliance.execute_command("register management 10.10.9.219 8443", timeout=600)
-            print("  ℹ ", result)
+            print("  ℹ ", json.loads(result)['unit_type'])
         except TimeoutError:
-            pass
-        
-        unit_data = api.get_unit_data(api_target_host='10.10.9.239')
-        if unit_data and 'Message' in unit_data:
-            unit_data = parse_unit_summary(unit_data['Message'])
-            print("  ℹ ", unit_data)
-        else:
-            print("  ✗ Uncexpected answer from API: ", unit_data)
-        print("  ℹ Unit type:")
-        try:
+            print("  ✗ registration command timeout, it sometimes happens, lets wait additional 5 minutes and check again")
+            time.sleep(300)
+            appliance = create_appliance('collector')
+            if not appliance.connect():
+                print("  ✗ Failed to connect to collector")
+                exit(1)
+            print("  Unit type:")
             result = appliance.execute_command("show unit type")
-            print("  ℹ ", result)
-        except (TimeoutError, OSError):
-            pass
+            print(f"  ℹ ", result)
+        
+        # unit_data = api.get_unit_data(api_target_host='10.10.9.239')
+        # if unit_data and 'Message' in unit_data:
+        #     unit_data = parse_unit_summary(unit_data['Message'])
+        #     print("  ℹ ", unit_data)
+        # else:
+        #     print("  ✗ Uncexpected answer from API: ", unit_data)
+        # try:
+        #     result = appliance.execute_command("show unit type")
+        #     print("  ℹ ", result)
+        # except (TimeoutError, OSError):
+        #     pass
         print("  ✓ Collector registered ")
     else:
         unit_data = api.get_unit_data(api_target_host='10.10.9.239')
@@ -347,34 +356,31 @@ def t_register_collector(api):
             print("  ✗ Incorrect API answer: ", unit_data)
         print("  ✓ Collector is already registered ")
 
-
 def t_preparing_appliances_for_patching(api):
-    print("\nDownload and unpack patches locally")
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
+    print("  ➜ Download and unpack patches locally")
     target_dir = "/root/gn-trainings/appliance-patches"
     os.makedirs(target_dir, exist_ok=True)
     filename = os.path.join(target_dir, os.path.basename("patches.zip"))
     urllib.request.urlretrieve(get_env_value("PATCH_ARCHIVE"), filename)
     with zipfile.ZipFile(filename, "r") as zipf:
             zipf.extractall(path=target_dir)
-    print(f"  ✓ Patches extracted")
     with zipfile.ZipFile(filename, "r") as zipf:
         patch_list = sorted(zipf.namelist())
     patch_order = get_env_value("PATCH_NAME_LIST").split(",")
     sorted_patch_list = sorted(patch_order)
     save_to_env("PATCH_ORDER", ",".join(str(sorted_patch_list.index(item) + 1) for item in patch_order))
 
-    print("\nRemoving old patch archives on central manager")
+    print("  ➜ Removing old patch archives on central manager")
     result = api.patch_cleanup()   
-    print("    ✓ OK")
-    
-    print("\nCopying patches to central manager and collector")
+        
+    print("  ➜ Copying patches to central manager and collector")
     patch_files = glob.glob('/root/gn-trainings/appliance-patches/patches/*.sig')
     
     if not patch_files:
         print("  ✗ No patch files found in /root/gn-trainings/appliance-patches/patches/")
         exit(1)    
-    print(f"  Found {len(patch_files)} patch files to copy")
+    print(f"  ℹ Found {len(patch_files)} patch files to copy")
     all_success = True
     for appl in ['10.10.9.219', '10.10.9.239']:
         for patch_file in patch_files:
@@ -389,9 +395,9 @@ def t_preparing_appliances_for_patching(api):
                 all_success = False
                 break
     if all_success:
-        print(f"  ✓ All {len(patch_files)} patches copied successfully")
+        print(f"  ℹ All {len(patch_files)} patches copied successfully")
 
-        print("\nChanging ownership of patches to tomcat:tomcat")
+        print("  ➜ Changing ownership of patches to tomcat:tomcat")
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         for appl in ['10.10.9.219', '10.10.9.239']:
@@ -413,12 +419,10 @@ def t_preparing_appliances_for_patching(api):
             except Exception as e:
                 print(f"  ✗ Error changing ownership: {e}")
                 exit(1)
-        print(f"  ✓ Ownership changed to tomcat:tomcat")
     else:
         print("  ✗ Problem with copying of patches to central manager or collector")
         exit(1)
-    return None
-
+ 
 def t_registering_patches_installation(appliance_name, appliance_ip, password):
     appliance = create_appliance(appliance_name)
     if not appliance.connect():
@@ -1828,11 +1832,10 @@ def lab1_appliance_setup(state):
     run_task('Other collector settings', lambda: t_other_collector_settings(), state, STATE_FILE)
     run_task('Initial CM settings', lambda: t_initial_cm_settings(), state, STATE_FILE)
     run_task('Create demo user', lambda: t_create_demo_user(api), state, STATE_FILE)
-    
     run_task('Register collector', lambda: t_register_collector(api), state, STATE_FILE)
-    exit(0)
+    
     run_task('Prepare appliances for patching', lambda: t_preparing_appliances_for_patching(api), state, STATE_FILE)
-
+    exit(0)
     print(f"\nRegister patches on appliances and start patching process")
     for appliance_name, appliance_ip, password, task_number in [('cm', '10.10.9.219', get_env_value('CM_PASSWORD'), 'register_patches_on_cm'), ('collector', '10.10.9.239', get_env_value('COLLECTOR_PASSWORD'), 'register_patches_on_collector')]:
         run_task(task_number, lambda: t_registering_patches_installation(appliance_name, appliance_ip, password), state, STATE_FILE)
