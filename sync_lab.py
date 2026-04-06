@@ -1838,14 +1838,34 @@ def t_install_stap_on_hana(api):
     print(api.create_sql_configuration(db_type="Oracle", instance="ORCLPDB1", stap_host='10.10.9.60', username='guardium', api_target_host='10.10.9.239'))
 
 def t_policy_report_1(api):
-    conn = get_postgres_conn(host='10.10.9.70', port=5432, dbname='postgres', user='jerry', password=f'{get_env_value("DEFAULT_SERVICE_PASSWORD")}')
-    conn.autocommit = True
-    cur = conn.cursor()
-    cur.execute("CREATE TABLE customers (first_name VARCHAR(50),last_name VARCHAR(50),email_address VARCHAR(100),credit_card_number VARCHAR(20))")
-    cur.execute("INSERT INTO customers VALUES ('John', 'Smith', 'john.smith@example.com', '4111 1111 1111 1111'),('Jane', 'Doe', 'jane.doe@example.com', '5500 0000 0000 0004'),('Alice', 'Johnson', 'alice.j@example.com', '3400 0000 0000 009'),('Bob', 'Brown', 'bob.brown@example.com', '6011 0000 0000 0004'),('Carol', 'Davis', 'carol.d@example.com', '4111 1111 1111 1234'),('David', 'Wilson', 'david.w@example.com', '5500 0000 0000 5678'),('Emma', 'Taylor', 'emma.t@example.com', '3400 0000 0000 4321'),('Frank', 'Miller', 'frank.m@example.com', '6011 0000 0000 8765'),('Grace', 'Lee', 'grace.l@example.com', '4111 1111 1111 9999'),('Henry', 'Clark', 'henry.c@example.com', '5500 0000 0000 8888')")
-    cur.execute("GRANT SELECT ON customers TO PUBLIC")
-    cur.close()
-    conn.close()
+    print("\n Create sensitive table for lab")
+    # conn = get_postgres_conn(host='10.10.9.70', port=5432, dbname='postgres', user='jerry', password=f'{get_env_value("DEFAULT_SERVICE_PASSWORD")}')
+    # conn.autocommit = True
+    # cur = conn.cursor()
+    # cur.execute("CREATE TABLE customers (first_name VARCHAR(50),last_name VARCHAR(50),email_address VARCHAR(100),credit_card_number VARCHAR(20))")
+    # cur.execute("INSERT INTO customers VALUES ('John', 'Smith', 'john.smith@example.com', '4111 1111 1111 1111'),('Jane', 'Doe', 'jane.doe@example.com', '5500 0000 0000 0004'),('Alice', 'Johnson', 'alice.j@example.com', '3400 0000 0000 009'),('Bob', 'Brown', 'bob.brown@example.com', '6011 0000 0000 0004'),('Carol', 'Davis', 'carol.d@example.com', '4111 1111 1111 1234'),('David', 'Wilson', 'david.w@example.com', '5500 0000 0000 5678'),('Emma', 'Taylor', 'emma.t@example.com', '3400 0000 0000 4321'),('Frank', 'Miller', 'frank.m@example.com', '6011 0000 0000 8765'),('Grace', 'Lee', 'grace.l@example.com', '4111 1111 1111 9999'),('Henry', 'Clark', 'henry.c@example.com', '5500 0000 0000 8888')")
+    # cur.execute("GRANT SELECT ON customers TO PUBLIC")
+    # cur.close()
+    # conn.close()
+    print("\n Enable DBF features on raptor")
+    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
+
+    api.gim_client_params(
+        client_ip="10.10.9.70",
+        param_name="STAP_FIREWAL_INSTALLED",
+        param_value="1"
+    )
+    api.gim_client_params(
+        client_ip="10.10.9.70",
+        param_name="STAP_FIREWALL_DEFAULT_STATE",
+        param_value="1"
+    )
+    api.gim_schedule_install(
+        client_ip="10.10.9.70",
+        date="now",
+    )
+    print("\n STAP reconfiguration monitoring")
+    monitor_gim_module_installation(api, "10.10.9.70")
     exit(0)
 
 def lab12_policy_report1(state):
