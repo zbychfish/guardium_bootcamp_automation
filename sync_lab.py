@@ -1917,7 +1917,7 @@ def t_setup_filebeat():
         # "mkdir -p /root/gn-trainings",
         # f"curl -L -O https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-{get_env_value("FILEBEAT_VERSION")}-x86_64.rpm --output-dir /root/gn-trainings",
         # f"cd /root/gn-trainings && dnf -y install /root/gn-trainings/filebeat-{get_env_value("FILEBEAT_VERSION")}-x86_64.rpm",
-        "sed -i '/^- type: filestream/,/^[^[:space:]]/c\\- type: filestream\\n  id: \"cassandra\"\\n  enabled: true\\n  paths:\\n    - /var/log/cassandra/audit/audit.log\\n  exclude_lines: ['\"'\"'AuditLogManager'\"'\"']\\n  tags: [\"cassandra\"]\\n  multiline.type: pattern\n  multiline.pattern: '\"'\"'^INFO'\"'\"'\\n  multiline.negate: true\\n  multiline.match: after' /etc/filebeat/filebeat.yml"
+        r"sed -i '/^- type: filestream/,/^[^[:space:]]/c\- type: filestream\n  id: \"cassandra\"\n  enabled: true\n  paths:\n    - /var/log/cassandra/audit/audit.log\n  exclude_lines: ['\"'\"'AuditLogManager'\"'\"']\n  tags: [\"cassandra\"]\n  multiline.type: pattern\n  multiline.pattern: '\"'\"'^INFO'\"'\"'\n  multiline.negate: true\n  multiline.match: after' /etc/filebeat/filebeat.yml"
     ])
     exit(0)
 
