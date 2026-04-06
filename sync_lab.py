@@ -1890,7 +1890,7 @@ def t_va_api(api):
             check=True
         )
 
-def t_setup_cassandra(api):
+def t_setup_cassandra():
     scp_file_as_root(host='10.10.9.60', root_password=get_env_value("HANA_PASSWORD"), local_path="guardium_configuration_files/cassandra.repo", remote_path="/etc/yum.repos.d/cassandra.repo")
     scp_file_as_root(host='10.10.9.60', root_password=get_env_value("HANA_PASSWORD"), local_path="guardium_configuration_files/cassandra_table.cql", remote_path="/root")
     result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"),
@@ -1906,10 +1906,19 @@ def t_setup_cassandra(api):
         "service cassandra start",
         "service cassandra start",
         "dnf -qy install python3-pip",
-        "pip install --user cqlsh"
+        "pip install --user cqlsh",
+        "cqlsh -f /root/cassandra_table.cql"
     ])
     time.sleep(30)
 
+def t_setup_filebeat():
+    result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"),
+    commands=[
+        "mkdir -p /root/gn-trainings",
+        f"curl -L -O https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-{get_env_value("FILEBEAT_VERSION")}-x86_64.rpm --output-dir /root/gn-trainings",
+        f"cd /root/gn-trainings && dnf -y install /root/gn-trainings/filebeat-{get_env_value("FILEBEAT_VERSION")}-x86_64.rpm",
+    ])
+    exit(0)
 
 def lab6_uc1(state):
     """
@@ -1921,7 +1930,9 @@ def lab6_uc1(state):
         client_id='BOOTCAMP'
     )
     
-    run_task('Deploy cassandra on hana', lambda: t_setup_cassandra(api), state)
+    run_task('Deploy cassandra on hana', lambda: t_setup_cassandra(), state)
+
+    run_task('Deploy filebeat on hana', lambda: t_setup_filebeat(), state)
 
 def lab13_va_api(state):
     """
@@ -2256,6 +2267,7 @@ if __name__ == "__main__":
         print(f"\n[ERROR] Błąd: {e}")
         import traceback
         traceback.print_exc()
+
 
 
 
