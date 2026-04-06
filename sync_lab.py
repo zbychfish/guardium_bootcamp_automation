@@ -1783,9 +1783,9 @@ def lab4_atap(state):
         client_id='BOOTCAMP'
     )
 
-    run_task('install_stap_on_raptor', lambda: t_install_stap_on_raptor(api), state, STATE_FILE)
+    run_task('Install STAP on raptor', lambda: t_install_stap_on_raptor(api), state, STATE_FILE)
 
-    run_task('configure_atap_for_postgres_on_raptor', lambda: t_enable_atap_for_postgres_on_raptor(), state, STATE_FILE)
+    run_task('Configure ATAP for postgres on raptor', lambda: t_enable_atap_for_postgres_on_raptor(), state, STATE_FILE)
     
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443',
@@ -1814,11 +1814,11 @@ def lab2_gim(state):
         client_id='BOOTCAMP'
     )
 
-    run_task('resolving_collector_on_raptor', lambda: t_set_collector_resolving_on_raptor(), state, STATE_FILE)
+    run_task('Set collector resolving on raptor', lambda: t_set_collector_resolving_on_raptor(), state, STATE_FILE)
 
-    run_task('getting_gim_files', lambda: t_getting_gim_files(), state, STATE_FILE)
+    run_task('Getting GIM files', lambda: t_getting_gim_files(), state, STATE_FILE)
 
-    run_task('import_gim_files_on_cm', lambda: t_import_gim_modules(api), state, STATE_FILE)
+    run_task('Import GIM files on CM', lambda: t_import_gim_modules(api), state, STATE_FILE)
 
 def lab1_appliance_setup(state):
     """
@@ -1827,8 +1827,9 @@ def lab1_appliance_setup(state):
     
     run_task('Password change for cli users on appliances', lambda: t_password_change_on_appliances(), state, STATE_FILE)
     
-    #if 'other_collector_settings' not in state["completed_tasks"]:
-    appliance = create_appliance('collector_unconfigured')
+    if 'other_collector_settings' not in state["completed_tasks"]:
+        appliance = create_appliance('collector_unconfigured')
+        print(appliance)
 
     run_task('Initial collector setup', lambda: t_initial_collector_settings(appliance), state, STATE_FILE)
 
@@ -1843,7 +1844,7 @@ def lab1_appliance_setup(state):
         else:
             print("    ✓ Connected to collector - OK")
 
-        run_task('other_collector_settings', lambda: t_other_collector_settings(appliance), state, STATE_FILE)
+        run_task('Other collector settings', lambda: t_other_collector_settings(appliance), state, STATE_FILE)
    
         if appliance:
             appliance.disconnect()
@@ -1855,7 +1856,7 @@ def lab1_appliance_setup(state):
     else:
         print("    ✓ Connected to CM - OK")
     
-    run_task('initial_cm_settings', lambda: t_initial_cm_settings(appliance), state, STATE_FILE)
+    run_task('Initial CM settings', lambda: t_initial_cm_settings(appliance), state, STATE_FILE)
     
     appliance.disconnect
 
@@ -1864,9 +1865,9 @@ def lab1_appliance_setup(state):
         client_id='BOOTCAMP'
     )
     
-    run_task('create_demo_user', lambda: t_create_demo_user(api), state, STATE_FILE)
-    run_task('register_collector', lambda: t_register_collector(api), state, STATE_FILE)
-    run_task('prepare_appliances_for_patching', lambda: t_preparing_appliances_for_patching(api), state, STATE_FILE)
+    run_task('Create demo user', lambda: t_create_demo_user(api), state, STATE_FILE)
+    run_task('Register collector', lambda: t_register_collector(api), state, STATE_FILE)
+    run_task('Prepare appliances for patching', lambda: t_preparing_appliances_for_patching(api), state, STATE_FILE)
 
     print(f"\nRegister patches on appliances and start patching process")
     for appliance_name, appliance_ip, password, task_number in [('cm', '10.10.9.219', get_env_value('CM_PASSWORD'), 'register_patches_on_cm'), ('collector', '10.10.9.239', get_env_value('COLLECTOR_PASSWORD'), 'register_patches_on_collector')]:
@@ -1876,7 +1877,7 @@ def lab1_appliance_setup(state):
     for appliance_name, task_number in [('cm', 'monitor_patch_installation_on_cm'), ('collector', 'monitor_patch_installation_on_collector')]:
         run_task(task_number, lambda: t_monitoring_patch_installation(appliance_name), state, STATE_FILE)
 
-    run_task('policy_installation_on_collector', lambda: t_install_policy_on_collector(api), state, STATE_FILE)
+    run_task('Policy installation on collector', lambda: t_install_policy_on_collector(api), state, STATE_FILE)
     
     return None
 
