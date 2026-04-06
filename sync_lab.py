@@ -1827,9 +1827,12 @@ def lab1_appliance_setup(state):
     
     run_task('Password change for cli users on appliances', lambda: t_password_change_on_appliances(), state, STATE_FILE)
     
-    if 'other_collector_settings' not in state["completed_tasks"]:
-        appliance = create_appliance('collector_unconfigured')
-        print(appliance)
+    appliance = create_appliance('collector_unconfigured')
+    if not appliance.connect():
+        print("  ✗ Failed to connect to collector")
+        return None
+    else:
+        print("    ✓ Connected to collector - OK")
 
     run_task('Initial collector setup', lambda: t_initial_collector_settings(appliance), state, STATE_FILE)
 
