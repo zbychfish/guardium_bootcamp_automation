@@ -1877,17 +1877,17 @@ def t_policy_report_1(api):
     result = api.engine_config(compute_average=True, inspect_data=True, log_records=True, record_empty=True, api_target_host="10.10.9.239")
     # print(result)
     # sprawdzic czy zmiany w engine core widoczne jak nie to albo restart appliance albo restart inspection-core
+    pass
 
 def t_va_api(api):
-    # token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
-    # print("\n Setup new dashboard - VA")
-    # result = api.import_definitions('guardium_definition_files/exp_dashboard_va.sql')
-    # print(result)
-    # print("\n Import oracle VA definition")
-    # result = api.import_definitions('guardium_definition_files/exp_security_assessment_va_oracle.sql')
-    # print(result)
+    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
+    print("\n Setup new dashboard - VA")
+    result = api.import_definitions('guardium_definition_files/exp_dashboard_va.sql')
+    print(result)
+    print("\n Import oracle VA definition")
+    result = api.import_definitions('guardium_definition_files/exp_security_assessment_va_oracle.sql')
+    print(result)
 
-    # password = get_env_value("DEFAULT_SERVICE_PASSWORD")
     commands = [
         {"cmd": ["mkdir", "-p", "/root/gn-trainings/va-api"]},
         {"cmd": ["/usr/bin/python3.12", "-m", "venv", ".venv"], "cwd" : "/root/gn-trainings/va-api"},
@@ -1902,6 +1902,18 @@ def t_va_api(api):
             cwd=c.get("cwd"),
             check=True
         )
+
+def lab6_uc1(state):
+    """
+    LAB 6 - UC 1.0
+
+    """
+    api = GuardiumRestAPI(
+        base_url='https://10.10.9.219:8443/',
+        client_id='BOOTCAMP'
+    )
+    
+    run_task('Setup environment for VA API lab', lambda: t_va_api(api), state)
 
 def lab13_va_api(state):
     """
@@ -2172,14 +2184,14 @@ def sync_lab(state, skip_below: int = 0, stop_at: int = 999):
         (3, None, "SKIPPED", "LAB 3 does not modify final environment"),
         (4, lab4_atap, "ATAP", "ATAP"),
         (5, lab5_exit, "EXIT", "EXIT"),
-        (6, None, "UC 1.0", "LAB 6 focuses on UC 1.0 which will withdrawn in the future. There is no API to automate UC 1.0 configuration. Will decide later to automate some steps from this lab later"),
+        (6, lab6_uc1, "UC 1.0", "LAB 6 focuses on UC 1.0 which will withdrawn in the future. There is no API to automate UC 1.0 configuration. Automated cassandra and filebeat setup."),
         (7, lab7_etap, "ETAP", "ETAP"),
         (8, lab8_va, "VA", "VA"),
         (9, lab9_winstap, "WINSTAP", "WINSTAP"),
         (10, lab10_fam, "FAM", "FAM"),
         (11, lab11_oracle, "Oracle", "Oracle"),
-        (12, lab12_policy_report1, "Policy & Reports I", "Policy & Reports I"),
-        (13, lab13_va_api, "VA API", "VA API"),
+        (12, lab12_policy_report1, "Policy & Reports I", "New Dashboard added with reports for this lab"),
+        (13, lab13_va_api, "VA API", "Use BOOTCAMP oauth client name instead 'va-api'"),
     ]
     
     # Iteracja przez wszystkie LAB-y
