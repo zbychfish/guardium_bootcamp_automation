@@ -1914,9 +1914,10 @@ def t_setup_cassandra():
 def t_setup_filebeat():
     result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"),
     commands=[
-        "mkdir -p /root/gn-trainings",
-        f"curl -L -O https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-{get_env_value("FILEBEAT_VERSION")}-x86_64.rpm --output-dir /root/gn-trainings",
-        f"cd /root/gn-trainings && dnf -y install /root/gn-trainings/filebeat-{get_env_value("FILEBEAT_VERSION")}-x86_64.rpm",
+        # "mkdir -p /root/gn-trainings",
+        # f"curl -L -O https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-{get_env_value("FILEBEAT_VERSION")}-x86_64.rpm --output-dir /root/gn-trainings",
+        # f"cd /root/gn-trainings && dnf -y install /root/gn-trainings/filebeat-{get_env_value("FILEBEAT_VERSION")}-x86_64.rpm",
+        "sed -i '/^- type: filestream/,/^[^[:space:]]/c\\- type: filestream\\n  id: \"cassandra\"\\n  enabled: true\\n  paths:\\n    - /var/log/cassandra/audit/audit.log\\n  exclude_lines: ['\"'\"'AuditLogManager'\"'\"']\\n  tags: [\"cassandra\"]\\n  multiline.type: pattern\n  multiline.pattern: '\"'\"'^INFO'\"'\"'\\n  multiline.negate: true\\n  multiline.match: after' /etc/filebeat/filebeat.yml"
     ])
     exit(0)
 
