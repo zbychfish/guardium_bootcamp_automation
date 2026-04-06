@@ -1935,20 +1935,6 @@ def t_setup_filebeat(api):
         "systemctl enable filebeat"
     ])
 
-def lab6_uc1(state):
-    """
-    LAB 6 - UC 1.0
-
-    """
-    api = GuardiumRestAPI(
-        base_url='https://10.10.9.239:8443/',
-        client_id='BOOTCAMP'
-    )
-    
-    run_task('Deploy cassandra on hana', lambda: t_setup_cassandra(), state)
-
-    run_task('Deploy filebeat on hana', lambda: t_setup_filebeat(api), state)
-
 def lab13_va_api(state):
     """
     LAB 13 - VA API
@@ -2071,6 +2057,20 @@ def lab7_etap(state):
     run_task('Import mysql ETAP cert', lambda: t_import_etap_cert(), state)
 
     run_task('Start mysql ETAP on raptor', lambda: t_start_etap(), state)
+
+def lab6_uc1(state):
+    """
+    LAB 6 - UC 1.0
+
+    """
+    api = GuardiumRestAPI(
+        base_url='https://10.10.9.239:8443/',
+        client_id='BOOTCAMP'
+    )
+    
+    run_task('Deploy cassandra on hana', lambda: t_setup_cassandra(), state)
+
+    run_task('Deploy filebeat on hana', lambda: t_setup_filebeat(api), state)
 
 def lab5_exit(state):
     """
@@ -2202,15 +2202,11 @@ def lab1_appliance_setup(state):
 
 def sync_lab(state, skip_below: int = 0, stop_at: int = 999):
     """
-    Główna funkcja synchronizacji laboratorium.
-    
-    Args:
+        Args:
         skip_below: Pomiń LAB-y o numerze mniejszym niż podana wartość (domyślnie 0 - wykonaj wszystkie)
         stop_at: Zatrzymaj się po wykonaniu LAB-a o podanym numerze (domyślnie 999 - wykonaj wszystkie)
     """
-
-    print(state)
-    
+   
     # Konfiguracja LAB-ów: (numer, funkcja, nazwa, opis)
     labs_config = [
         (1, lab1_appliance_setup, "Appliance Setup", "Appliance setup"),
