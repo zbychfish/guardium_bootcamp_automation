@@ -120,11 +120,11 @@ def wait_for_appliance(appliance_name: str, max_attempts: int = 40, interval: in
 STATE_FILE = "sync_lab_state.json"
 
 def t_password_change_on_appliances():
-    print("\nPassword change for cli user on appliances")
+    print("Password change for cli user on appliances")
     current_appliances = appliances.copy()
     del current_appliances['collector']
     for name, cfg in current_appliances.items():
-        print(f"  Changing password on {name} ({cfg['host']})")
+        print(f"Changing password on {name} ({cfg['host']})")
         ok = change_password_as_root(
             host=cfg["host"],
             root_password=get_env_value("ROOT_PASSWORD"),
@@ -465,7 +465,7 @@ def t_monitoring_patch_installation(appliance_name):
     required_status = "DONE: Patch installation Succeeded."
     while True:
         result = appliance.execute_command("show system patch installed")
-        # Pobierz listę numerów patchy ze zmiennej środowiskowej (np. "9997,4015")
+        # Get list of patch numbers from environment variable (e.g., "9997,4015")
         wanted = set(get_env_value("PATCH_LIST").split(","))
         status_by_id = {}
         for line in result.splitlines():
@@ -478,7 +478,7 @@ def t_monitoring_patch_installation(appliance_name):
             pid = m.group(1)
             has_ok_status = required_status in line
             status_by_id[pid] = has_ok_status        
-        # Sprawdź czy wszystkie wymagane patche są zainstalowane z poprawnym statusem
+        # Check if all required patches are installed with correct status
         all_installed = all(pid in status_by_id and status_by_id[pid] for pid in wanted)
         if all_installed:
             print(f"  ✓ All required patches ({', '.join(wanted)}) on {appliance_name} are installed with status: {required_status}")
@@ -1279,9 +1279,9 @@ def t_deploy_oracle_in_container_on_hana():
         rc = res.get("rc")
         last_out = out
 
-        # Jeśli chcesz logować status:
+        # If you want to log status:
         print(f"rc={rc} out={out!r} err={err[:120]!r}")
-        # out powinno być liczbą (wynik wc -l)
+        # out should be a number (result of wc -l)
         try:
             count = int(out) if out else 0
         except ValueError:
@@ -1896,11 +1896,11 @@ def lab1_appliance_setup(state):
 def sync_lab(state, skip_below: int = 0, stop_at: int = 999):
     """
         Args:
-        skip_below: Pomiń LAB-y o numerze mniejszym niż podana wartość (domyślnie 0 - wykonaj wszystkie)
-        stop_at: Zatrzymaj się po wykonaniu LAB-a o podanym numerze (domyślnie 999 - wykonaj wszystkie)
+        skip_below: Skip LABs with number lower than given value (default 0 - execute all)
+        stop_at: Stop after executing LAB with given number (default 999 - execute all)
     """
    
-    # Konfiguracja LAB-ów: (numer, funkcja, nazwa, opis)
+    # LAB configuration: (number, function, name, description)
     labs_config = [
         (1, lab1_appliance_setup, "Appliance Setup", "Appliance setup"),
         (2, lab2_gim, "GIM Setup", "GIM setup"),
@@ -1917,23 +1917,23 @@ def sync_lab(state, skip_below: int = 0, stop_at: int = 999):
         (13, lab13_va_api, "VA API", "Use BOOTCAMP oauth client name instead 'va-api'"),
     ]
     
-    # Iteracja przez wszystkie LAB-y
+    # Iterate through all LABs
     for lab_num, lab_func, lab_name, lab_desc in labs_config:
         if skip_below < lab_num and stop_at >= lab_num:
             if lab_func is not None:
-                # Wykonaj LAB
+                # Execute LAB
                 lab_func(state)
                 print("\n" + "=" * 60)
                 print(f"LAB {lab_num} completed!")
                 print("=" * 60)
             else:
-                # LAB pominięty (None)
+                # LAB skipped (None)
                 print(f"\n[LAB {lab_num}] SKIPPED")
                 print(lab_desc)
             
-            # Sprawdź czy zatrzymać się po tym LAB-ie
+            # Check if should stop after this LAB
             if stop_at == lab_num:
-                print(f"\n[INFO] Zatrzymano po LAB {lab_num} (--stop-at={lab_num})")
+                print(f"\n[INFO] Stopped after LAB {lab_num} (--stop-at={lab_num})")
                 return
         elif skip_below >= lab_num:
             print(f"\n[LAB {lab_num}] SKIPPED - {lab_name} (--skip-below)")
@@ -1947,18 +1947,18 @@ if __name__ == "__main__":
     state = load_state(STATE_FILE)
 
 
-    parser = argparse.ArgumentParser(description="Sync Lab - synchronizacja środowiska laboratoryjnego")
+    parser = argparse.ArgumentParser(description="Sync Lab - laboratory environment synchronization")
     parser.add_argument(
         "--skip-below",
         type=int,
         default=0,
-        help="Pomiń LAB-y o numerze mniejszym niż podana wartość (domyślnie 0 - wykonaj wszystkie)"
+        help="Skip LABs with number lower than given value (default 0 - execute all)"
     )
     parser.add_argument(
         "--stop-at",
         type=int,
         default=999,
-        help="Zatrzymaj się po wykonaniu LAB-a o podanym numerze (domyślnie 999 - wykonaj wszystkie)"
+        help="Stop after executing LAB with given number (default 999 - execute all)"
     )
     
     args = parser.parse_args()
@@ -1966,9 +1966,9 @@ if __name__ == "__main__":
     try:
         sync_lab(state, skip_below=args.skip_below, stop_at=args.stop_at)
     except KeyboardInterrupt:
-        print("\n\n[INFO] Przerwano przez użytkownika")
+        print("\n\n[INFO] Interrupted by user")
     except Exception as e:
-        print(f"\n[ERROR] Błąd: {e}")
+        print(f"\n[ERROR] Error: {e}")
         import traceback
         traceback.print_exc()
 
