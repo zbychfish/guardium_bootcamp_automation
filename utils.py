@@ -614,9 +614,9 @@ def save_state(state, state_file: str):
 def run_task(task_id, task_fn, state, state_file: str):
     """Run task if not already completed"""
     if task_id in state["completed_tasks"]:
-        print(f"Skipping {task_id}")
+        print(f"\n⏭ Skipping - {task_id}")
         return
-    print(f"➤ Running - {task_id}")
+    print(f"\n➤ Running - {task_id}")
     output = task_fn()
     state["completed_tasks"].append(task_id)
     save_state(state, state_file)

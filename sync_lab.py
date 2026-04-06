@@ -148,13 +148,13 @@ def t_initial_collector_settings(appliance):
         print(output)
     else:
         print(f"  ℹ Time zone already set to {timezone}")
-    print(" ➜ Configure NTP servers")
+    print("  ➜ Configure NTP servers")
     appliance.execute_command("store system time_server hostname 0.pool.ntp.org 1.pool.ntp.org 2.pool.ntp.org")
-    print(" ➜ Enabling time synchronization")
+    print("  ➜ Enabling time synchronization")
     appliance.execute_command("store system time_server state on")
 
 def t_restart_system(appliance):
-    print(" ➜ Restart system")
+    print("  ➜ Restart system")
     result = appliance.execute_restart_with_check()
     #print(f"  {result}")
     appliance.disconnect()
@@ -167,31 +167,26 @@ def t_restart_system(appliance):
         print("  ✗ Could not restart - MYSQL is busy")
         print("  ✗ Run script again in 1 minute or restart collector manually and then start again")
 
-
 def t_other_collector_settings(appliance):
-    print("\nSetup collector name and domain")
+    print("  ➜ Setup collector name and domain")
     appliance.execute_command("store system hostname coll1")
     appliance.execute_command("store system domain gdemo.com")
-    print("  ✓ Collector name set")
     
-    print("\nConfigure session timeouts")
+    print("  ➜ Configure session timeouts")
     appliance.execute_command("store gui session_timeout 9999")
     appliance.execute_command("store timeout cli_session 600")
-    print("  ✓ Timeouts configured")
    
-    print("\nRestart GUI")
+    print("  ➜ Restart GUI")
     appliance.execute_command_with_confirmation(
         command="restart gui",
         response="y",
         confirmation_pattern=r"Are you sure you want to restart GUI\s*\(y/n\)\?"
     )
-    print("  ✓ GUI restarted")
 
-    print("\nSet shared secret on collector")
+    print("  ➜ Set shared secret on collector")
     appliance.execute_command("store system shared secret guardium")
-    print("  ✓ Shared Secret set")
 
-    print("\nSet manual hosts settings")
+    print("  ➜ Set manual hosts resolving")
     output = appliance.execute_command("support show hosts")
     existing = set()
     for line in output.splitlines():
@@ -218,13 +213,10 @@ def t_other_collector_settings(appliance):
         command = f'support store hosts {cfg["host"]} {prompt_host}'
         appliance.execute_command(command)
     print(appliance.execute_command("support show hosts"))
-    print("  ✓ Hosts updated")
 
-    print("\nDisabling guardcli accounts")
+    print("  ➜ Disabling guardcli accounts")
     for account_number in range(2, 9):
         appliance.execute_command(f"store guarduser_state disable guardcli{account_number}")
-    print("  ✓Accounts disabled")
-    return None
 
 def t_initial_cm_settings(appliance):
     print("\nCreate oauth client for bootcamp sync")
@@ -1834,7 +1826,7 @@ def lab1_appliance_setup(state):
     run_task('Initial collector setup', lambda: t_initial_collector_settings(appliance), state, STATE_FILE)
 
     run_task('Collector restart', lambda: t_restart_system(appliance), state, STATE_FILE)
-    exit(0)
+    
     appliance = None
     if 'other_collector_settings' not in state["completed_tasks"]:
         appliance = create_appliance('collector_unconfigured')
@@ -1846,7 +1838,7 @@ def lab1_appliance_setup(state):
    
         if appliance:
             appliance.disconnect()
-
+    exit(0)
     appliance = create_appliance('cm')
     if not appliance.connect():
         print("  ✗ Failed to connect to CM")
