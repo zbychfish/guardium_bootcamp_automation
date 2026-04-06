@@ -131,7 +131,11 @@ def t_password_change_on_appliances():
             new_password=get_env_value("COLLECTOR_PASSWORD")
         )
 
-def t_initial_collector_settings(appliance):
+def t_initial_collector_settings():
+    appliance = create_appliance('collector_unconfigured')
+    if not appliance.connect():
+        print("  ✗ Failed to connect to collector")
+        exit(1)
     print("  ➜ Disabling purge")
     output = appliance.execute_command("grdapi disable_purge")
     print("  ➜ Set time zone to Europe/Warsaw")
@@ -152,8 +156,13 @@ def t_initial_collector_settings(appliance):
     appliance.execute_command("store system time_server hostname 0.pool.ntp.org 1.pool.ntp.org 2.pool.ntp.org")
     print("  ➜ Enabling time synchronization")
     appliance.execute_command("store system time_server state on")
+    appliance.disconnect()
 
-def t_restart_system(appliance):
+def t_restart_system():
+    appliance = create_appliance('collector_unconfigured')
+    if not appliance.connect():
+        print("  ✗ Failed to connect to collector")
+        exit(1)
     print("  ➜ Restart system")
     result = appliance.execute_restart_with_check()
     #print(f"  {result}")
@@ -167,7 +176,11 @@ def t_restart_system(appliance):
         print("  ✗ Could not restart - MYSQL is busy")
         print("  ✗ Run script again in 1 minute or restart collector manually and then start again")
 
-def t_other_collector_settings(appliance):
+def t_other_collector_settings():
+    appliance = create_appliance('collector_unconfigured')
+    if not appliance.connect():
+        print("  ✗ Failed to connect to collector")
+        exit(1)
     print("  ➜ Setup collector name and domain")
     appliance.execute_command("store system hostname coll1")
     appliance.execute_command("store system domain gdemo.com")
@@ -217,9 +230,14 @@ def t_other_collector_settings(appliance):
     print("  ➜ Disabling guardcli accounts")
     for account_number in range(2, 9):
         appliance.execute_command(f"store guarduser_state disable guardcli{account_number}")
+    appliance.disconnect()
 
-def t_initial_cm_settings(appliance):
-    print("\nCreate oauth client for bootcamp sync")
+def t_initial_cm_settings():
+    appliance = create_appliance('cm')
+    if not appliance.connect():
+        print("  ✗ Failed to connect to CM")
+        exit(1)
+    print("  ➜ Create oauth client for bootcamp sync")
     result = appliance.execute_command("grdapi list_oauth_clients")
     if "Client Id: BOOTCAMP" in result:
         appliance.execute_command("grdapi delete_oauth_clients client_id=BOOTCAMP")
@@ -233,30 +251,25 @@ def t_initial_cm_settings(appliance):
                 client_secret = data.get('client_secret')
                 if client_secret:
                     if save_to_env("CLIENT_SECRET", client_secret):
-                        print(f"  ✓ Client secret saved to .env")
+                        print(f"  ℹ Client secret saved to .env")
                     else:
                         print(f"  ⚠ Warning: Could not save client_secret to .env")
+                        exit(1)
                     break
             except json.JSONDecodeError:
                 pass
-    if not client_secret:
-        print("  ⚠ Warning: Could not extract client_secret from response")
-        return None
-    print("  ✓ Oauth client configured")
 
-    print("\nSet shared secret on Central Manager")
+    print("  ➜ Set shared secret on Central Manager")
     appliance.execute_command("store system shared secret guardium")
-    print("  ✓ Shared Secret set")
 
-    print("\nDisabling guardcli accounts")
+    print("  ➜ Disabling guardcli accounts")
     for account_number in range(2, 9):
         appliance.execute_command(f"store guarduser_state disable guardcli{account_number}")
-    print("  ✓ Accounts disabled")
 
-    print("\nSet resolving for coll1.gdemo.com")
+    print("  ➜ Set resolving for coll1.gdemo.com")
     appliance.execute_command(f"support store hosts 10.10.9.239 coll1.gdemo.com")
-    print("  ✓ Done")
-    return None
+    print("10.10.9.239 coll1.gdemo.com")
+    appliance.disconnect()
 
 def t_create_demo_user(api):
     print("\nCreate demo user")
@@ -1818,36 +1831,15 @@ def lab1_appliance_setup(state):
     
     run_task('Password change for cli users on appliances', lambda: t_password_change_on_appliances(), state, STATE_FILE)
     
-    appliance = create_appliance('collector_unconfigured')
-    if not appliance.connect():
-        print("  ✗ Failed to connect to collector")
-        exit(1)
-    
-    run_task('Initial collector setup', lambda: t_initial_collector_settings(appliance), state, STATE_FILE)
+    run_task('Initial collector setup', lambda: t_initial_collector_settings(), state, STATE_FILE)
 
-    run_task('Collector restart', lambda: t_restart_system(appliance), state, STATE_FILE)
+    run_task('Collector restart', lambda: t_restart_system(), state, STATE_FILE)
     
-    appliance = None
-    if 'other_collector_settings' not in state["completed_tasks"]:
-        appliance = create_appliance('collector_unconfigured')
-        if not appliance.connect():
-            print("  ✗ Failed to connect to collector")
-            exit(1)
-
-        run_task('Other collector settings', lambda: t_other_collector_settings(appliance), state, STATE_FILE)
+    run_task('Other collector settings', lambda: t_other_collector_settings(), state, STATE_FILE)
    
-        if appliance:
-            appliance.disconnect()
+    run_task('Initial CM settings', lambda: t_initial_cm_settings(), state, STATE_FILE)
+    
     exit(0)
-    appliance = create_appliance('cm')
-    if not appliance.connect():
-        print("  ✗ Failed to connect to CM")
-        exit(1)
-    
-    run_task('Initial CM settings', lambda: t_initial_cm_settings(appliance), state, STATE_FILE)
-    
-    appliance.disconnect
-
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443',
         client_id='BOOTCAMP'
