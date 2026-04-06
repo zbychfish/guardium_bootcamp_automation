@@ -301,7 +301,6 @@ def t_create_demo_user(api):
         result = api.import_definitions('guardium_definition_files/exp_dashboard_training.sql')
 
 def t_register_collector(api):  
-    print("\nRegister collector to central manager")
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
     units = api.get_registered_units()
     units = parse_mus_from_message_dict(units)
@@ -315,40 +314,39 @@ def t_register_collector(api):
         appliance = create_appliance('collector')
         if not appliance.connect():
             print("  ✗ Failed to connect to collector")
-            return None
 
         print("  Unit type:")
         result = appliance.execute_command("show unit type")
-        print(f"    {result}")
+        print(f"  ℹ {result}")
 
         try:
             result = appliance.execute_command("register management 10.10.9.219 8443", timeout=600)
-            print(result)
+            print("  ℹ ", result)
         except TimeoutError:
-            pass  # Ignoruj timeout, kontynuuj
+            pass
         
         unit_data = api.get_unit_data(api_target_host='10.10.9.239')
         if unit_data and 'Message' in unit_data:
             unit_data = parse_unit_summary(unit_data['Message'])
-            print(unit_data)
+            print("  ℹ ", unit_data)
         else:
-            print(f"  ⚠ Uncexpected answer from API: {unit_data}")
-        print("  Unit type:")
+            print("  ✗ Uncexpected answer from API: ", unit_data)
+        print("  ℹ Unit type:")
         try:
             result = appliance.execute_command("show unit type")
-            print(f"    {result}")
+            print("  ℹ ", result)
         except (TimeoutError, OSError):
-            pass  # Ignoruj timeout, kontynuuj
-        print(f"  ✓ Collector registered ")
+            pass
+        print("  ✓ Collector registered ")
     else:
         unit_data = api.get_unit_data(api_target_host='10.10.9.239')
         if unit_data and 'Message' in unit_data:
             unit_data = parse_unit_summary(unit_data['Message'])
-            print(unit_data)
+            print("  ℹ ", unit_data)
         else:
-            print(f"  ⚠ Incorrect API answer: {unit_data}")
-        print(f"  ✓ Collector is already registered ")
-    return None
+            print("  ✗ Incorrect API answer: ", unit_data)
+        print("  ✓ Collector is already registered ")
+
 
 def t_preparing_appliances_for_patching(api):
     print("\nDownload and unpack patches locally")
@@ -1830,9 +1828,9 @@ def lab1_appliance_setup(state):
     run_task('Other collector settings', lambda: t_other_collector_settings(), state, STATE_FILE)
     run_task('Initial CM settings', lambda: t_initial_cm_settings(), state, STATE_FILE)
     run_task('Create demo user', lambda: t_create_demo_user(api), state, STATE_FILE)
-    exit(0)
-    run_task('Register collector', lambda: t_register_collector(api), state, STATE_FILE)
     
+    run_task('Register collector', lambda: t_register_collector(api), state, STATE_FILE)
+    exit(0)
     run_task('Prepare appliances for patching', lambda: t_preparing_appliances_for_patching(api), state, STATE_FILE)
 
     print(f"\nRegister patches on appliances and start patching process")
