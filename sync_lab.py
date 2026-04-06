@@ -1934,7 +1934,6 @@ def t_setup_filebeat(api):
         "systemctl start filebeat",
         "systemctl enable filebeat"
     ])
-    exit(0)
 
 def lab6_uc1(state):
     """
