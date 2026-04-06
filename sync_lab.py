@@ -132,16 +132,9 @@ def t_password_change_on_appliances():
         )
 
 def t_initial_collector_settings(appliance):
-    print("Connect to collector and get network settings")
-    print(appliance.execute_command("show network interface all"))
-    print(appliance.execute_command("show network route default"))
-    print(appliance.execute_command("show network resolvers"))
-    
-    print("\nDisabling purge")
+    print(" ➜ Disabling purge")
     output = appliance.execute_command("grdapi diable_purge")
-    print("    ✓ OK")
-
-    print("\nSet time zone to Europe/Warsaw")
+    print(" ➜ Set time zone to Europe/Warsaw")
     output = appliance.execute_command("show system clock all")
     timezone = output.strip().splitlines()[-1]
     if timezone != "Europe/Warsaw":
@@ -150,19 +143,16 @@ def t_initial_collector_settings(appliance):
             response="y",
             confirmation_pattern=r"Do you want to proceed\?\s*\(y/n\)\s*"
         )
-        print(output)
+        print(" ⓘ New TZ is:")
         output = appliance.execute_command("show system clock all")
         print(output)
     else:
-        print(f"  Time zone already set to {timezone}")
-    print("    ✓ OK")
-    print("\nConfigure NTP servers")
+        print(f" ⓘ Time zone already set to {timezone}")
+    print(" ➜ Configure NTP servers")
     appliance.execute_command("store system time_server hostname 0.pool.ntp.org 1.pool.ntp.org 2.pool.ntp.org")
-    print(appliance.execute_command("show system time_server all"))
-    print("\nEnabling time synchronization")
+    print(" ➜ Enabling time synchronization")
     appliance.execute_command("store system time_server state on")
-    print(appliance.execute_command("show system time_server all"))
-    print("    ✓ OK")
+    exit(0)
 
 def t_restart_system(appliance):
     print("\nRestart system")
@@ -1836,7 +1826,7 @@ def lab1_appliance_setup(state):
     """
     
     run_task('Password change for cli users on appliances', lambda: t_password_change_on_appliances(), state, STATE_FILE)
-    exit(0)
+    
     if 'other_collector_settings' not in state["completed_tasks"]:
         appliance = create_appliance('collector_unconfigured')
 
