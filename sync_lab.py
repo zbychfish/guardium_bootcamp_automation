@@ -1847,25 +1847,28 @@ def t_policy_report_1(api):
     # cur.execute("GRANT SELECT ON customers TO PUBLIC")
     # cur.close()
     # conn.close()
-    print("\n Enable DBF features on raptor")
-    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
+    # print("\n Enable DBF features on raptor")
+    # token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
 
-    api.gim_client_params(
-        client_ip="10.10.9.70",
-        param_name="STAP_FIREWAL_INSTALLED",
-        param_value="1"
-    )
-    api.gim_client_params(
-        client_ip="10.10.9.70",
-        param_name="STAP_FIREWALL_DEFAULT_STATE",
-        param_value="1"
-    )
-    api.gim_schedule_install(
-        client_ip="10.10.9.70",
-        date="now",
-    )
-    print("\n STAP reconfiguration monitoring")
-    monitor_gim_module_installation(api, "10.10.9.70")
+    # api.gim_client_params(
+    #     client_ip="10.10.9.70",
+    #     param_name="STAP_FIREWALL_INSTALLED",
+    #     param_value="1"
+    # )
+    # api.gim_client_params(
+    #     client_ip="10.10.9.70",
+    #     param_name="STAP_FIREWALL_DEFAULT_STATE",
+    #     param_value="1"
+    # )
+    # api.gim_schedule_install(
+    #     client_ip="10.10.9.70",
+    #     date="now",
+    # )
+    # print("\n STAP reconfiguration monitoring")
+    # monitor_gim_module_installation(api, "10.10.9.70")
+    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
+    print("\n Import blocking policy")
+    result = api.import_definitions('guardium_definition_files/exp_policy_log_everything_with_blocking.sql')
     exit(0)
 
 def lab12_policy_report1(state):
