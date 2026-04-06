@@ -1912,6 +1912,8 @@ def t_setup_cassandra():
     time.sleep(30)
 
 def t_setup_filebeat(api):
+    """
+    # API call added to create UC 1.0 cert but rest automatization is not implemented
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
     cert = api.generate_ssl_key_universal_connector(
         expiration_days=3650,
@@ -1919,7 +1921,8 @@ def t_setup_filebeat(api):
         overwrite=True,
         api_target_host='10.10.9.239',
     )
-    print(cert)
+    """
+
     result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"),
     commands=[
         # "mkdir -p /root/gn-trainings",
