@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import Optional, Sequence
 import re
@@ -15,7 +14,6 @@ class WinRMResult:
     status_code: int
     stdout: str
     stderr: str
-
 
 def run_winrm(
     host: str,

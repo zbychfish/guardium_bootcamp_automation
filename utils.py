@@ -14,7 +14,6 @@ import subprocess
 import pwd
 from typing import Any, Dict, List, Optional, Tuple, Iterator
 from pathlib import Path
-
 import paramiko
 import oracledb
 import psycopg2

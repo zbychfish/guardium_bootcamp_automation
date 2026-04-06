@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Optional, List, Tuple
 from playwright.sync_api import sync_playwright, Page, Frame
 
-
 def guardium_customer_upload_import(
     login_url: str,
     username: str,

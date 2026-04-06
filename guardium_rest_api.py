@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Guardium REST API - klasa do komunikacji z Guardium przez REST API
+Guardium REST API - class for communication with Guardium via REST API
 """
 
 import os
@@ -14,7 +14,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 load_dotenv()
 
 class GuardiumRestAPI:
-    """Klasa do komunikacji z Guardium przez REST API"""
+    """Class for communication with Guardium via REST API"""
     
     def __init__(
         self,
@@ -24,19 +24,19 @@ class GuardiumRestAPI:
         verify_ssl: bool = False
     ):
         """
-        Inicjalizuje klienta REST API.
+        Initializes the REST API client.
         
         Args:
-            base_url: Bazowy URL API (np. 'https://10.10.9.219')
-            client_id: ID klienta OAuth (domyślnie 'BOOTCAMP')
-            client_secret: Secret klienta OAuth (jeśli None, pobiera z .env)
-            verify_ssl: Czy weryfikować certyfikat SSL (domyślnie False)
+            base_url: Base API URL (e.g., 'https://10.10.9.219')
+            client_id: OAuth client ID (default 'BOOTCAMP')
+            client_secret: OAuth client secret (if None, retrieves from .env)
+            verify_ssl: Whether to verify SSL certificate (default False)
         """
         self.base_url = base_url.rstrip('/')
         self.client_id = client_id
         self.verify_ssl = verify_ssl
         
-        # Pobierz client_secret z parametru lub ze zmiennych środowiskowych
+        # Get client_secret from parameter or environment variables
         if client_secret:
             self.client_secret = client_secret
         else:
@@ -48,18 +48,18 @@ class GuardiumRestAPI:
     
     def get_token(self, username: str, password: str) -> str:
         """
-        Pobiera access token z Guardium OAuth.
+        Retrieves access token from Guardium OAuth.
         
         Args:
-            username: Nazwa użytkownika Guardium
-            password: Hasło użytkownika Guardium
+            username: Guardium username
+            password: Guardium user password
         
         Returns:
             Access token
         
         Raises:
-            requests.exceptions.RequestException: W przypadku błędu HTTP
-            KeyError: Jeśli odpowiedź nie zawiera access_token
+            requests.exceptions.RequestException: In case of HTTP error
+            KeyError: If response does not contain access_token
         """
         data = {
             'client_id': self.client_id,
@@ -81,13 +81,13 @@ class GuardiumRestAPI:
     
     def get_headers(self) -> dict:
         """
-        Zwraca nagłówki HTTP z tokenem autoryzacji.
+        Returns HTTP headers with authorization token.
         
         Returns:
-            Słownik z nagłówkami
+            Dictionary with headers
         
         Raises:
-            RuntimeError: Jeśli token nie został jeszcze pobrany
+            RuntimeError: If token has not been retrieved yet
         """
         if not self.access_token:
             raise RuntimeError("Access token not available. Call get_token() first.")
@@ -99,14 +99,14 @@ class GuardiumRestAPI:
     
     def get_users(self) -> dict:
         """
-        Pobiera listę użytkowników z Guardium.
+        Retrieves list of users from Guardium.
         
         Returns:
-            Słownik z danymi użytkowników
+            Dictionary with user data
         
         Raises:
-            RuntimeError: Jeśli token nie został jeszcze pobrany
-            requests.exceptions.RequestException: W przypadku błędu HTTP
+            RuntimeError: If token has not been retrieved yet
+            requests.exceptions.RequestException: In case of HTTP error
         """
         url = f'{self.base_url}/restAPI/user'
         headers = self.get_headers()
@@ -129,26 +129,26 @@ class GuardiumRestAPI:
         disable_pwd_expiry: bool = False
     ) -> dict:
         """
-        Tworzy nowego użytkownika w Guardium.
+        Creates a new user in Guardium.
         
         Args:
-            username: Nazwa użytkownika (wymagane)
-            password: Hasło (wymagane, min. 8 znaków, wielka/mała litera, cyfra, znak specjalny)
-            confirm_password: Potwierdzenie hasła (wymagane, musi być takie samo jak password)
-            first_name: Imię (wymagane)
-            last_name: Nazwisko (wymagane)
-            email: Adres email (opcjonalne)
-            country: Kod kraju ISO 3166 2-literowy, np. 'US', 'PL' (opcjonalne)
-            disabled: Czy użytkownik jest wyłączony (domyślnie False)
-            disable_pwd_expiry: Czy wyłączyć wymóg zmiany hasła przy pierwszym logowaniu (domyślnie False)
+            username: Username (required)
+            password: Password (required, min. 8 characters, uppercase/lowercase letter, digit, special character)
+            confirm_password: Password confirmation (required, must match password)
+            first_name: First name (required)
+            last_name: Last name (required)
+            email: Email address (optional)
+            country: ISO 3166 2-letter country code, e.g., 'US', 'PL' (optional)
+            disabled: Whether user is disabled (default False)
+            disable_pwd_expiry: Whether to disable password change requirement on first login (default False)
         
         Returns:
-            Słownik z odpowiedzią API
+            Dictionary with API response
         
         Raises:
-            RuntimeError: Jeśli token nie został jeszcze pobrany
-            requests.exceptions.RequestException: W przypadku błędu HTTP
-            ValueError: Jeśli password != confirm_password
+            RuntimeError: If token has not been retrieved yet
+            requests.exceptions.RequestException: In case of HTTP error
+            ValueError: If password != confirm_password
         """
         if password != confirm_password:
             raise ValueError("Password and confirmPassword must match")
@@ -166,7 +166,7 @@ class GuardiumRestAPI:
             'disablePwdExpiry': 1 if disable_pwd_expiry else 0
         }
         
-        # Dodaj opcjonalne parametry
+        # Add optional parameters
         if email:
             data['email'] = email
         if country:
@@ -179,19 +179,19 @@ class GuardiumRestAPI:
     
     def set_user_roles(self, username: str, roles: str) -> dict:
         """
-        Przypisuje lub aktualizuje role użytkownika w Guardium.
+        Assigns or updates user roles in Guardium.
         
         Args:
-            username: Nazwa użytkownika (wymagane)
-            roles: Rola lub role do przypisania (wymagane)
-                   Dla wielu ról użyj przecinka bez spacji, np. "role1,role2,role3"
+            username: Username (required)
+            roles: Role or roles to assign (required)
+                   For multiple roles use comma without spaces, e.g., "role1,role2,role3"
         
         Returns:
-            Słownik z odpowiedzią API
+            Dictionary with API response
         
         Raises:
-            RuntimeError: Jeśli token nie został jeszcze pobrany
-            requests.exceptions.RequestException: W przypadku błędu HTTP
+            RuntimeError: If token has not been retrieved yet
+            requests.exceptions.RequestException: In case of HTTP error
         """
         url = f'{self.base_url}/restAPI/user_roles'
         headers = self.get_headers()
@@ -208,18 +208,18 @@ class GuardiumRestAPI:
     
     def import_definitions(self, file_path: str) -> dict:
         """
-        Importuje definicje z pliku do Guardium.
+        Imports definitions from file to Guardium.
         
         Args:
-            file_path: Ścieżka do pliku z definicjami (np. z katalogu guardium_definitions_file)
+            file_path: Path to file with definitions (e.g., from guardium_definitions_file directory)
         
         Returns:
-            Słownik z odpowiedzią API
+            Dictionary with API response
         
         Raises:
-            RuntimeError: Jeśli token nie został jeszcze pobrany
-            FileNotFoundError: Jeśli plik nie istnieje
-            requests.exceptions.RequestException: W przypadku błędu HTTP
+            RuntimeError: If token has not been retrieved yet
+            FileNotFoundError: If file does not exist
+            requests.exceptions.RequestException: In case of HTTP error
         """
         import os
         
@@ -229,7 +229,7 @@ class GuardiumRestAPI:
         url = f'{self.base_url}/restAPI/import_definitions'
         headers = self.get_headers()
         
-        # Usuń Content-Type z nagłówków, requests ustawi go automatycznie dla multipart/form-data
+        # Remove Content-Type from headers, requests will set it automatically for multipart/form-data
         headers_without_content_type = {k: v for k, v in headers.items() if k != 'Content-Type'}
         
         with open(file_path, 'rb') as f:
@@ -247,19 +247,19 @@ class GuardiumRestAPI:
     
     def register_unit(self, unit_ip: str, unit_port: str, secret_key: str) -> dict:
         """
-        Rejestruje jednostkę (unit) w Guardium Central Manager.
+        Registers a unit in Guardium Central Manager.
         
         Args:
-            unit_ip: Adres IP jednostki (wymagane)
-            unit_port: Port jednostki (wymagane)
-            secret_key: Klucz tajny do rejestracji (wymagane)
+            unit_ip: Unit IP address (required)
+            unit_port: Unit port (required)
+            secret_key: Secret key for registration (required)
         
         Returns:
-            Słownik z odpowiedzią API
+            Dictionary with API response
         
         Raises:
-            RuntimeError: Jeśli token nie został jeszcze pobrany
-            requests.exceptions.RequestException: W przypadku błędu HTTP
+            RuntimeError: If token has not been retrieved yet
+            requests.exceptions.RequestException: In case of HTTP error
         """
         url = f'{self.base_url}/restAPI/register_unit'
         headers = self.get_headers()
@@ -277,14 +277,14 @@ class GuardiumRestAPI:
     
     def get_registered_units(self) -> dict:
         """
-        Pobiera listę zarejestrowanych jednostek (units) w Guardium Central Manager.
+        Retrieves list of registered units in Guardium Central Manager.
         
         Returns:
-            Słownik z listą zarejestrowanych jednostek
+            Dictionary with list of registered units
         
         Raises:
-            RuntimeError: Jeśli token nie został jeszcze pobrany
-            requests.exceptions.RequestException: W przypadku błędu HTTP
+            RuntimeError: If token has not been retrieved yet
+            requests.exceptions.RequestException: In case of HTTP error
         """
         url = f'{self.base_url}/restAPI/get_registered_units'
         headers = self.get_headers()
@@ -296,17 +296,17 @@ class GuardiumRestAPI:
     
     def get_unit_data(self, api_target_host: str) -> dict:
         """
-        Pobiera dane jednostki (unit) z Guardium.
+        Retrieves unit data from Guardium.
         
         Args:
-            api_target_host: Adres IP lub hostname jednostki
+            api_target_host: Unit IP address or hostname
         
         Returns:
-            Słownik z danymi jednostki
+            Dictionary with unit data
         
         Raises:
-            RuntimeError: Jeśli token nie został jeszcze pobrany
-            requests.exceptions.RequestException: W przypadku błędu HTTP
+            RuntimeError: If token has not been retrieved yet
+            requests.exceptions.RequestException: In case of HTTP error
         """
         url = f'{self.base_url}/restAPI/unit_data'
         headers = self.get_headers()
@@ -327,23 +327,23 @@ class GuardiumRestAPI:
         mode: str = "local_only"
     ) -> dict:
         """
-        Instaluje patch na jednostkach Guardium.
+        Installs patch on Guardium units.
         
         Args:
-            patch_number: Numer patcha do zainstalowania
-            unit_ip_list: Lista IP jednostek oddzielona przecinkami (np. "10.10.9.219,10.10.9.220")
-            mode: Tryb instalacji:
-                - "local_only": Instaluj tylko lokalnie
-                - "pull_only": Tylko pobierz patch
-                - "pull_install": Pobierz i zainstaluj
+            patch_number: Patch number to install
+            unit_ip_list: Comma-separated list of unit IPs (e.g., "10.10.9.219,10.10.9.220")
+            mode: Installation mode:
+                - "local_only": Install locally only
+                - "pull_only": Only pull patch
+                - "pull_install": Pull and install
         
         Returns:
-            Słownik z odpowiedzią API
+            Dictionary with API response
         
         Raises:
-            RuntimeError: Jeśli token nie został jeszcze pobrany
-            ValueError: Jeśli mode jest nieprawidłowy
-            requests.exceptions.RequestException: W przypadku błędu HTTP
+            RuntimeError: If token has not been retrieved yet
+            ValueError: If mode is invalid
+            requests.exceptions.RequestException: In case of HTTP error
         """
         valid_modes = ["local_only", "pull_only", "pull_install"]
         if mode not in valid_modes:
@@ -365,14 +365,14 @@ class GuardiumRestAPI:
     
     def patch_cleanup(self) -> dict:
         """
-        Czyści stare pliki patchy z systemu Guardium.
+        Cleans up old patch files from Guardium system.
         
         Returns:
-            Słownik z odpowiedzią API
+            Dictionary with API response
         
         Raises:
-            RuntimeError: Jeśli token nie został jeszcze pobrany
-            requests.exceptions.RequestException: W przypadku błędu HTTP
+            RuntimeError: If token has not been retrieved yet
+            requests.exceptions.RequestException: In case of HTTP error
         """
         url = f'{self.base_url}/restAPI/patch_cleanup'
         headers = self.get_headers()
@@ -389,29 +389,29 @@ class GuardiumRestAPI:
         api_target_host: Optional[str] = None
     ) -> dict:
         """
-        Instaluje policy lub policies w Guardium.
+        Installs policy or policies in Guardium.
         
         Args:
-            policy: Nazwa policy lub policies do zainstalowania (wymagane)
-                Dla wielu policies użyj znaku pipe (|), np. "policy1|policy2|policy3"
-            install_action: Akcja instalacji (opcjonalne)
-            api_target_host: Docelowy host dla API (opcjonalne)
+            policy: Policy or policies name to install (required)
+                For multiple policies use pipe character (|), e.g., "policy1|policy2|policy3"
+            install_action: Installation action (optional)
+            api_target_host: Target host for API (optional)
         
         Returns:
-            Słownik z odpowiedzią API
+            Dictionary with API response
         
         Raises:
-            RuntimeError: Jeśli token nie został jeszcze pobrany
-            requests.exceptions.RequestException: W przypadku błędu HTTP
+            RuntimeError: If token has not been retrieved yet
+            requests.exceptions.RequestException: In case of HTTP error
         
         Example:
-            # Instalacja pojedynczej policy
+            # Install single policy
             api.install_policy("MyPolicy")
             
-            # Instalacja wielu policies
+            # Install multiple policies
             api.install_policy("Policy1|Policy2|Policy3")
             
-            # Z dodatkowym targetem
+            # With additional target
             api.install_policy("MyPolicy", api_target_host="10.10.9.239")
         """
         url = f'{self.base_url}/restAPI/policy_install'
@@ -421,7 +421,7 @@ class GuardiumRestAPI:
             'policy': policy
         }
         
-        # Dodaj opcjonalne parametry
+        # Add optional parameters
         if install_action:
             data['install_action'] = install_action
         if api_target_host:
@@ -434,17 +434,17 @@ class GuardiumRestAPI:
     
     def get_gim_package(self, filename: str) -> dict:
         """
-        Pobiera pakiet GIM (Group Identity Management) z Guardium.
+        Retrieves GIM (Group Identity Management) package from Guardium.
         
         Args:
-            filename: Nazwa pliku pakietu GIM (wymagane)
+            filename: GIM package filename (required)
         
         Returns:
-            Słownik z odpowiedzią API zawierający informacje o pakiecie GIM
+            Dictionary with API response containing GIM package information
         
         Raises:
-            RuntimeError: Jeśli token nie został jeszcze pobrany
-            requests.exceptions.RequestException: W przypadku błędu HTTP
+            RuntimeError: If token has not been retrieved yet
+            requests.exceptions.RequestException: In case of HTTP error
         
         Example:
             api.get_gim_package("gim_package_name.tar.gz")
@@ -468,19 +468,19 @@ class GuardiumRestAPI:
         module_version: str
     ) -> dict:
         """
-        Przypisuje moduł GIM do klienta.
+        Assigns GIM module to client.
         
         Args:
-            client_ip: Adres IP klienta (wymagane)
-            module: Nazwa modułu GIM (wymagane)
-            module_version: Wersja modułu (wymagane)
+            client_ip: Client IP address (required)
+            module: GIM module name (required)
+            module_version: Module version (required)
         
         Returns:
-            Słownik z odpowiedzią API
+            Dictionary with API response
         
         Raises:
-            RuntimeError: Jeśli token nie został jeszcze pobrany
-            requests.exceptions.RequestException: W przypadku błędu HTTP
+            RuntimeError: If token has not been retrieved yet
+            requests.exceptions.RequestException: In case of HTTP error
         
         Example:
             api.gim_client_assign(
@@ -510,30 +510,30 @@ class GuardiumRestAPI:
         module: Optional[str] = None
     ) -> dict:
         """
-        Planuje instalację modułu/modułów GIM na kliencie.
+        Schedules GIM module(s) installation on client.
         
         Args:
-            client_ip: Adres IP klienta (wymagane)
-            date: Data instalacji w formacie "now" lub "yyyy-MM-dd HH:mm" (wymagane)
-            module: Nazwa modułu GIM (opcjonalne). Jeśli nie podano, wszystkie moduły
-                   dla danego klienta zostaną zaplanowane do instalacji.
+            client_ip: Client IP address (required)
+            date: Installation date in format "now" or "yyyy-MM-dd HH:mm" (required)
+            module: GIM module name (optional). If not provided, all modules
+                   for the given client will be scheduled for installation.
         
         Returns:
-            Słownik z odpowiedzią API
+            Dictionary with API response
         
         Raises:
-            RuntimeError: Jeśli token nie został jeszcze pobrany
-            requests.exceptions.RequestException: W przypadku błędu HTTP
+            RuntimeError: If token has not been retrieved yet
+            requests.exceptions.RequestException: In case of HTTP error
         
         Example:
-            # Zaplanuj instalację natychmiast
+            # Schedule installation immediately
             api.gim_schedule_install(
                 client_ip="10.10.9.100",
                 date="now",
                 module="PostgreSQL"
             )
             
-            # Zaplanuj instalację na konkretną datę
+            # Schedule installation for specific date
             api.gim_schedule_install(
                 client_ip="10.10.9.100",
                 date="2026-03-27 14:30"
@@ -547,7 +547,7 @@ class GuardiumRestAPI:
             'date': date
         }
         
-        # Dodaj opcjonalny parametr module
+        # Add optional module parameter
         if module:
             data['module'] = module
         
@@ -558,17 +558,17 @@ class GuardiumRestAPI:
     
     def gim_list_client_modules(self, client_ip: str) -> dict:
         """
-        Pobiera listę modułów GIM przypisanych do klienta.
+        Retrieves list of GIM modules assigned to client.
         
         Args:
-            client_ip: Adres IP klienta (wymagane)
+            client_ip: Client IP address (required)
         
         Returns:
-            Słownik z listą modułów GIM dla danego klienta
+            Dictionary with list of GIM modules for the given client
         
         Raises:
-            RuntimeError: Jeśli token nie został jeszcze pobrany
-            requests.exceptions.RequestException: W przypadku błędu HTTP
+            RuntimeError: If token has not been retrieved yet
+            requests.exceptions.RequestException: In case of HTTP error
         
         Example:
             modules = api.gim_list_client_modules(client_ip="10.10.9.100")
@@ -592,29 +592,29 @@ class GuardiumRestAPI:
         param_value: Optional[str] = None
     ) -> dict:
         """
-        Ustawia parametry klienta GIM.
+        Sets GIM client parameters.
         
         Args:
-            client_ip: Adres IP klienta docelowego (wymagane)
-            param_name: Nazwa parametru (wymagane)
-            param_value: Wartość parametru (opcjonalne)
+            client_ip: Target client IP address (required)
+            param_name: Parameter name (required)
+            param_value: Parameter value (optional)
         
         Returns:
-            Słownik z odpowiedzią API
+            Dictionary with API response
         
         Raises:
-            RuntimeError: Jeśli token nie został jeszcze pobrany
-            requests.exceptions.RequestException: W przypadku błędu HTTP
+            RuntimeError: If token has not been retrieved yet
+            requests.exceptions.RequestException: In case of HTTP error
         
         Example:
-            # Ustaw parametr z wartością
+            # Set parameter with value
             api.gim_client_params(
                 client_ip="10.10.9.100",
                 param_name="connection_timeout",
                 param_value="30"
             )
             
-            # Ustaw parametr bez wartości
+            # Set parameter without value
             api.gim_client_params(
                 client_ip="10.10.9.100",
                 param_name="enable_ssl"
@@ -628,7 +628,7 @@ class GuardiumRestAPI:
             'paramName': param_name
         }
         
-        # Dodaj opcjonalny parametr paramValue
+        # Add optional paramValue parameter
         if param_value is not None:
             data['paramValue'] = param_value
         
@@ -646,23 +646,23 @@ class GuardiumRestAPI:
         api_target_host: Optional[str] = None
     ) -> dict:
         """
-        Usuwa inspection engine z Guardium.
+        Deletes inspection engine from Guardium.
         
         Args:
-            stap_host: Host S-TAP inspection engine (wymagane)
-            type: Typ monitorowanego repozytorium danych (wymagane)
-                  Przykłady: PostgreSQL, Oracle, MSSQL, MongoDB, MySQL, itp.
-            sequence: Numer sekwencyjny inspection engine do usunięcia (opcjonalne)
-            wait_for_response: Czy czekać na odpowiedź z S-TAP (opcjonalne)
-                              0 = nie czekaj, 1 = czekaj
-            api_target_host: Docelowy host dla API (opcjonalne)
+            stap_host: S-TAP inspection engine host (required)
+            type: Type of monitored data repository (required)
+                  Examples: PostgreSQL, Oracle, MSSQL, MongoDB, MySQL, etc.
+            sequence: Sequence number of inspection engine to delete (optional)
+            wait_for_response: Whether to wait for response from S-TAP (optional)
+                              0 = don't wait, 1 = wait
+            api_target_host: Target host for API (optional)
         
         Returns:
-            Słownik z odpowiedzią API
+            Dictionary with API response
         
         Raises:
-            RuntimeError: Jeśli token nie został jeszcze pobrany
-            requests.exceptions.RequestException: W przypadku błędu HTTP
+            RuntimeError: If token has not been retrieved yet
+            requests.exceptions.RequestException: In case of HTTP error
         
         Example:
             api.delete_inspection_engine(
@@ -679,7 +679,7 @@ class GuardiumRestAPI:
             'type': type
         }
         
-        # Dodaj opcjonalne parametry
+        # Add optional parameters
         if sequence is not None:
             data['sequence'] = sequence
         if wait_for_response is not None:
@@ -779,7 +779,7 @@ class GuardiumRestAPI:
             'protocol': protocol
         }
         
-        # Dodaj opcjonalne parametry
+        # Add optional parameters
         if client:
             data['client'] = client
         if connect_to_ip:
@@ -848,36 +848,36 @@ class GuardiumRestAPI:
         api_target_host: Optional[str] = None
     ) -> dict:
         """
-        Tworzy konfigurację SQL dla Oracle w Guardium.
+        Creates SQL configuration for Oracle in Guardium.
         
         Args:
-            b_type: Typ monitorowanego repozytorium danych (wymagane)
-                   Prawidłowa wartość: "Oracle"
-            instance: Identyfikator połączenia w tnsnames.ora używany do połączenia z bazą danych (wymagane)
-            stap_host: Hostname S-TAP (wymagane)
-                      Aby uzyskać prawidłowe wartości, wywołaj create_sql_configuration z --help=true
-            username: Nazwa użytkownika do logowania do Oracle DB (wymagane)
-            data_pull_interval: Czas w sekundach między próbami pobrania danych z bazy danych (opcjonalne)
-                               Domyślnie: 30
-            data_pull_rows: Liczba wierszy danych audytowych do pobrania w jednym przebiegu (opcjonalne)
-                           Domyślnie: 100
-            timeout: Czas w sekundach na odpowiedź bazy danych (opcjonalne)
-                    Domyślnie: 300000
-            user_role: Rola do logowania do Oracle DB (opcjonalne)
-                      Prawidłowe wartości: "sysdba", "sysoper"
-                      Domyślnie: ""
-            api_target_host: Docelowy host dla API (opcjonalne)
+            db_type: Type of monitored data repository (required)
+                    Valid value: "Oracle"
+            instance: Connection identifier in tnsnames.ora used to connect to database (required)
+            stap_host: S-TAP hostname (required)
+                      To get valid values, call create_sql_configuration with --help=true
+            username: Username to login to Oracle DB (required)
+            data_pull_interval: Time in seconds between attempts to pull data from database (optional)
+                               Default: 30
+            data_pull_rows: Number of audit data rows to pull in one pass (optional)
+                           Default: 100
+            timeout: Time in seconds for database response (optional)
+                    Default: 300000
+            user_role: Role to login to Oracle DB (optional)
+                      Valid values: "sysdba", "sysoper"
+                      Default: ""
+            api_target_host: Target host for API (optional)
         
         Returns:
-            Słownik z odpowiedzią API
+            Dictionary with API response
         
         Raises:
-            RuntimeError: Jeśli token nie został jeszcze pobrany
-            requests.exceptions.RequestException: W przypadku błędu HTTP
+            RuntimeError: If token has not been retrieved yet
+            requests.exceptions.RequestException: In case of HTTP error
         
         Example:
             api.create_sql_configuration(
-                b_type="Oracle",
+                db_type="Oracle",
                 instance="ORCLPDB1",
                 stap_host="10.10.9.60",
                 username="secadmin",
@@ -896,7 +896,7 @@ class GuardiumRestAPI:
             'username': username
         }
         
-        # Dodaj opcjonalne parametry
+        # Add optional parameters
         if data_pull_interval:
             data['dataPullInterval'] = data_pull_interval
         if data_pull_rows:
@@ -921,21 +921,21 @@ class GuardiumRestAPI:
         api_target_host: Optional[str] = None
     ) -> dict:
         """
-        Przechowuje dane uwierzytelniające SQL dla Oracle w Guardium.
+        Stores SQL credentials for Oracle in Guardium.
         
         Args:
-            password: Hasło do logowania do Oracle DB (wymagane)
-            stap_host: Hostname S-TAP, który łączy się z tą instancją Oracle DB (wymagane)
-                      Aby uzyskać prawidłowe wartości, wywołaj store_sql_credentials z --help=true
-            username: Nazwa użytkownika do logowania do Oracle DB (wymagane)
-            api_target_host: Docelowy host dla API (opcjonalne)
+            password: Password to login to Oracle DB (required)
+            stap_host: S-TAP hostname that connects to this Oracle DB instance (required)
+                      To get valid values, call store_sql_credentials with --help=true
+            username: Username to login to Oracle DB (required)
+            api_target_host: Target host for API (optional)
         
         Returns:
-            Słownik z odpowiedzią API
+            Dictionary with API response
         
         Raises:
-            RuntimeError: Jeśli token nie został jeszcze pobrany
-            requests.exceptions.RequestException: W przypadku błędu HTTP
+            RuntimeError: If token has not been retrieved yet
+            requests.exceptions.RequestException: In case of HTTP error
         
         Example:
             api.store_sql_credentials(
@@ -953,7 +953,7 @@ class GuardiumRestAPI:
             'username': username
         }
         
-        # Dodaj opcjonalny parametr
+        # Add optional parameter
         if api_target_host:
             data['api_target_host'] = api_target_host
         
@@ -975,40 +975,40 @@ class GuardiumRestAPI:
         api_target_host: Optional[str] = None
     ) -> dict:
         """
-        Konfiguruje ustawienia Inspection Engine w Guardium.
+        Configures Inspection Engine settings in Guardium.
         
         Args:
-            compute_average: Gdy włączone, dla każdej konstrukcji SQL obliczany jest średni czas odpowiedzi (opcjonalne)
-                           Prawidłowe wartości: True (1), False (0)
-            inspect_data: Gdy włączone, dane zwracane przez zapytania SQL są sprawdzane,
-                         a liczniki ingress i egress są aktualizowane.
-                         Jeśli w polityce bezpieczeństwa używane są reguły, ten parametr musi być włączony (opcjonalne)
-                         Prawidłowe wartości: True (1), False (0)
-            log_exception_sql: Gdy włączone, podczas logowania wyjątków zapisywana jest cała instrukcja SQL (opcjonalne)
-                              Prawidłowe wartości: True (1), False (0)
-            log_records: Gdy włączone, liczba rekordów, których dotyczy instrukcja SQL, jest rejestrowana
-                        dla każdej instrukcji SQL (gdy ma to zastosowanie) (opcjonalne)
-                        Prawidłowe wartości: True (1), False (0)
-                        Domyślnie: False (0)
-            log_sequencing: Gdy włączone, rejestrowana jest bezpośrednio poprzednia instrukcja SQL,
-                           jak również bieżąca instrukcja SQL, pod warunkiem że poprzednia konstrukcja
-                           występuje w wystarczająco krótkim okresie czasu (opcjonalne)
-                           Prawidłowe wartości: True (1), False (0)
-            max_hits: Gdy zwracane dane są sprawdzane, wskazuje ile trafień (naruszeń reguł polityki)
-                     ma być zarejestrowanych (opcjonalne)
-            parse_xml: Inspection Engine normalnie nie parsuje ruchu XML. Włącz aby parsować ruch XML (opcjonalne)
-                      Prawidłowe wartości: True (1), False (0)
-            record_empty: Gdy włączone, sesje nie zawierające instrukcji SQL są logowane.
-                         Gdy wyłączone, te sesje są ignorowane (opcjonalne)
-                         Prawidłowe wartości: True (1), False (0)
-            api_target_host: Docelowy host dla API (opcjonalne)
+            compute_average: When enabled, average response time is calculated for each SQL construct (optional)
+                           Valid values: True (1), False (0)
+            inspect_data: When enabled, data returned by SQL queries is inspected,
+                         and ingress and egress counters are updated.
+                         If rules are used in security policy, this parameter must be enabled (optional)
+                         Valid values: True (1), False (0)
+            log_exception_sql: When enabled, full SQL statement is logged during exception logging (optional)
+                              Valid values: True (1), False (0)
+            log_records: When enabled, number of records affected by SQL statement is logged
+                        for each SQL statement (when applicable) (optional)
+                        Valid values: True (1), False (0)
+                        Default: False (0)
+            log_sequencing: When enabled, immediately previous SQL statement is logged,
+                           as well as current SQL statement, provided that previous construct
+                           occurs within sufficiently short time period (optional)
+                           Valid values: True (1), False (0)
+            max_hits: When returned data is inspected, indicates how many hits (policy rule violations)
+                     should be logged (optional)
+            parse_xml: Inspection Engine normally does not parse XML traffic. Enable to parse XML traffic (optional)
+                      Valid values: True (1), False (0)
+            record_empty: When enabled, sessions containing no SQL statements are logged.
+                         When disabled, these sessions are ignored (optional)
+                         Valid values: True (1), False (0)
+            api_target_host: Target host for API (optional)
         
         Returns:
-            Słownik z odpowiedzią API
+            Dictionary with API response
         
         Raises:
-            RuntimeError: Jeśli token nie został jeszcze pobrany
-            requests.exceptions.RequestException: W przypadku błędu HTTP
+            RuntimeError: If token has not been retrieved yet
+            requests.exceptions.RequestException: In case of HTTP error
         
         Example:
             api.engine_config(
@@ -1025,7 +1025,7 @@ class GuardiumRestAPI:
         
         data: dict[str, Any] = {}
         
-        # Dodaj opcjonalne parametry - konwertuj bool na int (0/1)
+        # Add optional parameters - convert bool to int (0/1)
         if compute_average is not None:
             data['computeAverage'] = 1 if compute_average else 0
         if inspect_data is not None:
@@ -1057,22 +1057,22 @@ class GuardiumRestAPI:
         api_target_host: Optional[str] = None
     ) -> dict:
         """
-        Generuje klucz SSL dla Universal Connector.
+        Generates SSL key for Universal Connector.
         
         Args:
-            expiration_days: Liczba dni ważności certyfikatu (domyślnie 100)
-            hostname: Hostname maszyny Guardium lub wildcard (domyślnie '*.guard.swg.usma.ibm.com')
-            overwrite: Czy nadpisać istniejący klucz i certyfikat (domyślnie False)
-                      False (0): nie nadpisuj
-                      True (1): nadpisz
-            api_target_host: Opcjonalny docelowy host API (domyślnie None)
+            expiration_days: Number of days certificate is valid (default 100)
+            hostname: Guardium machine hostname or wildcard (default '*.guard.swg.usma.ibm.com')
+            overwrite: Whether to overwrite existing key and certificate (default False)
+                      False (0): don't overwrite
+                      True (1): overwrite
+            api_target_host: Optional target API host (default None)
         
         Returns:
-            Słownik z odpowiedzią API
+            Dictionary with API response
         
         Raises:
-            RuntimeError: Jeśli token nie został jeszcze pobrany
-            requests.exceptions.RequestException: W przypadku błędu HTTP
+            RuntimeError: If token has not been retrieved yet
+            requests.exceptions.RequestException: In case of HTTP error
         """
         url = f'{self.base_url}/restAPI/generateSSLKeyUniversalConnector'
         headers = self.get_headers()
@@ -1090,12 +1090,5 @@ class GuardiumRestAPI:
         response.raise_for_status()
         
         return response.json()
-
-
-
-
-
-
-
 
 # Made with Bob
