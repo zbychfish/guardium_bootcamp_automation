@@ -965,6 +965,94 @@ class GuardiumRestAPI:
         response.raise_for_status()
         
         return response.json()
+    
+    def engine_config(
+        self,
+        compute_average: Optional[bool] = None,
+        inspect_data: Optional[bool] = None,
+        log_exception_sql: Optional[bool] = None,
+        log_records: Optional[bool] = None,
+        log_sequencing: Optional[bool] = None,
+        max_hits: Optional[int] = None,
+        parse_xml: Optional[bool] = None,
+        record_empty: Optional[bool] = None,
+        api_target_host: Optional[str] = None
+    ) -> dict:
+        """
+        Konfiguruje ustawienia Inspection Engine w Guardium.
+        
+        Args:
+            compute_average: Gdy włączone, dla każdej konstrukcji SQL obliczany jest średni czas odpowiedzi (opcjonalne)
+                           Prawidłowe wartości: True (1), False (0)
+            inspect_data: Gdy włączone, dane zwracane przez zapytania SQL są sprawdzane,
+                         a liczniki ingress i egress są aktualizowane.
+                         Jeśli w polityce bezpieczeństwa używane są reguły, ten parametr musi być włączony (opcjonalne)
+                         Prawidłowe wartości: True (1), False (0)
+            log_exception_sql: Gdy włączone, podczas logowania wyjątków zapisywana jest cała instrukcja SQL (opcjonalne)
+                              Prawidłowe wartości: True (1), False (0)
+            log_records: Gdy włączone, liczba rekordów, których dotyczy instrukcja SQL, jest rejestrowana
+                        dla każdej instrukcji SQL (gdy ma to zastosowanie) (opcjonalne)
+                        Prawidłowe wartości: True (1), False (0)
+                        Domyślnie: False (0)
+            log_sequencing: Gdy włączone, rejestrowana jest bezpośrednio poprzednia instrukcja SQL,
+                           jak również bieżąca instrukcja SQL, pod warunkiem że poprzednia konstrukcja
+                           występuje w wystarczająco krótkim okresie czasu (opcjonalne)
+                           Prawidłowe wartości: True (1), False (0)
+            max_hits: Gdy zwracane dane są sprawdzane, wskazuje ile trafień (naruszeń reguł polityki)
+                     ma być zarejestrowanych (opcjonalne)
+            parse_xml: Inspection Engine normalnie nie parsuje ruchu XML. Włącz aby parsować ruch XML (opcjonalne)
+                      Prawidłowe wartości: True (1), False (0)
+            record_empty: Gdy włączone, sesje nie zawierające instrukcji SQL są logowane.
+                         Gdy wyłączone, te sesje są ignorowane (opcjonalne)
+                         Prawidłowe wartości: True (1), False (0)
+            api_target_host: Docelowy host dla API (opcjonalne)
+        
+        Returns:
+            Słownik z odpowiedzią API
+        
+        Raises:
+            RuntimeError: Jeśli token nie został jeszcze pobrany
+            requests.exceptions.RequestException: W przypadku błędu HTTP
+        
+        Example:
+            api.engine_config(
+                compute_average=True,
+                inspect_data=True,
+                log_exception_sql=True,
+                log_records=True,
+                max_hits=100,
+                api_target_host="10.10.9.239"
+            )
+        """
+        url = f'{self.base_url}/restAPI/engine_config'
+        headers = self.get_headers()
+        
+        data: dict[str, Any] = {}
+        
+        # Dodaj opcjonalne parametry - konwertuj bool na int (0/1)
+        if compute_average is not None:
+            data['computeAverage'] = 1 if compute_average else 0
+        if inspect_data is not None:
+            data['inspectData'] = 1 if inspect_data else 0
+        if log_exception_sql is not None:
+            data['logExceptionSql'] = 1 if log_exception_sql else 0
+        if log_records is not None:
+            data['logRecords'] = 1 if log_records else 0
+        if log_sequencing is not None:
+            data['logSequencing'] = 1 if log_sequencing else 0
+        if max_hits is not None:
+            data['maxHits'] = max_hits
+        if parse_xml is not None:
+            data['parseXml'] = 1 if parse_xml else 0
+        if record_empty is not None:
+            data['recordEmpty'] = 1 if record_empty else 0
+        if api_target_host:
+            data['api_target_host'] = api_target_host
+        
+        response = requests.put(url, json=data, headers=headers, verify=self.verify_ssl)
+        response.raise_for_status()
+        
+        return response.json()
 
 
 
