@@ -1876,8 +1876,7 @@ def t_policy_report_1(api):
     print("\n Configure parsing engine")
     result = api.engine_config(compute_average=True, inspect_data=True, log_records=True, record_empty=True, api_target_host="10.10.9.239")
     print(result)
-    
-    exit(0)
+
 
 def lab12_policy_report1(state):
     """
