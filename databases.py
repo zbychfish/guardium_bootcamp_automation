@@ -1,6 +1,8 @@
 
 import oracledb
-from typing import Iterable, Optional, Dict, Any
+import psycopg2
+
+from typing import Iterable, Optional, Dict, Any, Tuple, Iterator
 
 
 def get_oracle_conn(
@@ -45,3 +47,47 @@ def run_sql_oracle(
 
         conn.commit()
         return None
+
+    
+def get_postgres_conn(
+    host: str,
+    port: int,
+    dbname: str,
+    user: str,
+    password: str
+) -> psycopg2.extensions.connection:
+    """
+    Tworzy i zwraca polaczenie do PostgreSQL.
+    """
+    return psycopg2.connect(
+        host=host,
+        port=port,
+        dbname=dbname,
+        user=user,
+        password=password
+    )
+
+
+def run_sql_postgres(
+    conn: psycopg2.extensions.connection,
+    sql: str,
+    params: Optional[Tuple | Dict[str, Any]] = None,
+    fetch: bool = False
+) -> Optional[Iterator[Tuple]]:
+    """
+    Uruchamia SQL na PostgreSQL.
+
+    - fetch=True  -> zwraca iterator po wynikach (SELECT)
+    - fetch=False -> commit (INSERT/UPDATE/DELETE/DDL)
+    """
+
+    with conn.cursor() as cursor:
+        cursor.execute(sql, params)
+
+        if fetch:
+            # iterator – lazy fetch
+            return cursor
+
+        conn.commit()
+        return None
+

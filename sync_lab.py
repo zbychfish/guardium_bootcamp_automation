@@ -29,7 +29,7 @@ from pathlib import Path
 import subprocess
 from packaging.version import Version
 import pwd
-from databases import get_oracle_conn, run_sql_oracle
+from databases import get_oracle_conn, get_postgres_conn, run_sql_oracle, run_sql_postgres
 
 
 # Sprawdź czy plik .env istnieje
@@ -1837,8 +1837,10 @@ def t_install_stap_on_hana(api):
     print("\n Adding OUA configuration")
     print(api.create_sql_configuration(db_type="Oracle", instance="ORCLPDB1", stap_host='10.10.9.60', username='guardium', api_target_host='10.10.9.239'))
 
-def t_policy_report_1():
-    pass
+def t_policy_report_1(api):
+    conn = get_postgres_conn(host='10.10.9.70', port=5432, dbname='postgres', user='jerry', password=f'{get_env_value("DEFAULT_SERVICE_PASSWORD")}')
+    print(run_sql_postgres(conn, "SELECT 1"))
+    exit(0)
 
 def lab12_policy_report1(state):
     """
@@ -1849,7 +1851,7 @@ def lab12_policy_report1(state):
         client_id='BOOTCAMP'
     )
     
-    #run_task('Enable FAM on raptor', lambda: t_enable_fam_on_raptor(api), state)
+    run_task('Setup environment for policies and report lab', lambda: t_policy_report_1(api), state)
 
 def lab11_oracle(state):
     """
