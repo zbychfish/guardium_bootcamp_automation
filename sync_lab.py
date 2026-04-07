@@ -1486,9 +1486,21 @@ def t_install_stap_on_hana(api):
     result = api.store_sql_credentials(password=get_env_value("DEFAULT_SERVICE_PASSWORD"), username="guardium", stap_host='10.10.9.60', api_target_host='10.10.9.239')
     print("  ➜ Adding OUA configuration")
     result = api.create_sql_configuration(db_type="Oracle", instance="ORCLPDB1", stap_host='10.10.9.60', username='guardium', api_target_host='10.10.9.239')
+    print("  ➜ Stopping STAP on HANA")
+    api.gim_client_params(
+        client_ip="10.10.9.60",
+        param_name="STAP_ENABLED",
+        param_value="0"
+    )
+    api.gim_schedule_install(
+        client_ip="10.10.9.60",
+        date="now",
+    )
+    print("  ➜ STAP disable monitoring")
+    monitor_gim_module_installation(api, "10.10.9.60")
 
 def t_policy_report_1(api):
-    print("\n Create sensitive table for lab")
+    print("  ➜ Create sensitive table for lab")
     conn = get_postgres_conn(host='10.10.9.70', port=5432, dbname='postgres', user='jerry', password=f'{get_env_value("DEFAULT_SERVICE_PASSWORD")}')
     conn.autocommit = True
     cur = conn.cursor()
@@ -1497,8 +1509,7 @@ def t_policy_report_1(api):
     cur.execute("GRANT SELECT ON customers TO PUBLIC")
     cur.close()
     conn.close()
-    print("\n Enable DBF features on raptor")
-
+    print("  ➜ Enable STAP DBF feature on raptor")
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
     api.gim_client_params(
         client_ip="10.10.9.70",
@@ -1514,20 +1525,18 @@ def t_policy_report_1(api):
         client_ip="10.10.9.70",
         date="now",
     )
-    print("\n STAP reconfiguration monitoring")
+    print("  ➜ STAP reconfiguration monitoring")
     monitor_gim_module_installation(api, "10.10.9.70")
-
-    print("\n Import blocking policy")
+    print("  ➜ Import blocking policy")
     result = api.import_definitions('guardium_definition_files/exp_policy_log_everything_with_blocking.sql')
-    print("\n Install blocking Policy")
+    print("  ➜ Install blocking Policy")
     result = api.install_policy("Blocking Policy (Policies and Reports I)|raptor FAM policy", api_target_host="10.10.9.239")
-    print("\n Setup new dashboard - Policies and Reports I")
+    print("  ➜ Setup new dashboard - Policies and Reports I")
     result = api.import_definitions('guardium_definition_files/exp_dashboard_policies_and_reports_I.sql')
-    print("\n Configure parsing engine")
+    print("  ➜ Configure parsing engine")
     result = api.engine_config(compute_average=True, inspect_data=True, log_records=True, record_empty=True, api_target_host="10.10.9.239")
     # print(result)
     # sprawdzic czy zmiany w engine core widoczne jak nie to albo restart appliance albo restart inspection-core
-    pass
 
 def t_va_api(api):
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
@@ -1575,7 +1584,6 @@ def lab12_policy_report1(state):
         base_url='https://10.10.9.219:8443/',
         client_id='BOOTCAMP'
     )
-    
     run_task('Setup environment for policies and report lab', lambda: t_policy_report_1(api), state, STATE_FILE)
 
 def lab11_oracle(state):
