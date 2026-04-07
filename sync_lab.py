@@ -601,7 +601,7 @@ def t_install_gim_on_raptor():
     subprocess.run(["/root/gn-trainings/gim_installers/guard-bundle-GIM-12.2.0.0_r121306_v12_2_1-rhel-8-linux-x86_64.gim.sh", "--", "--dir", "/opt/guardium", "--tapip", "10.10.9.70", "--sqlguardip", "10.10.9.219"], check=True, capture_output=True)
 
 def t_install_stap_on_raptor(api):
-    print("\n S-TAP installation schedule")
+    print("  ➜ S-TAP installation schedule")
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
     api.gim_client_assign(
         client_ip="10.10.9.70",
@@ -632,11 +632,8 @@ def t_install_stap_on_raptor(api):
         client_ip="10.10.9.70",
         date="now",
     )
-
     time.sleep(10)
-
-    print("\n S-TAP installation monitoring")
-
+    print("  ➜ S-TAP installation monitoring")
     monitor_gim_module_installation(api, "10.10.9.70")
 
 def t_enable_atap_for_postgres_on_raptor():
@@ -1747,17 +1744,10 @@ def lab4_atap(state):
     run_task('Installing psql on raptor', lambda: t_postgres_installation(), state, STATE_FILE)
     run_task('Create postgres admin users', lambda: t_create_postgres_admin_users(), state, STATE_FILE)
     run_task('Install GIM client on raptor', lambda: t_install_gim_on_raptor(), state, STATE_FILE)
-   
-    exit(0)
     run_task('Install STAP on raptor', lambda: t_install_stap_on_raptor(api), state, STATE_FILE)
-
+    exit(0)
     run_task('Configure ATAP for postgres on raptor', lambda: t_enable_atap_for_postgres_on_raptor(), state, STATE_FILE)
-    
-    api = GuardiumRestAPI(
-        base_url='https://10.10.9.219:8443',
-        client_id='BOOTCAMP'
-    )
-
+        
     run_task('Correct mysql IE\'s', lambda: t_correct_mysql_ie(api), state, STATE_FILE)
 
     run_task('Configure SSL for Mongo', lambda: t_configure_ssl_for_mongo(), state, STATE_FILE)
@@ -1835,17 +1825,23 @@ def sync_lab(state, skip_below: int = 0, stop_at: int = 999):
                 print("=" * 60)
             else:
                 # LAB skipped (None)
+                print("\n" + "=" * 60)
                 print(f"\nLAB {lab_num} - skipped")
                 print(lab_desc)
+                print("=" * 60)
             
             # Check if should stop after this LAB
             if stop_at == lab_num:
                 print(f"Stopped after LAB {lab_num} (--stop-at={lab_num})")
                 return
         elif skip_below >= lab_num:
-            print(f"\n[LAB {lab_num}] - skipped - {lab_name} (--skip-below)")
+            print("\n" + "=" * 60)
+            print(f"LAB {lab_num} - skipped - {lab_name} (--skip-below)")
+            print("=" * 60)
         else:
-            print(f"\n[LAB {lab_num}] - skipped - {lab_name} (--stop-at)")
+            print("\n" + "=" * 60)
+            print(f"LAB {lab_num} - skipped - {lab_name} (--stop-at)")
+            print("=" * 60)
 
 if __name__ == "__main__":
     import argparse

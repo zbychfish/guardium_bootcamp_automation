@@ -634,20 +634,16 @@ def monitor_gim_module_installation(api, client_ip):
     while pending:
         modules = api.gim_list_client_modules(client_ip=client_ip)
         msg = modules["Message"]
-
         entries = [
             e.strip()
             for e in re.split(r"#+\s*ENTRY\s+\d+\s*#+", msg)
             if e.strip()
         ]
-
         result = []
-
         for e in entries:
             def g(p):
                 m = re.search(p, e)
                 return m.group(1) if m else None
-
             result.append({
                 "module_id": g(r"MODULE_ID:\s+(-?\d+)"),
                 "name": g(r"NAME:\s+([A-Z0-9\-]+)"),
@@ -657,13 +653,11 @@ def monitor_gim_module_installation(api, client_ip):
                 "is_scheduled": g(r"IS_SCHEDULED:\s+([NY])"),
                 "schedule_time": g(r"IS_SCHEDULED:\s+[NY]\s+\(([^)]+)\)")
             })
-        
         pending = [m for m in result if m["state"] != "INSTALLED"]
-        
         if pending:
-            print("Waiting 30 seconds before next check...")
+            print("  ⌛ Waiting 30 seconds before next check...")
             time.sleep(30)
         else:
-            print("All modules installed successfully!")
+            print("  ✔ All modules installed successfully!")
 
 # Made with Bob
