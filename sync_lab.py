@@ -606,7 +606,7 @@ def t_install_stap_on_raptor(api):
     api.gim_client_assign(
         client_ip="10.10.9.70",
         module="BUNDLE-STAP",
-        module_version="12.2.0.0_r121306_5"
+        module_version="12.2.1.0_r122289_1"
     )
     api.gim_client_params(
         client_ip="10.10.9.70",
@@ -645,7 +645,7 @@ def t_enable_atap_for_postgres_on_raptor():
 
 def t_correct_mysql_ie(api):
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
-    print("  ➜ Delete mysql Inspection Engine definition")
+    print("  ➜ Delete mysql Inspection Engine definitions")
     api.delete_inspection_engine(
         stap_host="10.10.9.70",
         type="mysql",
@@ -743,20 +743,20 @@ def t_enable_atap_for_mongo():
     subprocess.run(["mv", "/opt/guardium/etc/guard/postgres.conf", "/opt/guardium/etc/guard/root"], check=True, capture_output=True)
 
 def t_exit_for_db2_setup(api):
-    print("\n Registering db2inst1 user")
+    print("  ➜ Registering db2inst1 user")
     subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "authorize-user", "db2inst1"], check=True)
-    print("\n Stop DB2")
+    print("  ➜ Stopping DB2")
     subprocess.run(["sudo", "-iu", "db2inst1", "db2stop"], check=True)
-    print("\n Configure EXIT shared library")
+    print("  ➜ Configuring EXIT shared library")
     subprocess.run(["sudo", "-iu", "db2inst1", "mkdir", "-p", "/home/db2inst1/sqllib/security64/plugin/commexit"], check=True)
     subprocess.run(["sudo", "-iu", "db2inst1", "ln", "-fs", "/usr/lib64/libguard_db2_exit_64.so", "/home/db2inst1/sqllib/security64/plugin/commexit/libguard_db2_exit_64.so"], check=True)
     subprocess.run(["sudo", "-iu", "db2inst1", "db2", "update", "dbm", "cfg", "using", "comm_exit_list", "libguard_db2_exit_64"], check=True)
     subprocess.run(["sudo", "-iu", "db2inst1", "db2", "get", "database", "manager", "configuration"], check=True)
-    print("\n Start DB2")
+    print("  ➜ Starting DB2")
     subprocess.run(["sudo", "-iu", "db2inst1", "db2start"], check=True)
     # print("\n Configure DB2 IE for EXIT")
     # subprocess.run(["/opt/guardium/modules/STAP/current/setup_exit.sh", "db2"], check=True)
-    print("\n Correcting DB2 Inspection Engine definition")
+    print("  ➜ Correcting DB2 Inspection Engine definition")
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
     api.delete_inspection_engine(
         stap_host="10.10.9.70",
@@ -774,7 +774,7 @@ def t_exit_for_db2_setup(api):
         db_install_dir="/home/db2inst1",
         api_target_host="10.10.9.239"
     )
-    return None
+
 
 def t_setup_raptor_to_deploy_etap():
     print("\n Installing package requirements")
