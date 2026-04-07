@@ -1111,9 +1111,9 @@ def t_enable_fam_on_raptor(api):
     print("  ➜ Monitoring is a FAM enabled")
     monitor_gim_module_installation(api, "10.10.9.70")
     
-    print("\nEnable root account monitoring")
+    print("  ➜ Enable root account monitoring")
     subprocess.run(["sed", "-i", r"s/^fam_protect_privileged[[:space:]]*=.*/fam_protect_privileged=1/", "/opt/guardium/modules/STAP/current/guard_tap.ini"], check=True)
-    subprocess.run(["/opt/guardium/modules/STAP/current/guard-config-update", "--restart", "stap"], check=True)
+    subprocess.run(["/opt/guardium/modules/STAP/current/guard-config-update", "--restart", "stap"], check=True, capture_output=True)
 
 def t_install_enable_fam_on_winsql(api):
     print("  ➜ Set FAMMONITOR installation and settings")
@@ -1154,11 +1154,11 @@ def t_install_fam_policy(api):
 
 def t_configure_env_for_oracle(api):
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
-    print("\n Setup oracle user settings")
+    print("  ➜ Setup oracle user settings")
     run_as_user(["bash", "-c", r'mkdir -p ~/.sqlcl && printf "%s\n" "SET SQLFORMAT ansiconsole" > "$HOME/.sqlcl/login.sql" && printf "%s\n" "export SQLPATH=.:$HOME/.sqlcl/" >> "$HOME/.bashrc"'], user="oracle", text=True)
-    print("\n Import Oracle dashboard")
+    print("  ➜ Import Oracle dashboard")
     result = api.import_definitions('guardium_definition_files/exp_dashboard_oracle.sql')
-    print("\n Add missing IE definition")
+    print("  ➜ Add missing IE definition")
     api.create_inspection_engine(
         stap_host="10.10.9.70",
         protocol="oracle",
@@ -1175,31 +1175,29 @@ def t_configure_env_for_oracle(api):
     )
 
 def t_setup_SSL_for_oracle():
-    print("\n Create server wallet")
+    print("  ➜ Create server wallet")
     run_as_user(["mkdir", "-p", "/opt/oracle/product/19c/dbhome_1/wallet"], user="oracle", text=True)
     run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "create", "-wallet", "/opt/oracle/product/19c/dbhome_1/wallet", "-auto_login_local", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True)
-    print("\n Add self-sign certificate to server wallet")
+    print("  ➜ Add self-sign certificate to server wallet")
     run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "add", "-wallet", r'/opt/oracle/product/19c/dbhome_1/wallet', "-dn", r'CN=raptor.gdemo.com', "-keysize", "2048", "-self_signed", "-validity", "3650", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True)
-    print("\n Create client wallet")
+    print("  ➜ Create client wallet")
     run_as_user(["mkdir", "-p", "/opt/oracle/product/19c/dbhome_1/client_wallet"], user="oracle", text=True)
     run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "create", "-wallet", "/opt/oracle/product/19c/dbhome_1/client_wallet", "-auto_login_local", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True)
-    print("\n Add self-sign certificate to client wallet")
+    print("  ➜ Add self-sign certificate to client wallet")
     run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "add", "-wallet", r'/opt/oracle/product/19c/dbhome_1/client_wallet', "-dn", r'CN=client', "-keysize", "2048", "-self_signed", "-validity", "3650", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True)
-    print("\n Export public keys")
+    print("  ➜ Export public keys")
     run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "export", "-wallet", r'/opt/oracle/product/19c/dbhome_1/wallet', "-dn", r'CN=raptor.gdemo.com', "-cert", "/tmp/server-cert.crt", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True)
     run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "export", "-wallet", r'/opt/oracle/product/19c/dbhome_1/client_wallet', "-dn", r'CN=client', "-cert", "/tmp/client-cert.crt", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True)
-    print("\n Import public keys")
+    print("  ➜ Import public keys")
     run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "add", "-wallet", r'/opt/oracle/product/19c/dbhome_1/client_wallet', "-trusted_cert", "-cert", "/tmp/server-cert.crt", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True)
     run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "add", "-wallet", r'/opt/oracle/product/19c/dbhome_1/wallet', "-trusted_cert", "-cert", "/tmp/client-cert.crt", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True)
     run_as_user(["rm", "/tmp/server-cert.crt", "/tmp/client-cert.crt"], user="oracle", text=True)
-
-    print("\nChange listener configuration")
-    subprocess.run(["cp", "-f", "guardium_configuration_files/listener.ora", "/opt/oracle/product/19c/dbhome_1/network/admin/listener.ora"], check=True)
-    subprocess.run(["cp", "-f", "guardium_configuration_files/tnsnames.ora", "/opt/oracle/product/19c/dbhome_1/network/admin/tnsnames.ora"], check=True)
-    subprocess.run(["cp", "-f", "guardium_configuration_files/sqlnet.ora", "/opt/oracle/product/19c/dbhome_1/network/admin/sqlnet.ora"], check=True)
+    print("  ➜ Change listener configuration")
+    subprocess.run(["cp", "-f", "guardium_configuration_files/listener.ora", "/opt/oracle/product/19c/dbhome_1/network/admin/listener.ora"], check=True, capture_output=True)
+    subprocess.run(["cp", "-f", "guardium_configuration_files/tnsnames.ora", "/opt/oracle/product/19c/dbhome_1/network/admin/tnsnames.ora"], check=True, capture_output=True)
+    subprocess.run(["cp", "-f", "guardium_configuration_files/sqlnet.ora", "/opt/oracle/product/19c/dbhome_1/network/admin/sqlnet.ora"], check=True, capture_output=True)
     subprocess.run(["chown", "-R", "oracle:oinstall", "/opt/oracle/product/19c/dbhome_1/network/admin/"], check=True)
-
-    print("\n Restart listener")
+    print("  ➜ Restart listener")
     run_as_user(["bash","-lc", "/opt/oracle/product/19c/dbhome_1/bin/lsnrctl reload"], user="oracle", text=True)
 
 def t_setup_ATAP_for_oracle():

@@ -268,8 +268,20 @@ def scp_file_as_root(
         return False
 
 
-def run_as_user(argv, user, *, check=True, **kwargs):
-    """Run subprocess as a specific user"""
+def run_as_user(argv, user, *, check=True, capture_output=False, **kwargs):
+    """
+    Run subprocess as a specific user
+    
+    Args:
+        argv: Command and arguments to execute
+        user: Username to run command as
+        check: Whether to raise exception on non-zero exit code (default True)
+        capture_output: Whether to capture stdout/stderr instead of printing (default False)
+        **kwargs: Additional arguments passed to subprocess.run
+    
+    Returns:
+        subprocess.CompletedProcess object
+    """
     pw = pwd.getpwnam(user)
     uid, gid = pw.pw_uid, pw.pw_gid
     home = pw.pw_dir
@@ -289,6 +301,7 @@ def run_as_user(argv, user, *, check=True, **kwargs):
         check=check,
         env=env,
         preexec_fn=demote,
+        capture_output=capture_output,
         **kwargs
     )
 
