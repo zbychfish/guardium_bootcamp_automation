@@ -1664,7 +1664,7 @@ def lab8_va(state):
     """
     LAB 8 - VA
     """
-
+    exit(0)
     run_task('Configure raptor for VA', lambda: t_configure_raptor_for_va(), state, STATE_FILE)
 
     run_task('Configure VA scanner', lambda: t_setup_vascanner(), state, STATE_FILE)
@@ -1688,7 +1688,6 @@ def lab7_etap(state):
     run_task('Create CSR for ETAP for mysql', lambda: t_create_mysql_csr_for_etap(), state, STATE_FILE)
     run_task('Import CA cert for ETAP', lambda: t_import_etap_ca_cert(), state, STATE_FILE)
     run_task('Import mysql ETAP cert', lambda: t_import_etap_cert(), state, STATE_FILE)
-    exit(0)
     run_task('Start mysql ETAP on raptor', lambda: t_start_etap(), state, STATE_FILE)
 
 def lab6_uc1(state):
