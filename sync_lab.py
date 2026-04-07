@@ -809,7 +809,7 @@ def t_setup_filebeat(api):
     )
     """
 
-    result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"),
+    result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"), print_output=False,
     commands=[
         "mkdir -p /root/gn-trainings",
         f"curl -L -O https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-{get_env_value("FILEBEAT_VERSION")}-x86_64.rpm --output-dir /root/gn-trainings",
@@ -1686,7 +1686,7 @@ def lab7_etap(state):
     """
     LAB 7 - ETAP
     """
-
+    exit(0)
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443',
         client_id='BOOTCAMP'
@@ -1714,7 +1714,6 @@ def lab6_uc1(state):
         client_id='BOOTCAMP'
     )
     run_task('Deploy cassandra on hana', lambda: t_setup_cassandra(), state, STATE_FILE)
-    exit(0)
     run_task('Deploy filebeat on hana', lambda: t_setup_filebeat(api), state, STATE_FILE)
 
 def lab5_exit(state):
