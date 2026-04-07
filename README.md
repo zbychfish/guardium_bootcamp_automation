@@ -151,43 +151,6 @@ Lab order:
 13 - VA API
 
 
-## Task Flow
-
-The automation performs the following major tasks:
-
-1. **Initial Setup**
-   - Download and extract patches
-   - Download GIM installers and bundles
-   - Download DPS updates
-
-2. **Appliance Configuration**
-   - Configure Central Manager
-   - Configure Collectors
-   - Configure Tool Nodes
-   - Install patches
-
-3. **Database Setup**
-   - Configure Oracle databases
-   - Configure PostgreSQL
-   - Configure SAP HANA
-   - Configure Cassandra
-
-4. **GIM and S-TAP**
-   - Install GIM clients
-   - Deploy S-TAP agents
-   - Configure monitoring
-
-5. **Vulnerability Assessment**
-   - Set up VA scanner containers
-   - Import VA processes
-   - Configure scanning
-
-6. **Final Configuration**
-   - Import dashboards
-   - Configure policies
-   - Set up reports
-
-
 ## Project Structure
 
 ```
