@@ -644,14 +644,15 @@ def t_enable_atap_for_postgres_on_raptor():
     subprocess.run(["systemctl", "start", "postgresql"], check=True, capture_output=True)
 
 def t_correct_mysql_ie(api):
-    print("\n Correcting mysql Inspection Engine definition")
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
+    print("  ➜ Delete mysql Inspection Engine definition")
     api.delete_inspection_engine(
         stap_host="10.10.9.70",
         type="mysql",
         wait_for_response="1",
         api_target_host="10.10.9.239"
     )
+    print("  ➜ Create mysql Inspection Engine 1")
     api.create_inspection_engine(
         stap_host="10.10.9.70",
         protocol="mysql",
@@ -666,6 +667,7 @@ def t_correct_mysql_ie(api):
         unix_socket_marker="mysql.sock",
         api_target_host="10.10.9.239"
     )
+    print("  ➜ Create mysql Inspection Engine 2")
     api.create_inspection_engine(
         stap_host="10.10.9.70",
         protocol="mysql",
@@ -680,6 +682,7 @@ def t_correct_mysql_ie(api):
         unix_socket_marker="mysql.sock",
         api_target_host="10.10.9.239"
     )
+    print("  ➜ Create mysql Inspection Engine 3")
     api.create_inspection_engine(
         stap_host="10.10.9.70",
         protocol="mysql",
@@ -694,6 +697,7 @@ def t_correct_mysql_ie(api):
         unix_socket_marker="mysqlx.sock",
         api_target_host="10.10.9.239"
     )
+    print("  ➜ Create mysql Inspection Engine 4")
     api.create_inspection_engine(
         stap_host="10.10.9.70",
         protocol="mysql",
@@ -708,12 +712,10 @@ def t_correct_mysql_ie(api):
         unix_socket_marker="mysqlx.sock",
         api_target_host="10.10.9.239"
     )
-    return None
 
 def t_configure_ssl_for_mongo():
-    print("\n Mongo SSL configuration")
     subprocess.run(["mkdir", "-p", "/var/lib/mongo/cert"], check=True)
-    subprocess.run(["openssl", "req", '-x509', '-newkey', "rsa:4096", "-keyout", "/var/lib/mongo/cert/key.pem", "-out", "/var/lib/mongo/cert/cert.pem", "-sha256", "-days", "3650", "-nodes", "-subj", "/C=PL/ST=Lubuskie/L=Nowa Sol/O=Training/OU=Demo/CN=mongod"], check=True)
+    subprocess.run(["openssl", "req", '-x509', '-newkey', "rsa:4096", "-keyout", "/var/lib/mongo/cert/key.pem", "-out", "/var/lib/mongo/cert/cert.pem", "-sha256", "-days", "3650", "-nodes", "-subj", "/C=PL/ST=Lubuskie/L=Nowa Sol/O=Training/OU=Demo/CN=mongod"], check=True, capture_output=True)
     with open("/var/lib/mongo/cert/both.pem", "w") as f:
         subprocess.run(["cat", "/var/lib/mongo/cert/key.pem", "/var/lib/mongo/cert/cert.pem"], stdout=f, stderr=subprocess.STDOUT, check=True)
     subprocess.run(["chown", "-R", "mongod:mongod", "/var/lib/mongo/cert"], check=True)
@@ -730,18 +732,15 @@ def t_configure_ssl_for_mongo():
                 lines.append(line)
     conf.write_text("".join(lines))
     subprocess.run(["systemctl", "restart", "mongod"], check=True)
-    return None
 
 def t_enable_atap_for_mongo():
-    print("\n ATAP setup for postgres on raptor")
     subprocess.run(["mv", "/opt/guardium/etc/guard/root/postgres.conf", "/opt/guardium/etc/guard"], check=True)
-    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "--db-user=mongod", "--db-home=/usr", "--db-base=/var/lib/mongo", "--db-type=mongodb",     "--db-instance=mongo4", "store-conf"], check=True)
-    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "authorize-user", "mongod"], check=True)
-    subprocess.run(["systemctl", "stop", "mongod"], check=True)
-    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "--db-instance=mongo4", "activate"], check=True)
-    subprocess.run(["systemctl", "start", "mongod"], check=True)
-    subprocess.run(["mv", "/opt/guardium/etc/guard/postgres.conf", "/opt/guardium/etc/guard/root"], check=True)
-    return None
+    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "--db-user=mongod", "--db-home=/usr", "--db-base=/var/lib/mongo", "--db-type=mongodb",     "--db-instance=mongo4", "store-conf"], check=True, capture_output=True)
+    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "authorize-user", "mongod"], check=True, capture_output=True)
+    subprocess.run(["systemctl", "stop", "mongod"], check=True, capture_output=True)
+    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "--db-instance=mongo4", "activate"], check=True, capture_output=True)
+    subprocess.run(["systemctl", "start", "mongod"], check=True, capture_output=True)
+    subprocess.run(["mv", "/opt/guardium/etc/guard/postgres.conf", "/opt/guardium/etc/guard/root"], check=True, capture_output=True)
 
 def t_exit_for_db2_setup(api):
     print("\n Registering db2inst1 user")
@@ -1723,7 +1722,7 @@ def lab5_exit(state):
     """
     LAB 5 - EXIT
     """
-
+    exit(0)  
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443',
         client_id='BOOTCAMP'
@@ -1745,11 +1744,8 @@ def lab4_atap(state):
     run_task('Install GIM client on raptor', lambda: t_install_gim_on_raptor(), state, STATE_FILE)
     run_task('Install STAP on raptor', lambda: t_install_stap_on_raptor(api), state, STATE_FILE)
     run_task('Configure ATAP for postgres on raptor', lambda: t_enable_atap_for_postgres_on_raptor(), state, STATE_FILE)
-    exit(0)        
     run_task('Correct mysql IE\'s', lambda: t_correct_mysql_ie(api), state, STATE_FILE)
-
     run_task('Configure SSL for Mongo', lambda: t_configure_ssl_for_mongo(), state, STATE_FILE)
-
     run_task('Enable ATAP for Mongo', lambda: t_enable_atap_for_mongo(), state, STATE_FILE)
 
 def lab2_gim(state):
