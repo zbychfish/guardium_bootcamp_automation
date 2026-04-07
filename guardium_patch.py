@@ -61,13 +61,9 @@ def install_patch(
             allow_agent=False
         )
         
-        # Otwórz interaktywny kanał
         channel = client.invoke_shell()
         channel.settimeout(0.1)
-        
-        print("Connected! Waiting for prompt...")
-        
-        # Czekaj na prompt systemowy
+
         buf = ""
         prompt_found = False
         timeout = time.time() + 30

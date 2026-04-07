@@ -444,11 +444,10 @@ def t_monitoring_patch_installation(appliance_name):
     appliance = create_appliance(appliance_name)
     if not appliance.connect():
         print(f"  ✗ Failed to connect to {appliance_name}")
-        return None   
+        exit(1)   
     required_status = "DONE: Patch installation Succeeded."
     while True:
         result = appliance.execute_command("show system patch installed")
-        # Get list of patch numbers from environment variable (e.g., "9997,4015")
         wanted = set(get_env_value("PATCH_LIST").split(","))
         status_by_id = {}
         for line in result.splitlines():
@@ -461,10 +460,9 @@ def t_monitoring_patch_installation(appliance_name):
             pid = m.group(1)
             has_ok_status = required_status in line
             status_by_id[pid] = has_ok_status        
-        # Check if all required patches are installed with correct status
         all_installed = all(pid in status_by_id and status_by_id[pid] for pid in wanted)
         if all_installed:
-            print(f"  ✓ All required patches ({', '.join(wanted)}) on {appliance_name} are installed with status: {required_status}")
+            print(f"  ℹ All required patches ({', '.join(wanted)}) on {appliance_name} are installed with status: {required_status}")
             break
         else:
             missing = [pid for pid in wanted if pid not in status_by_id or not status_by_id[pid]]
@@ -1832,15 +1830,12 @@ def lab1_appliance_setup(state):
     run_task('Create demo user', lambda: t_create_demo_user(api), state, STATE_FILE)
     run_task('Register collector', lambda: t_register_collector(api), state, STATE_FILE)
     run_task('Prepare appliances for patching', lambda: t_preparing_appliances_for_patching(api), state, STATE_FILE)
+    # for appliance_name, appliance_ip, password, task_number in [('cm', '10.10.9.219', get_env_value('CM_PASSWORD'), 'Register patches on cm'), ('collector', '10.10.9.239', get_env_value('COLLECTOR_PASSWORD'), f'Register patches on collector')]:
+    #     run_task(task_number, lambda: t_registering_patches_installation(appliance_name, appliance_ip, password), state, STATE_FILE)
 
-    for appliance_name, appliance_ip, password, task_number in [('cm', '10.10.9.219', get_env_value('CM_PASSWORD'), 'register_patches_on_cm'), ('collector', '10.10.9.239', get_env_value('COLLECTOR_PASSWORD'), 'register_patches_on_collector')]:
-        print(f"  ➜ Schedulling patch installation on {appliance_name}")
-        run_task(task_number, lambda: t_registering_patches_installation(appliance_name, appliance_ip, password), state, STATE_FILE)
-    exit(0)
-    
-    for appliance_name, task_number in [('cm', 'monitor_patch_installation_on_cm'), ('collector', 'monitor_patch_installation_on_collector')]:
+    for appliance_name, task_number in [('cm', 'Monitor patch installation on cm'), ('collector', 'Monitor patch installation on collector')]:
         run_task(task_number, lambda: t_monitoring_patch_installation(appliance_name), state, STATE_FILE)
-
+    exit(0)
     run_task('Policy installation on collector', lambda: t_install_policy_on_collector(api), state, STATE_FILE)
 
 def sync_lab(state, skip_below: int = 0, stop_at: int = 999):
