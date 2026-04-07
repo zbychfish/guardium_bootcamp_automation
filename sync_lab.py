@@ -1269,14 +1269,16 @@ def t_deploy_oracle_in_container_on_hana():
     )
 
 def t_create_oracle_csr_for_etap():
+    print("  ➜ Connect to appliance")
     appliance = ApplianceCommand(
         host="10.10.9.239",
         strip_ansi=True,
         user="cli",
         password=get_env_value("COLLECTOR_PASSWORD"),
         prompt_regex=r">",
-        debug=True
+        debug=False
     )
+    print("  ➜ Generate CSR for Oracle ETAP")
     if appliance.connect():
         csr, token, line_above = appliance.generate_external_stap_csr(
         alias="oracle-etap",
@@ -1289,9 +1291,8 @@ def t_create_oracle_csr_for_etap():
         save_to_env("ETAP_CSR_ID", line_above)
         save_to_env("ETAP_TOKEN_ORACLE", token)
     appliance.disconnect()
-    print("\n Signing CSR by CA")
-    subprocess.run(["openssl", "x509", "-sha256", "-req", "-days", "3650", "-CA", "/root/gn-trainings/ETAP/ca/ca.pem", "-CAkey", "/root/gn-trainings/ETAP/ca/ca.key", "-CAcreateserial", "-CAserial", "serial", "-in", "/root/gn-trainings/ETAP/ca/etap2.csr", "-out", "/root/gn-trainings/ETAP/ca/etap2.pem"], check=True)
-    return None
+    print("  ➜ Signing CSR by CA")
+    subprocess.run(["openssl", "x509", "-sha256", "-req", "-days", "3650", "-CA", "/root/gn-trainings/ETAP/ca/ca.pem", "-CAkey", "/root/gn-trainings/ETAP/ca/ca.key", "-CAcreateserial", "-CAserial", "serial", "-in", "/root/gn-trainings/ETAP/ca/etap2.csr", "-out", "/root/gn-trainings/ETAP/ca/etap2.pem"], check=True, capture_output=True)
 
 def t_import_oracle_etap_cert():
     appliance = ApplianceCommand(
@@ -1300,19 +1301,18 @@ def t_import_oracle_etap_cert():
     user="cli",
     password=get_env_value("COLLECTOR_PASSWORD"),
     prompt_regex=r">",
-    debug=True
+    debug=False
     )   
-
     if appliance.connect():
     # Wczytaj certyfikat External S-TAP
         with open("/root/gn-trainings/ETAP/ca/etap2.pem") as f:
             etap_cert = f.read()
-        
         # Importuj certyfikat
         appliance.import_external_stap_certificate(
             alias_line=get_env_value("ETAP_CSR_ID"),
             stap_cert=etap_cert
         )
+    appliance.disconnect()
 
 def t_start_oracle_etap():
     etap_host = "10.10.9.60"
@@ -1385,12 +1385,13 @@ def t_start_oracle_etap():
         "-e",
         f"STAP_CONFIG_SQLGUARD_0_SQLGUARD_IP={collector_ip}",
         f"-p={listen_port}:8888/tcp",
+        "-q",
         f"icr.io/guardium/guardium_external_s-tap:v{etap_release}"
     ]
-    subprocess.run(etap_command, check=True)
+    subprocess.run(etap_command, check=True, capture_output=True)
     time.sleep(10)
     print("\n ETAP stopped for other part of lab")
-    subprocess.run(["podman", "stop", "oracle-etap"], check=True)
+    subprocess.run(["podman", "stop", "oracle-etap"], check=True, capture_output=True)
 
 def t_setup_oracle_traffic_generator():
     password = get_env_value("DEFAULT_SERVICE_PASSWORD")
@@ -1408,7 +1409,7 @@ def t_setup_oracle_traffic_generator():
         subprocess.run(
             c["cmd"],
             cwd=c.get("cwd"),
-            check=True
+            check=True, capture_output=True
         )
 
 def t_setup_OUA_on_oracle_on_hana():
