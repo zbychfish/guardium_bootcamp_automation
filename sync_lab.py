@@ -637,12 +637,11 @@ def t_install_stap_on_raptor(api):
     monitor_gim_module_installation(api, "10.10.9.70")
 
 def t_enable_atap_for_postgres_on_raptor():
-    print("\n ATAP setup for postgres on raptor")
-    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "--db-user=postgres", "--db-home=/usr", "--db-user-dir=/var/lib/pgsql", "--db-type=postgres", "--db-instance=postgres", "--db-version=16", "store-conf"], check=True)
-    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "authorize-user", "postgres"], check=True)
-    subprocess.run(["systemctl", "stop", "postgresql"], check=True)
-    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "--db-instance=postgres", "activate"], check=True)
-    subprocess.run(["systemctl", "start", "postgresql"], check=True)
+    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "--db-user=postgres", "--db-home=/usr", "--db-user-dir=/var/lib/pgsql", "--db-type=postgres", "--db-instance=postgres", "--db-version=16", "store-conf"], check=True, capture_output=True)
+    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "authorize-user", "postgres"], check=True, capture_output=True)
+    subprocess.run(["systemctl", "stop", "postgresql"], check=True, capture_output=True)
+    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "--db-instance=postgres", "activate"], check=True, capture_output=True)
+    subprocess.run(["systemctl", "start", "postgresql"], check=True, capture_output=True)
 
 def t_correct_mysql_ie(api):
     print("\n Correcting mysql Inspection Engine definition")
@@ -1745,9 +1744,8 @@ def lab4_atap(state):
     run_task('Create postgres admin users', lambda: t_create_postgres_admin_users(), state, STATE_FILE)
     run_task('Install GIM client on raptor', lambda: t_install_gim_on_raptor(), state, STATE_FILE)
     run_task('Install STAP on raptor', lambda: t_install_stap_on_raptor(api), state, STATE_FILE)
-    exit(0)
     run_task('Configure ATAP for postgres on raptor', lambda: t_enable_atap_for_postgres_on_raptor(), state, STATE_FILE)
-        
+    exit(0)        
     run_task('Correct mysql IE\'s', lambda: t_correct_mysql_ie(api), state, STATE_FILE)
 
     run_task('Configure SSL for Mongo', lambda: t_configure_ssl_for_mongo(), state, STATE_FILE)
@@ -1826,7 +1824,7 @@ def sync_lab(state, skip_below: int = 0, stop_at: int = 999):
             else:
                 # LAB skipped (None)
                 print("\n" + "=" * 60)
-                print(f"\nLAB {lab_num} - skipped")
+                print(f"LAB {lab_num} - skipped")
                 print(lab_desc)
                 print("=" * 60)
             
@@ -1872,7 +1870,7 @@ if __name__ == "__main__":
     try:
         sync_lab(state, skip_below=args.skip_below, stop_at=args.stop_at)
     except KeyboardInterrupt:
-        print("\n\n[INFO] Interrupted by user")
+        print("\n[INFO] Interrupted by user")
     except Exception as e:
         print(f"\n[ERROR] Error: {e}")
         import traceback
