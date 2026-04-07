@@ -1686,13 +1686,9 @@ def lab7_etap(state):
     """
     LAB 7 - ETAP
     """
-    exit(0)
-    api = GuardiumRestAPI(
-        base_url='https://10.10.9.219:8443',
-        client_id='BOOTCAMP'
-    )
+        
     run_task('Setup raptor for ETAP', lambda: t_setup_raptor_to_deploy_etap(), state, STATE_FILE)
-
+    exit(0)
     run_task('Deploy CA on raptor', lambda: t_deploy_ca_on_raptor(), state, STATE_FILE)
 
     run_task('Create CSR for ETAP for mysql', lambda: t_create_mysql_csr_for_etap(), state, STATE_FILE)
