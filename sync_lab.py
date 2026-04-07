@@ -1057,10 +1057,7 @@ def t_import_DPS():
         headless=True
     )
 
-
-
 def t_install_gim_on_winsql():
-    print("\n Run GIM client on winsql")
     res = run_winrm(
         host="10.10.9.59",
         username=r".\administrator",
@@ -1072,9 +1069,9 @@ def t_install_gim_on_winsql():
     )
 
 def t_install_stap_on_winsql(api):
-    print("\n WINSTAP installation schedule")
-    time.sleep(60)
+    time.sleep(60) # wait for registration GIM client
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
+    print("  ➜ WINSTAP installation schedule")
     api.gim_client_assign(
         client_ip="10.10.9.59",
         module="WINSTAP",
@@ -1085,12 +1082,12 @@ def t_install_stap_on_winsql(api):
         param_name="WINSTAP_SQLGUARD_IP",
         param_value="10.10.9.239"
     )
+    print("  ➜ WINSTAP installation start")
     api.gim_schedule_install(
         client_ip="10.10.9.59",
         date="now",
     )
-    
-    print("\n WINSTAP installation monitoring")
+    print("  ➜ WINSTAP installation monitoring")
     monitor_gim_module_installation(api, "10.10.9.59")
 
 def t_enable_fam_on_raptor(api):
