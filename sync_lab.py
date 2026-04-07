@@ -3,7 +3,6 @@
 
 
 from subprocess import SubprocessError
-# import psycopg2
 import os
 import re
 import time
@@ -589,7 +588,7 @@ def t_postgres_installation():
     subprocess.run(["sudo", "-u", "postgres", "psql", "-d", "postgres", "-U", "postgres", "-c",  sql], check=True, capture_output=True)
 
 def t_create_postgres_admin_users():
-    conn = psycopg2.connect(dbname="postgres", user= "postgres", password="guardium", host="localhost", port=5432)
+    conn = get_postgres_conn(dbname="postgres", user= "postgres", password="guardium", host="localhost", port=5432)
     cur = conn.cursor()
     cur.execute(f"CREATE ROLE tom PASSWORD '{get_env_value('DEFAULT_SERVICE_PASSWORD')}' SUPERUSER CREATEDB CREATEROLE INHERIT LOGIN;")
     cur.execute(f"CREATE ROLE jerry PASSWORD '{get_env_value('DEFAULT_SERVICE_PASSWORD')}' SUPERUSER CREATEDB CREATEROLE INHERIT LOGIN;")
