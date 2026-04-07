@@ -1176,21 +1176,21 @@ def t_configure_env_for_oracle(api):
 
 def t_setup_SSL_for_oracle():
     print("  ➜ Create server wallet")
-    run_as_user(["mkdir", "-p", "/opt/oracle/product/19c/dbhome_1/wallet"], user="oracle", text=True)
-    run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "create", "-wallet", "/opt/oracle/product/19c/dbhome_1/wallet", "-auto_login_local", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True)
+    run_as_user(["mkdir", "-p", "/opt/oracle/product/19c/dbhome_1/wallet"], user="oracle", text=True, capture_output=True)
+    run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "create", "-wallet", "/opt/oracle/product/19c/dbhome_1/wallet", "-auto_login_local", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True, capture_output=True)
     print("  ➜ Add self-sign certificate to server wallet")
-    run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "add", "-wallet", r'/opt/oracle/product/19c/dbhome_1/wallet', "-dn", r'CN=raptor.gdemo.com', "-keysize", "2048", "-self_signed", "-validity", "3650", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True)
+    run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "add", "-wallet", r'/opt/oracle/product/19c/dbhome_1/wallet', "-dn", r'CN=raptor.gdemo.com', "-keysize", "2048", "-self_signed", "-validity", "3650", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True, capture_output=True)
     print("  ➜ Create client wallet")
     run_as_user(["mkdir", "-p", "/opt/oracle/product/19c/dbhome_1/client_wallet"], user="oracle", text=True)
-    run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "create", "-wallet", "/opt/oracle/product/19c/dbhome_1/client_wallet", "-auto_login_local", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True)
+    run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "create", "-wallet", "/opt/oracle/product/19c/dbhome_1/client_wallet", "-auto_login_local", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True, capture_output=True)
     print("  ➜ Add self-sign certificate to client wallet")
-    run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "add", "-wallet", r'/opt/oracle/product/19c/dbhome_1/client_wallet', "-dn", r'CN=client', "-keysize", "2048", "-self_signed", "-validity", "3650", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True)
+    run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "add", "-wallet", r'/opt/oracle/product/19c/dbhome_1/client_wallet', "-dn", r'CN=client', "-keysize", "2048", "-self_signed", "-validity", "3650", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True, capture_output=True)
     print("  ➜ Export public keys")
-    run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "export", "-wallet", r'/opt/oracle/product/19c/dbhome_1/wallet', "-dn", r'CN=raptor.gdemo.com', "-cert", "/tmp/server-cert.crt", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True)
-    run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "export", "-wallet", r'/opt/oracle/product/19c/dbhome_1/client_wallet', "-dn", r'CN=client', "-cert", "/tmp/client-cert.crt", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True)
+    run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "export", "-wallet", r'/opt/oracle/product/19c/dbhome_1/wallet', "-dn", r'CN=raptor.gdemo.com', "-cert", "/tmp/server-cert.crt", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True, capture_output=True)
+    run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "export", "-wallet", r'/opt/oracle/product/19c/dbhome_1/client_wallet', "-dn", r'CN=client', "-cert", "/tmp/client-cert.crt", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True, capture_output=True)
     print("  ➜ Import public keys")
-    run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "add", "-wallet", r'/opt/oracle/product/19c/dbhome_1/client_wallet', "-trusted_cert", "-cert", "/tmp/server-cert.crt", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True)
-    run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "add", "-wallet", r'/opt/oracle/product/19c/dbhome_1/wallet', "-trusted_cert", "-cert", "/tmp/client-cert.crt", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True)
+    run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "add", "-wallet", r'/opt/oracle/product/19c/dbhome_1/client_wallet', "-trusted_cert", "-cert", "/tmp/server-cert.crt", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True, capture_output=True)
+    run_as_user(["/opt/oracle/product/19c/dbhome_1/bin/orapki", "wallet", "add", "-wallet", r'/opt/oracle/product/19c/dbhome_1/wallet', "-trusted_cert", "-cert", "/tmp/client-cert.crt", "-pwd", f"'{get_env_value("DEMOUSER_PASSWORD")}'"], user="oracle", text=True, capture_output=True)
     run_as_user(["rm", "/tmp/server-cert.crt", "/tmp/client-cert.crt"], user="oracle", text=True)
     print("  ➜ Change listener configuration")
     subprocess.run(["cp", "-f", "guardium_configuration_files/listener.ora", "/opt/oracle/product/19c/dbhome_1/network/admin/listener.ora"], check=True, capture_output=True)
@@ -1198,24 +1198,24 @@ def t_setup_SSL_for_oracle():
     subprocess.run(["cp", "-f", "guardium_configuration_files/sqlnet.ora", "/opt/oracle/product/19c/dbhome_1/network/admin/sqlnet.ora"], check=True, capture_output=True)
     subprocess.run(["chown", "-R", "oracle:oinstall", "/opt/oracle/product/19c/dbhome_1/network/admin/"], check=True)
     print("  ➜ Restart listener")
-    run_as_user(["bash","-lc", "/opt/oracle/product/19c/dbhome_1/bin/lsnrctl reload"], user="oracle", text=True)
+    run_as_user(["bash","-lc", "/opt/oracle/product/19c/dbhome_1/bin/lsnrctl reload"], user="oracle", text=True, capture_output=True)
 
 def t_setup_ATAP_for_oracle():
-    print("\n Stop oracle instance")
-    run_as_user(["bash","-lc", "/opt/oracle/product/19c/dbhome_1/bin/lsnrctl stop"], user="oracle", text=True)
-    run_as_user(["bash","-lc", r"$ORACLE_HOME/bin/dbshut $ORACLE_HOME"], user="oracle", text=True)
-    print("\n ATAP setup for oracle on raptor")
-    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "--db-user=oracle", "--db-home=/opt/oracle/product/19c/dbhome_1", "--db-base=/home/oracle", "--db-type=oracle", "--db-instance=ORCLDB", "--db-version=19", "store-conf"], check=True)
-    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "authorize-user", "oracle"], check=True)
-    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "--db-type=oracle --db-instance=ORCLDB", "activate"], check=True)
-    print("\n Start oracle instance")
-    run_as_user(["bash","-lc", r"$ORACLE_HOME/bin/dbstart $ORACLE_HOME"], user="oracle", text=True)
-    run_as_user(["bash","-lc", "/opt/oracle/product/19c/dbhome_1/bin/lsnrctl stop"], user="oracle", text=True)
+    print("  ➜ Stop oracle instance")
+    run_as_user(["bash","-lc", "/opt/oracle/product/19c/dbhome_1/bin/lsnrctl stop"], user="oracle", text=True, capture_output=True)
+    run_as_user(["bash","-lc", r"$ORACLE_HOME/bin/dbshut $ORACLE_HOME"], user="oracle", text=True, capture_output=True)
+    print("  ➜ ATAP setup for oracle on raptor")
+    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "--db-user=oracle", "--db-home=/opt/oracle/product/19c/dbhome_1", "--db-base=/home/oracle", "--db-type=oracle", "--db-instance=ORCLDB", "--db-version=19", "store-conf"], check=True, capture_output=True)
+    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "authorize-user", "oracle"], check=True, capture_output=True)
+    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "--db-type=oracle --db-instance=ORCLDB", "activate"], check=True, capture_output=True)
+    print("  ➜ Start oracle instance")
+    run_as_user(["bash","-lc", r"$ORACLE_HOME/bin/dbstart $ORACLE_HOME"], user="oracle", text=True, capture_output=True)
+    run_as_user(["bash","-lc", "/opt/oracle/product/19c/dbhome_1/bin/lsnrctl stop"], user="oracle", text=True, capture_output=True)
 
 def t_deploy_oracle_in_container_on_hana():
-    print("\n Download and setup Oracle 21c container on hana")
+    print("  ➜ Download and setup Oracle 21c container on hana")
     unpack_cmd = "bash -lc 'gunzip -k /home/oracle19_oua_image.tar.gz 2>/dev/null || true'"
-    result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"),
+    result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"), print_output=False,
     commands=[
         f"wget -q {get_env_value('ORACLE_OUA_IMAGE')} -O /home/oracle19_oua_image.tar.gz",
         unpack_cmd,
@@ -1223,9 +1223,8 @@ def t_deploy_oracle_in_container_on_hana():
         "podman load -qi /home/oracle19_oua_image.tar",
         f"rm -f /home/oracle19_oua_image.tar"
     ])
-
-    print("\n Setup oracle container on hana")
-    result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"),
+    print("  ➜ Setup oracle container on hana")
+    result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"), print_output=False,
     commands=[
         "mkdir -p /home/oradata",
         "chown -R 54321:54321 /home/oradata",
@@ -1234,8 +1233,8 @@ def t_deploy_oracle_in_container_on_hana():
         "restorecon -Rv /home/oradata"
     ])
 
-    print("\n Starting oracle container on hana")
-    result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"),
+    print("  ➜ Starting oracle container on hana")
+    result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"), print_output=False,
     commands=[
         f"podman run -d --name oracle_db_21c -p 1521:1521 -p 5500:5500 -e ORACLE_EDITION=EE -e ORACLE_SID=ORCL  -e ORACLE_PDB=ORCLPDB1  -e ORACLE_CHARACTERSET=AL32UTF8 -e ORACLE_SERVICE_NAME=ORCLPDB1.localdomain -v /home/oradata:/opt/oracle/oradata -e ORACLE_PWD='{get_env_value("DEFAULT_SERVICE_PASSWORD")}' oracle/database:21.3.0-ee-oua"
     ])
@@ -1243,9 +1242,9 @@ def t_deploy_oracle_in_container_on_hana():
     timeout_sec = 1800
     deadline = time.time() + timeout_sec
     last_out = None
-    print("\n Monitoring first start of oracle container on hana")
+    print("  ➜ Monitoring first start of oracle container on hana")
     while time.time() < deadline:
-        res=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"),
+        res=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"), print_output=False,
             commands=[r"podman logs oracle_db_21c 2>&1 | grep -F 'DATABASE IS READY TO USE' | wc -l"],
         )[0]
         out = (res.get("stdout") or "").strip()
@@ -1254,14 +1253,14 @@ def t_deploy_oracle_in_container_on_hana():
         last_out = out
 
         # If you want to log status:
-        print(f"rc={rc} out={out!r} err={err[:120]!r}")
+        print(f"  ⌛ rc={rc} out={out!r} err={err[:120]!r}")
         # out should be a number (result of wc -l)
         try:
             count = int(out) if out else 0
         except ValueError:
             count = 0
         if count >= 1:
-            print("✅ Found readiness marker in logs. Exiting loop.")
+            print("  ✔ Found readiness marker in logs. Exiting loop.")
             break
         time.sleep(interval_sec)
     else:
@@ -1596,11 +1595,9 @@ def lab11_oracle(state):
     )
     run_task('Configure system for oracle lab', lambda: t_configure_env_for_oracle(api), state, STATE_FILE)
     run_task('Configure SSL support for oracle on raptor', lambda: t_setup_SSL_for_oracle(), state, STATE_FILE)
-    exit(0)
     run_task('Configure ATAP for oracle on raptor', lambda: t_setup_ATAP_for_oracle(), state, STATE_FILE)
-
     run_task('Deploy Oracle in container on hana', lambda: t_deploy_oracle_in_container_on_hana(), state, STATE_FILE)
-
+    exit(0)
     run_task('Create CSR for ETAP for oracle in container', lambda: t_create_oracle_csr_for_etap(), state, STATE_FILE)
 
     run_task('Import ETAP for oracle in container certificate', lambda: t_import_oracle_etap_cert(), state, STATE_FILE)
