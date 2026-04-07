@@ -474,6 +474,19 @@ def t_install_policy_on_collector(api):
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
     result = api.install_policy("Log Everything", api_target_host="10.10.9.239")
 
+def t_set_collector_resolving_on_raptor():
+    HOSTS_FILE = Path("/etc/hosts")
+    old_ip = "10.10.9.239"
+    new_entry = "10.10.9.239\t coll1.gdemo.com coll1\n"
+    lines = HOSTS_FILE.read_text().splitlines(keepends=True)
+    updated = []
+    for line in lines:
+        if line.startswith(old_ip):
+            updated.append(new_entry)
+        else:
+            updated.append(line)
+    HOSTS_FILE.write_text("".join(updated))
+
 def t_getting_gim_files():
     print("\nDownload and unpack gim installers and gim modules locally")
     target_dir = "/root/gn-trainings"
@@ -546,20 +559,6 @@ def t_getting_gim_files():
         exit(1) 
     client.close()
     return None
-
-def t_set_collector_resolving_on_raptor():
-    print("\nReslving collector on raptor")
-    HOSTS_FILE = Path("/etc/hosts")
-    old_ip = "10.10.9.239"
-    new_entry = "10.10.9.239\t coll1.gdemo.com coll1\n"
-    lines = HOSTS_FILE.read_text().splitlines(keepends=True)
-    updated = []
-    for line in lines:
-        if line.startswith(old_ip):
-            updated.append(new_entry)
-        else:
-            updated.append(line)
-    HOSTS_FILE.write_text("".join(updated))
 
 def t_import_gim_modules(api):
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
@@ -1801,14 +1800,13 @@ def lab2_gim(state):
     Returns:
         appliance: Połączony obiekt ApplianceCommand lub None w przypadku błędu
     """
-    exit(0)
+
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443',
         client_id='BOOTCAMP'
     )
-
     run_task('Set collector resolving on raptor', lambda: t_set_collector_resolving_on_raptor(), state, STATE_FILE)
-
+    exit(0)
     run_task('Getting GIM files', lambda: t_getting_gim_files(), state, STATE_FILE)
 
     run_task('Import GIM files on CM', lambda: t_import_gim_modules(api), state, STATE_FILE)
@@ -1885,10 +1883,10 @@ def sync_lab(state, skip_below: int = 0, stop_at: int = 999):
 
 if __name__ == "__main__":
     import argparse
+    import time
 
     STATE_FILE = "state.json"
     state = load_state(STATE_FILE)
-
 
     parser = argparse.ArgumentParser(description="Sync Lab - laboratory environment synchronization")
     parser.add_argument(
@@ -1906,6 +1904,9 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     
+    # Start time tracking
+    start_time = time.time()
+    
     try:
         sync_lab(state, skip_below=args.skip_below, stop_at=args.stop_at)
     except KeyboardInterrupt:
@@ -1914,6 +1915,17 @@ if __name__ == "__main__":
         print(f"\n[ERROR] Error: {e}")
         import traceback
         traceback.print_exc()
+    finally:
+        # Calculate and display execution time
+        end_time = time.time()
+        execution_time = end_time - start_time
+        hours = int(execution_time // 3600)
+        minutes = int((execution_time % 3600) // 60)
+        seconds = int(execution_time % 60)
+        
+        print("\n" + "=" * 60)
+        print(f"Total execution time: {hours:02d}:{minutes:02d}:{seconds:02d}")
+        print("=" * 60)
 
 
 
