@@ -589,20 +589,16 @@ def t_postgres_installation():
     subprocess.run(["sudo", "-u", "postgres", "psql", "-d", "postgres", "-U", "postgres", "-c",  sql], check=True, capture_output=True)
 
 def t_create_postgres_admin_users():
-    print("\n Create postgres admin users")
     conn = psycopg2.connect(dbname="postgres", user= "postgres", password="guardium", host="localhost", port=5432)
     cur = conn.cursor()
     cur.execute(f"CREATE ROLE tom PASSWORD '{get_env_value('DEFAULT_SERVICE_PASSWORD')}' SUPERUSER CREATEDB CREATEROLE INHERIT LOGIN;")
     cur.execute(f"CREATE ROLE jerry PASSWORD '{get_env_value('DEFAULT_SERVICE_PASSWORD')}' SUPERUSER CREATEDB CREATEROLE INHERIT LOGIN;")
     conn.commit()
-    cur.execute("SELECT 1;")
-    print(cur.fetchone())
     cur.close()
     conn.close()
 
 def t_install_gim_on_raptor():
-    print("\n GIM client installation on raptor")
-    subprocess.run(["/root/gn-trainings/gim_installers/guard-bundle-GIM-12.2.0.0_r121306_v12_2_1-rhel-8-linux-x86_64.gim.sh", "--", "--dir", "/opt/guardium", "--tapip", "10.10.9.70", "--sqlguardip", "10.10.9.219"], check=True)
+    subprocess.run(["/root/gn-trainings/gim_installers/guard-bundle-GIM-12.2.0.0_r121306_v12_2_1-rhel-8-linux-x86_64.gim.sh", "--", "--dir", "/opt/guardium", "--tapip", "10.10.9.70", "--sqlguardip", "10.10.9.219"], check=True, capture_output=True)
 
 def t_install_stap_on_raptor(api):
     print("\n S-TAP installation schedule")
@@ -1744,17 +1740,15 @@ def lab4_atap(state):
     LAB 4 - ATAP
     """
     
-    run_task('Installing psql on raptor', lambda: t_postgres_installation(), state, STATE_FILE)
-    exit(0)
-    run_task('Create postgres admin users', lambda: t_create_postgres_admin_users(), state, STATE_FILE)
-
-    run_task('Install GIM client on raptor', lambda: t_install_gim_on_raptor(), state, STATE_FILE)
-
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443',
         client_id='BOOTCAMP'
     )
-
+    run_task('Installing psql on raptor', lambda: t_postgres_installation(), state, STATE_FILE)
+    run_task('Create postgres admin users', lambda: t_create_postgres_admin_users(), state, STATE_FILE)
+    run_task('Install GIM client on raptor', lambda: t_install_gim_on_raptor(), state, STATE_FILE)
+   
+    exit(0)
     run_task('Install STAP on raptor', lambda: t_install_stap_on_raptor(api), state, STATE_FILE)
 
     run_task('Configure ATAP for postgres on raptor', lambda: t_enable_atap_for_postgres_on_raptor(), state, STATE_FILE)
