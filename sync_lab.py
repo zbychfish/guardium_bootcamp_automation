@@ -775,7 +775,6 @@ def t_exit_for_db2_setup(api):
         api_target_host="10.10.9.239"
     )
 
-
 def t_setup_raptor_to_deploy_etap():
     print("\n Installing package requirements")
     subprocess.run(["dnf", "-y", "install", "podman-docker", "skopeo"], check=True)
@@ -1709,6 +1708,7 @@ def lab6_uc1(state):
     LAB 6 - UC 1.0
 
     """
+    exit(0)  
     api = GuardiumRestAPI(
         base_url='https://10.10.9.239:8443/',
         client_id='BOOTCAMP'
@@ -1722,12 +1722,11 @@ def lab5_exit(state):
     """
     LAB 5 - EXIT
     """
-    exit(0)  
+
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443',
         client_id='BOOTCAMP'
     )
-
     run_task('Setup EXIT for DB2 on raptor', lambda: t_exit_for_db2_setup(api), state, STATE_FILE)
 
 def lab4_atap(state):
