@@ -843,9 +843,9 @@ def t_deploy_ca_on_raptor():
     print("  ➜ Create CA directory")
     subprocess.run(["mkdir", "-p", "/root/gn-trainings/ETAP/ca"], check=True)
     print("  ➜ Create CA private key")
-    subprocess.run(["openssl", "genrsa", "-out", "/root/gn-trainings/ETAP/ca/ca.key", "2048"], check=True, capture_output=False)
+    subprocess.run(["openssl", "genrsa", "-out", "/root/gn-trainings/ETAP/ca/ca.key", "2048"], check=True, capture_output=True)
     print("  ➜ Generate CA certificate")
-    subprocess.run(["openssl", "req", "-x509", "-sha256", "-new", "-key", "/root/gn-trainings/ETAP/ca/ca.key", "-days", "3650", "-out", "/root/gn-trainings/ETAP/ca/ca.pem", "-subj", "/C=PL/O=Demo/OU=Training/CN=Demo Root CA"], check=True, capture_output=False)
+    subprocess.run(["openssl", "req", "-x509", "-sha256", "-new", "-key", "/root/gn-trainings/ETAP/ca/ca.key", "-days", "3650", "-out", "/root/gn-trainings/ETAP/ca/ca.pem", "-subj", "/C=PL/O=Demo/OU=Training/CN=Demo Root CA"], check=True, capture_output=True)
 
 def t_create_mysql_csr_for_etap():
     print("  ➜ Connecting to collector")
