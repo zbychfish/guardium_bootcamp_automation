@@ -871,7 +871,7 @@ def t_create_mysql_csr_for_etap():
         save_to_env("ETAP_TOKEN", token)
     appliance.disconnect()
     print("  ➜ Signing CSR by CA")
-    subprocess.run(["openssl", "x509", "-sha256", "-req", "-days", "3650", "-CA", "/root/gn-trainings/ETAP/ca/ca.pem", "-CAkey", "/root/gn-trainings/ETAP/ca/ca.key", "-CAcreateserial", "-CAserial", "serial", "-in", "/root/gn-trainings/ETAP/ca/etap.csr", "-out", "/root/gn-trainings/ETAP/ca/etap.pem"], check=True, capture_output=False)
+    subprocess.run(["openssl", "x509", "-sha256", "-req", "-days", "3650", "-CA", "/root/gn-trainings/ETAP/ca/ca.pem", "-CAkey", "/root/gn-trainings/ETAP/ca/ca.key", "-CAcreateserial", "-CAserial", "serial", "-in", "/root/gn-trainings/ETAP/ca/etap.csr", "-out", "/root/gn-trainings/ETAP/ca/etap.pem"], check=True, capture_output=True)
 
 def t_import_etap_ca_cert():
     appliance = ApplianceCommand(
@@ -882,18 +882,15 @@ def t_import_etap_ca_cert():
         prompt_regex=r">",
         debug=True
     )
-
     if appliance.connect():
         # Wczytaj certyfikat CA
         with open("/root/gn-trainings/ETAP/ca/ca.pem") as f:
             ca_cert_pem = f.read()
-        
         # Importuj certyfikat
         appliance.import_external_stap_ca_certificate(
             alias="etapca",
             ca_cert=ca_cert_pem
         )
-    
     appliance.disconnect()
 
 def t_import_etap_cert():
@@ -905,17 +902,16 @@ def t_import_etap_cert():
     prompt_regex=r">",
     debug=True
     )   
-
     if appliance.connect():
     # Wczytaj certyfikat External S-TAP
         with open("/root/gn-trainings/ETAP/ca/etap.pem") as f:
             etap_cert = f.read()
-        
         # Importuj certyfikat
         appliance.import_external_stap_certificate(
             alias_line=get_env_value("ETAP_CSR_ID"),
             stap_cert=etap_cert
         )
+    appliance.disconnect()
 
 def t_start_etap():
     etap_host = "10.10.9.70"
@@ -1690,11 +1686,9 @@ def lab7_etap(state):
     run_task('Setup raptor for ETAP', lambda: t_setup_raptor_to_deploy_etap(), state, STATE_FILE)
     run_task('Deploy CA on raptor', lambda: t_deploy_ca_on_raptor(), state, STATE_FILE)
     run_task('Create CSR for ETAP for mysql', lambda: t_create_mysql_csr_for_etap(), state, STATE_FILE)
-    exit(0)
     run_task('Import CA cert for ETAP', lambda: t_import_etap_ca_cert(), state, STATE_FILE)
-
     run_task('Import mysql ETAP cert', lambda: t_import_etap_cert(), state, STATE_FILE)
-
+    exit(0)
     run_task('Start mysql ETAP on raptor', lambda: t_start_etap(), state, STATE_FILE)
 
 def lab6_uc1(state):
