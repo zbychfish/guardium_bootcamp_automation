@@ -744,16 +744,15 @@ def t_enable_atap_for_mongo():
 
 def t_exit_for_db2_setup(api):
     print("  ➜ Registering db2inst1 user")
-    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "authorize-user", "db2inst1"], check=True)
+    subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "authorize-user", "db2inst1"], check=True, capture_output=True)
     print("  ➜ Stopping DB2")
-    subprocess.run(["sudo", "-iu", "db2inst1", "db2stop"], check=True)
+    subprocess.run(["sudo", "-iu", "db2inst1", "db2stop"], check=True, capture_output=True)
     print("  ➜ Configuring EXIT shared library")
-    subprocess.run(["sudo", "-iu", "db2inst1", "mkdir", "-p", "/home/db2inst1/sqllib/security64/plugin/commexit"], check=True)
+    subprocess.run(["sudo", "-iu", "db2inst1", "mkdir", "-p", "/home/db2inst1/sqllib/security64/plugin/commexit"], check=True, capture_output=True)
     subprocess.run(["sudo", "-iu", "db2inst1", "ln", "-fs", "/usr/lib64/libguard_db2_exit_64.so", "/home/db2inst1/sqllib/security64/plugin/commexit/libguard_db2_exit_64.so"], check=True)
-    subprocess.run(["sudo", "-iu", "db2inst1", "db2", "update", "dbm", "cfg", "using", "comm_exit_list", "libguard_db2_exit_64"], check=True)
-    subprocess.run(["sudo", "-iu", "db2inst1", "db2", "get", "database", "manager", "configuration"], check=True)
+    subprocess.run(["sudo", "-iu", "db2inst1", "db2", "update", "dbm", "cfg", "using", "comm_exit_list", "libguard_db2_exit_64"], check=True, capture_output=True)
     print("  ➜ Starting DB2")
-    subprocess.run(["sudo", "-iu", "db2inst1", "db2start"], check=True)
+    subprocess.run(["sudo", "-iu", "db2inst1", "db2start"], check=True, capture_output=True)
     # print("\n Configure DB2 IE for EXIT")
     # subprocess.run(["/opt/guardium/modules/STAP/current/setup_exit.sh", "db2"], check=True)
     print("  ➜ Correcting DB2 Inspection Engine definition")
@@ -775,10 +774,57 @@ def t_exit_for_db2_setup(api):
         api_target_host="10.10.9.239"
     )
 
+def t_setup_cassandra():
+    print("  ➜ Copying config files to hana")
+    scp_file_as_root(host='10.10.9.60', root_password=get_env_value("HANA_PASSWORD"), local_path="guardium_configuration_files/cassandra.repo", remote_path="/etc/yum.repos.d/cassandra.repo")
+    scp_file_as_root(host='10.10.9.60', root_password=get_env_value("HANA_PASSWORD"), local_path="guardium_configuration_files/cassandra_table.cql", remote_path="/root")
+    print("  ➜ Installing java, cassandra, configuration of cassandra")
+    result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"), print_output=False,
+    commands=[
+        "dnf -y install java-11-openjdk",
+        "dnf -y install cassandra",
+        r"sed -i '/^audit_logging_options:/,/^[[:space:]]*- class_name:/c\audit_logging_options:\n  enabled: true\n  logger:\n    - class_name: FileAuditLogger' /etc/cassandra/conf/cassandra.yaml",
+        "sed -i '/<!-- <appender name=\"AUDIT\"/,/SizeAndTimeBasedRollingPolicy/ { s/<!-- //; s/ -->// }' /etc/cassandra/conf/logback.xml",
+        "sed -i 's|<!-- *<fileNamePattern>\\(.*\\)</fileNamePattern> *-->|<fileNamePattern>\1</fileNamePattern>|' /etc/cassandra/conf/logback.xml",
+        "sed -i '/<!-- *<maxFileSize>/,/<\\/appender> *-->/ { s/<!-- //; s/ -->// }' /etc/cassandra/conf/logback.xml",
+        "sed -i '/<!-- *<logger name=\"org.apache.cassandra.audit\"/,/<\\/logger> *-->/ { s/<!-- //; s/ -->// }' /etc/cassandra/conf/logback.xml",
+        "sed -i 's|^10\\.10\\.9\\.239[[:space:]]\\+yourcollectorname\\.gdemo\\.com[[:space:]]\\+yourcollectorname$|10.10.9.239     coll1.gdemo.com coll1|' /etc/hosts"
+        "service cassandra start",
+        "service cassandra start",
+        "dnf -qy install python3-pip",
+        "pip install --user cqlsh",
+        "cqlsh -f /root/cassandra_table.cql"
+    ])
+    time.sleep(30)
+
+def t_setup_filebeat(api):
+    """
+    # API call added to create UC 1.0 cert but rest automatization is not implemented
+    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
+    cert = api.generate_ssl_key_universal_connector(
+        expiration_days=3650,
+        hostname="*.gdemo.com",
+        overwrite=True,
+        api_target_host='10.10.9.239',
+    )
+    """
+
+    result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"),
+    commands=[
+        "mkdir -p /root/gn-trainings",
+        f"curl -L -O https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-{get_env_value("FILEBEAT_VERSION")}-x86_64.rpm --output-dir /root/gn-trainings",
+        f"cd /root/gn-trainings && dnf -y install /root/gn-trainings/filebeat-{get_env_value("FILEBEAT_VERSION")}-x86_64.rpm",
+        r"sed -i '/^- type: filestream/,/^[^[:space:]]/c\- type: filestream\n  id: \"cassandra\"\n  enabled: true\n  paths:\n    - /var/log/cassandra/audit/audit.log\n  exclude_lines: ['\"'\"'AuditLogManager'\"'\"']\n  tags: [\"cassandra\"]\n  multiline.type: pattern\n  multiline.pattern: '\"'\"'^INFO'\"'\"'\n  multiline.negate: true\n  multiline.match: after' /etc/filebeat/filebeat.yml",
+        r"sed -i '/^output.elasticsearch:/,/^[^[:space:]]/ { s/^/# / }' /etc/filebeat/filebeat.yml",
+        r"sed -i '/^#output.logstash:/,/^[^[:space:]]/ { s/^#output\.logstash:/output.logstash:/; s|^  #hosts:.*|  hosts: [\"coll1.demo.com:5047\"]| }' /etc/filebeat/filebeat.yml",
+        "systemctl start filebeat",
+        "systemctl enable filebeat"
+    ])
+
 def t_setup_raptor_to_deploy_etap():
-    print("\n Installing package requirements")
-    subprocess.run(["dnf", "-y", "install", "podman-docker", "skopeo"], check=True)
-    print("\n Determine the latest ETAP version")
+    print("  ➜ Installing package requirements")
+    subprocess.run(["dnf", "-y", "install", "podman-docker", "skopeo"], check=True, capture_output=True)
+    print("  ➜ Determine the latest ETAP version")
     result = subprocess.run(["skopeo", "list-tags", "docker://icr.io/guardium/guardium_external_s-tap"], check=True, text=True, capture_output=True)
     etap_versions = json.loads(result.stdout)
     latest = {}
@@ -792,7 +838,6 @@ def t_setup_raptor_to_deploy_etap():
         v = Version(version_str)
         latest[key] = max(latest.get(key, v), v)
     save_to_env("GUARDIUM_ETAP_VERSION", str( latest[get_env_value("GUARDIUM_MINOR_VERSION")]))
-    return None
 
 def t_deploy_ca_on_raptor():
     print("\n Create CA directory")
@@ -1535,51 +1580,6 @@ def t_va_api(api):
             check=True
         )
 
-def t_setup_cassandra():
-    scp_file_as_root(host='10.10.9.60', root_password=get_env_value("HANA_PASSWORD"), local_path="guardium_configuration_files/cassandra.repo", remote_path="/etc/yum.repos.d/cassandra.repo")
-    scp_file_as_root(host='10.10.9.60', root_password=get_env_value("HANA_PASSWORD"), local_path="guardium_configuration_files/cassandra_table.cql", remote_path="/root")
-    result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"),
-    commands=[
-        "dnf -y install java-11-openjdk",
-        "dnf -y install cassandra",
-        r"sed -i '/^audit_logging_options:/,/^[[:space:]]*- class_name:/c\audit_logging_options:\n  enabled: true\n  logger:\n    - class_name: FileAuditLogger' /etc/cassandra/conf/cassandra.yaml",
-        "sed -i '/<!-- <appender name=\"AUDIT\"/,/SizeAndTimeBasedRollingPolicy/ { s/<!-- //; s/ -->// }' /etc/cassandra/conf/logback.xml",
-        "sed -i 's|<!-- *<fileNamePattern>\\(.*\\)</fileNamePattern> *-->|<fileNamePattern>\1</fileNamePattern>|' /etc/cassandra/conf/logback.xml",
-        "sed -i '/<!-- *<maxFileSize>/,/<\\/appender> *-->/ { s/<!-- //; s/ -->// }' /etc/cassandra/conf/logback.xml",
-        "sed -i '/<!-- *<logger name=\"org.apache.cassandra.audit\"/,/<\\/logger> *-->/ { s/<!-- //; s/ -->// }' /etc/cassandra/conf/logback.xml",
-        "sed -i 's|^10\\.10\\.9\\.239[[:space:]]\\+yourcollectorname\\.gdemo\\.com[[:space:]]\\+yourcollectorname$|10.10.9.239     coll1.gdemo.com coll1|' /etc/hosts"
-        "service cassandra start",
-        "service cassandra start",
-        "dnf -qy install python3-pip",
-        "pip install --user cqlsh",
-        "cqlsh -f /root/cassandra_table.cql"
-    ])
-    time.sleep(30)
-
-def t_setup_filebeat(api):
-    """
-    # API call added to create UC 1.0 cert but rest automatization is not implemented
-    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
-    cert = api.generate_ssl_key_universal_connector(
-        expiration_days=3650,
-        hostname="*.gdemo.com",
-        overwrite=True,
-        api_target_host='10.10.9.239',
-    )
-    """
-
-    result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"),
-    commands=[
-        "mkdir -p /root/gn-trainings",
-        f"curl -L -O https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-{get_env_value("FILEBEAT_VERSION")}-x86_64.rpm --output-dir /root/gn-trainings",
-        f"cd /root/gn-trainings && dnf -y install /root/gn-trainings/filebeat-{get_env_value("FILEBEAT_VERSION")}-x86_64.rpm",
-        r"sed -i '/^- type: filestream/,/^[^[:space:]]/c\- type: filestream\n  id: \"cassandra\"\n  enabled: true\n  paths:\n    - /var/log/cassandra/audit/audit.log\n  exclude_lines: ['\"'\"'AuditLogManager'\"'\"']\n  tags: [\"cassandra\"]\n  multiline.type: pattern\n  multiline.pattern: '\"'\"'^INFO'\"'\"'\n  multiline.negate: true\n  multiline.match: after' /etc/filebeat/filebeat.yml",
-        r"sed -i '/^output.elasticsearch:/,/^[^[:space:]]/ { s/^/# / }' /etc/filebeat/filebeat.yml",
-        r"sed -i '/^#output.logstash:/,/^[^[:space:]]/ { s/^#output\.logstash:/output.logstash:/; s|^  #hosts:.*|  hosts: [\"coll1.demo.com:5047\"]| }' /etc/filebeat/filebeat.yml",
-        "systemctl start filebeat",
-        "systemctl enable filebeat"
-    ])
-
 def lab13_va_api(state):
     """
     LAB 13 - VA API
@@ -1708,14 +1708,13 @@ def lab6_uc1(state):
     LAB 6 - UC 1.0
 
     """
-    exit(0)  
+      
     api = GuardiumRestAPI(
         base_url='https://10.10.9.239:8443/',
         client_id='BOOTCAMP'
     )
-    
     run_task('Deploy cassandra on hana', lambda: t_setup_cassandra(), state, STATE_FILE)
-
+    exit(0)
     run_task('Deploy filebeat on hana', lambda: t_setup_filebeat(api), state, STATE_FILE)
 
 def lab5_exit(state):

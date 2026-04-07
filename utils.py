@@ -97,8 +97,21 @@ def save_to_env(key: str, value: str, env_file: str = ".env") -> bool:
 # SSH and Remote Command Execution
 # ============================================================================
 
-def run_many_commands_remotely(host, commands, port=22, key_file=None, password=None):
-    """Execute multiple commands on remote host via SSH"""
+def run_many_commands_remotely(host, commands, port=22, key_file=None, password=None, print_output=True):
+    """
+    Execute multiple commands on remote host via SSH
+    
+    Args:
+        host: Hostname or IP address
+        commands: List of commands to execute
+        port: SSH port (default 22)
+        key_file: Path to SSH key file
+        password: SSH password
+        print_output: Whether to print command output to console (default True)
+    
+    Returns:
+        List of dictionaries with command results (cmd, rc, stdout, stderr)
+    """
     client = paramiko.SSHClient()
     client.load_system_host_keys()
     client.set_missing_host_key_policy(paramiko.RejectPolicy())
@@ -120,6 +133,13 @@ def run_many_commands_remotely(host, commands, port=22, key_file=None, password=
         rc = stdout.channel.recv_exit_status()
         out = stdout.read().decode("utf-8", errors="replace")
         err = stderr.read().decode("utf-8", errors="replace")
+        
+        if print_output:
+            if out:
+                print(out)
+            if err:
+                print(err, file=__import__('sys').stderr)
+        
         results.append({"cmd": cmd, "rc": rc, "stdout": out, "stderr": err})
 
     client.close()
