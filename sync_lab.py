@@ -1645,7 +1645,7 @@ def lab9_winstap(state):
     """
     LAB 9 - WINSTAP
     """
-
+    exit(0)
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443/',
         client_id='BOOTCAMP'
@@ -1667,7 +1667,6 @@ def lab8_va(state):
     run_task('Configure raptor for VA', lambda: t_configure_raptor_for_va(), state, STATE_FILE)
     run_task('Configure VA scanner', lambda: t_setup_vascanner(), state, STATE_FILE)
     run_task('Import VA process for postgres', lambda: t_import_va_process_for_postgres(api), state, STATE_FILE)
-    exit(0)
     run_task('Import DPS', lambda: t_import_DPS(), state, STATE_FILE)
 
 def lab7_etap(state):
