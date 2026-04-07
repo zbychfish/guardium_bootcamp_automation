@@ -18,7 +18,7 @@ import glob
 from pathlib import Path
 import subprocess
 from packaging.version import Version
-import pwd
+#import pwd
 
 from appliance_command import ApplianceCommand
 from manual_web_ui_processing import guardium_customer_upload_import

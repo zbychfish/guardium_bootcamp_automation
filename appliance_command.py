@@ -9,11 +9,8 @@ import sys
 import time
 import socket
 from typing import List, Optional, Tuple
-
 import paramiko
-
 from utils import strip_ansi, _find_last_prompt_span
-
 
 class ApplianceCommand:
     """Class for executing commands on CLI devices via SSH"""
