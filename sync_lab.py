@@ -1625,6 +1625,7 @@ def lab10_fam(state):
     """
     LAB 10 - FAM
     """
+    exit(0)
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443/',
         client_id='BOOTCAMP'
@@ -1642,14 +1643,12 @@ def lab9_winstap(state):
     """
     LAB 9 - WINSTAP
     """
-    exit(0)
+    
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443/',
         client_id='BOOTCAMP'
     )
-    
     run_task('Install GIM client on winsql', lambda: t_install_gim_on_winsql(), state, STATE_FILE)
-
     run_task('Install STAP on winsql', lambda: t_install_stap_on_winsql(api), state, STATE_FILE)
 
 def lab8_va(state):
