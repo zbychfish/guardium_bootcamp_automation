@@ -1594,11 +1594,9 @@ def lab11_oracle(state):
         base_url='https://10.10.9.219:8443/',
         client_id='BOOTCAMP'
     )
-    exit(0)
     run_task('Configure system for oracle lab', lambda: t_configure_env_for_oracle(api), state, STATE_FILE)
-
     run_task('Configure SSL support for oracle on raptor', lambda: t_setup_SSL_for_oracle(), state, STATE_FILE)
-
+    exit(0)
     run_task('Configure ATAP for oracle on raptor', lambda: t_setup_ATAP_for_oracle(), state, STATE_FILE)
 
     run_task('Deploy Oracle in container on hana', lambda: t_deploy_oracle_in_container_on_hana(), state, STATE_FILE)
