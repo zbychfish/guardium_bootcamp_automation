@@ -6,14 +6,14 @@ This project automates the setup and configuration of IBM Guardium lab environme
 
 ### Key Features
 
-- **Automated Appliance Configuration**: Configures Guardium Central Manager, Collectors, and Tool Nodes
-- **Database Setup**: Automates Oracle, PostgreSQL, SAP HANA, and Cassandra database configurations
-- **Patch Management**: Handles Guardium patch installation and verification
-- **GIM (Guardium Installation Manager)**: Automates GIM client installation and S-TAP deployment
-- **Vulnerability Assessment**: Sets up VA scanner containers and processes
-- **REST API Integration**: Leverages Guardium REST API for configuration tasks
-- **State Management**: Tracks completed tasks to enable resumable execution
-- **Multi-Platform Support**: Manages both Linux and Windows environments
+- **Automated Appliance Configuration** - Configures Guardium Central Manager, Collectors, and Tool Nodes
+- **Database Setup** - Automates Oracle, PostgreSQL, SAP HANA, and Cassandra database configurations
+- **Patch Management** - Handles Guardium patch installation and verification
+- **GIM (Guardium Installation Manager)** - Automates GIM client installation and S-TAP deployment
+- **Vulnerability Assessment** - Sets up VA scanner containers and processes
+- **REST API Integration** - Leverages Guardium REST API for configuration tasks
+- **State Management** - Tracks completed tasks to enable resumable execution
+- **Multi-Platform Support** - Manages both Linux and Windows environments
 
 ### Components
 
@@ -27,12 +27,11 @@ The project consists of several key modules:
 - `utils.py` - Utility functions for SSH, database operations, and parsing
 - `manual_web_ui_processing.py` - Web UI automation using Playwright
 
-
 ## Prerequisites
 
 ### System Requirements
 
-You should use this project inside Guardiun Bootcamp lab environment - v12
+You should use this project inside Guardium Bootcamp lab environment - v12
 
 ### Python Dependencies
 
@@ -51,7 +50,6 @@ Required packages:
 - `oracledb` - Oracle database client
 - `pywinrm` - Windows Remote Management client
 - `packaging` - Version parsing utilities
-
 
 ## Setup Instructions
 
@@ -73,6 +71,7 @@ cp .env.example .env
 Edit the `.env` file and configure the following:
 
 #### Required Passwords
+
 - `COLLECTOR_PASSWORD` - Collector appliance CLI password
 - `CM_PASSWORD` - Central Manager CLI password
 - `TOOLNODE_PASSWORD` - Tool Node CLI password
@@ -86,6 +85,7 @@ Edit the `.env` file and configure the following:
 - `DEFAULT_SERVICE_PASSWORD` - Default password for all configured services
 
 #### Configuration Parameters
+
 - `PATCH_ARCHIVE` - URL to Guardium patch archive
 - `GIM_INSTALLERS_ARCHIVE` - URL to GIM installers
 - `GIM_BUNDLES_ARCHIVE` - URL to GIM bundles
@@ -100,6 +100,7 @@ Edit the `.env` file and configure the following:
 - `FILEBEAT_VERSION` - Filebeat version for log shipping
 
 #### Dynamic Parameters
+
 These are automatically generated during execution:
 - `CLIENT_SECRET`
 - `PATCH_ORDER`
@@ -107,7 +108,6 @@ These are automatically generated during execution:
 - `ETAP_TOKEN`
 - `ETAP_TOKEN_ORACLE`
 - `GUARDIUM_ETAP_VERSION`
-
 
 ## Running the Automation
 
@@ -130,26 +130,29 @@ The script will:
 
 If the script is interrupted, simply run it again. The state management system will skip completed tasks and resume from where it left off.
 
-### Acquire the desired lab environment state, run the following commands:
+### Acquire Desired Lab Environment State
 
+To stop at a specific lab configuration:
+
+```bash
 cd guardium_bootcamp_automation
 python sync_lab.py --stop-at=<lab_number>
+```
 
 Lab order:
-1 - Appliance setup
-2 - GIM Setup
-3 - STAP
-4 - ATAP
-5 - EXIT
-6 - UC 1.0 (only pre-req)
-7 - ETAP
-8 - VA
-9 - WINSTAP
-10 - FAM
-11 - ORACLE
-12 - Policy & Reports I
-13 - VA API
-
+- 1 - Appliance setup
+- 2 - GIM Setup
+- 3 - STAP
+- 4 - ATAP
+- 5 - EXIT
+- 6 - UC 1.0 (only pre-req)
+- 7 - ETAP
+- 8 - VA
+- 9 - WINSTAP
+- 10 - FAM
+- 11 - ORACLE
+- 12 - Policy & Reports I
+- 13 - VA API
 
 ## Project Structure
 
@@ -178,7 +181,6 @@ guardium_bootcamp_automation/
     ├── exp_policy_*.sql
     └── exp_security_assessment_*.sql
 ```
-
 
 ## Security Considerations
 
