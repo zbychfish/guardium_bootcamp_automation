@@ -470,6 +470,10 @@ def t_monitoring_patch_installation(appliance_name):
             time.sleep(10)
     appliance.disconnect()
 
+def t_install_policy_on_collector(api):
+    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
+    result = api.install_policy("Log Everything", api_target_host="10.10.9.239")
+
 def t_getting_gim_files():
     print("\nDownload and unpack gim installers and gim modules locally")
     target_dir = "/root/gn-trainings"
@@ -556,11 +560,6 @@ def t_set_collector_resolving_on_raptor():
         else:
             updated.append(line)
     HOSTS_FILE.write_text("".join(updated))
-
-def t_install_policy_on_collector(api):
-    token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
-    print("\nPolicy installation on collector")
-    result = api.install_policy("Log Everything", api_target_host="10.10.9.239")
 
 def t_import_gim_modules(api):
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
@@ -1802,7 +1801,7 @@ def lab2_gim(state):
     Returns:
         appliance: Połączony obiekt ApplianceCommand lub None w przypadku błędu
     """
-
+    exit(0)
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443',
         client_id='BOOTCAMP'
@@ -1830,12 +1829,10 @@ def lab1_appliance_setup(state):
     run_task('Create demo user', lambda: t_create_demo_user(api), state, STATE_FILE)
     run_task('Register collector', lambda: t_register_collector(api), state, STATE_FILE)
     run_task('Prepare appliances for patching', lambda: t_preparing_appliances_for_patching(api), state, STATE_FILE)
-    # for appliance_name, appliance_ip, password, task_number in [('cm', '10.10.9.219', get_env_value('CM_PASSWORD'), 'Register patches on cm'), ('collector', '10.10.9.239', get_env_value('COLLECTOR_PASSWORD'), f'Register patches on collector')]:
-    #     run_task(task_number, lambda: t_registering_patches_installation(appliance_name, appliance_ip, password), state, STATE_FILE)
-
+    for appliance_name, appliance_ip, password, task_number in [('cm', '10.10.9.219', get_env_value('CM_PASSWORD'), 'Register patches on cm'), ('collector', '10.10.9.239', get_env_value('COLLECTOR_PASSWORD'), f'Register patches on collector')]:
+        run_task(task_number, lambda: t_registering_patches_installation(appliance_name, appliance_ip, password), state, STATE_FILE)
     for appliance_name, task_number in [('cm', 'Monitor patch installation on cm'), ('collector', 'Monitor patch installation on collector')]:
         run_task(task_number, lambda: t_monitoring_patch_installation(appliance_name), state, STATE_FILE)
-    exit(0)
     run_task('Policy installation on collector', lambda: t_install_policy_on_collector(api), state, STATE_FILE)
 
 def sync_lab(state, skip_below: int = 0, stop_at: int = 999):
