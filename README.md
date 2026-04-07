@@ -130,9 +130,25 @@ The script will:
 
 If the script is interrupted, simply run it again. The state management system will skip completed tasks and resume from where it left off.
 
-### Manual Task Execution
+### Acquire the desired lab environment state, run the following commands:
 
-To run specific tasks, modify the `sync_lab.py` script and comment out unwanted tasks in the main execution flow.
+cd guardium_bootcamp_automation
+python sync_lab.py --stop-at=<lab_number>
+
+Lab order:
+1 - Appliance setup
+2 - GIM Setup
+3 - STAP
+4 - ATAP
+5 - EXIT
+6 - UC 1.0 (only pre-req)
+7 - ETAP
+8 - VA
+9 - WINSTAP
+10 - FAM
+11 - ORACLE
+12 - Policy & Reports I
+13 - VA API
 
 
 ## Task Flow
