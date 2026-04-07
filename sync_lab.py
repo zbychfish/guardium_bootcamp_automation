@@ -840,23 +840,24 @@ def t_setup_raptor_to_deploy_etap():
     save_to_env("GUARDIUM_ETAP_VERSION", str( latest[get_env_value("GUARDIUM_MINOR_VERSION")]))
 
 def t_deploy_ca_on_raptor():
-    print("\n Create CA directory")
+    print("  ➜ Create CA directory")
     subprocess.run(["mkdir", "-p", "/root/gn-trainings/ETAP/ca"], check=True)
-    print("\n Create CA private key")
-    subprocess.run(["openssl", "genrsa", "-out", "/root/gn-trainings/ETAP/ca/ca.key", "2048"], check=True)
-    print("\n Generate CA certificate")
-    subprocess.run(["openssl", "req", "-x509", "-sha256", "-new", "-key", "/root/gn-trainings/ETAP/ca/ca.key", "-days", "3650", "-out", "/root/gn-trainings/ETAP/ca/ca.pem", "-subj", "/C=PL/O=Demo/OU=Training/CN=Demo Root CA"], check=True)
-    return None
+    print("  ➜ Create CA private key")
+    subprocess.run(["openssl", "genrsa", "-out", "/root/gn-trainings/ETAP/ca/ca.key", "2048"], check=True, capture_output=False)
+    print("  ➜ Generate CA certificate")
+    subprocess.run(["openssl", "req", "-x509", "-sha256", "-new", "-key", "/root/gn-trainings/ETAP/ca/ca.key", "-days", "3650", "-out", "/root/gn-trainings/ETAP/ca/ca.pem", "-subj", "/C=PL/O=Demo/OU=Training/CN=Demo Root CA"], check=True, capture_output=False)
 
 def t_create_mysql_csr_for_etap():
+    print("  ➜ Connecting to collector")
     appliance = ApplianceCommand(
         host="10.10.9.239",
         strip_ansi=True,
         user="cli",
         password=get_env_value("COLLECTOR_PASSWORD"),
         prompt_regex=r">",
-        debug=True
+        debug=False
     )
+    print("  ➜ Generating CSR for MySQL ETAP")
     if appliance.connect():
         csr, token, line_above = appliance.generate_external_stap_csr(
         alias="mysql-etap",
@@ -869,9 +870,8 @@ def t_create_mysql_csr_for_etap():
         save_to_env("ETAP_CSR_ID", line_above)
         save_to_env("ETAP_TOKEN", token)
     appliance.disconnect()
-    print("\n Signing CSR by CA")
-    subprocess.run(["openssl", "x509", "-sha256", "-req", "-days", "3650", "-CA", "/root/gn-trainings/ETAP/ca/ca.pem", "-CAkey", "/root/gn-trainings/ETAP/ca/ca.key", "-CAcreateserial", "-CAserial", "serial", "-in", "/root/gn-trainings/ETAP/ca/etap.csr", "-out", "/root/gn-trainings/ETAP/ca/etap.pem"], check=True)
-    return None
+    print("  ➜ Signing CSR by CA")
+    subprocess.run(["openssl", "x509", "-sha256", "-req", "-days", "3650", "-CA", "/root/gn-trainings/ETAP/ca/ca.pem", "-CAkey", "/root/gn-trainings/ETAP/ca/ca.key", "-CAcreateserial", "-CAserial", "serial", "-in", "/root/gn-trainings/ETAP/ca/etap.csr", "-out", "/root/gn-trainings/ETAP/ca/etap.pem"], check=True, capture_output=False)
 
 def t_import_etap_ca_cert():
     appliance = ApplianceCommand(
@@ -1688,11 +1688,9 @@ def lab7_etap(state):
     """
         
     run_task('Setup raptor for ETAP', lambda: t_setup_raptor_to_deploy_etap(), state, STATE_FILE)
-    exit(0)
     run_task('Deploy CA on raptor', lambda: t_deploy_ca_on_raptor(), state, STATE_FILE)
-
     run_task('Create CSR for ETAP for mysql', lambda: t_create_mysql_csr_for_etap(), state, STATE_FILE)
-
+    exit(0)
     run_task('Import CA cert for ETAP', lambda: t_import_etap_ca_cert(), state, STATE_FILE)
 
     run_task('Import mysql ETAP cert', lambda: t_import_etap_cert(), state, STATE_FILE)
