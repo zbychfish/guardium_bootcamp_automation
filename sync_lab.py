@@ -986,7 +986,8 @@ def t_start_etap():
         "-e",
         f"STAP_CONFIG_SQLGUARD_0_SQLGUARD_IP={collector_ip}",
         f"-p={listen_port}:8888/tcp",
-        f"icr.io/guardium/guardium_external_s-tap:v{etap_release}"
+        f"icr.io/guardium/guardium_external_s-tap:v{etap_release}",
+        "-q"
     ]
     subprocess.run(etap_command, check=True)
 
