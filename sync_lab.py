@@ -488,22 +488,21 @@ def t_set_collector_resolving_on_raptor():
     HOSTS_FILE.write_text("".join(updated))
 
 def t_getting_gim_files():
-    print("\nDownload and unpack gim installers and gim modules locally")
+    print("  ➜ Download gim installers and gim modules locally")
     target_dir = "/root/gn-trainings"
     os.makedirs(target_dir, exist_ok=True)
     filename = os.path.join(target_dir, os.path.basename("gims.zip"))
     urllib.request.urlretrieve(get_env_value("GIM_INSTALLERS_ARCHIVE"), filename)
     with zipfile.ZipFile(filename, "r") as zipf:
-            zipf.extractall(path=target_dir)
-            print(f"  ✓ GIM installers extracted")
+        zipf.extractall(path=target_dir)
+        print(f"  ➜ GIM installers extracted")
     filename = os.path.join(target_dir, os.path.basename("agents.zip"))
     urllib.request.urlretrieve(get_env_value("GIM_BUNDLES_ARCHIVE"), filename)
     with zipfile.ZipFile(filename, "r") as zipf:
-            zipf.extractall(path=target_dir)
-    print(f"  ✓ GIM modules extracted")
+        zipf.extractall(path=target_dir)
+        print(f"  ➜ GIM modules extracted")
     
-    print("\nAdding execution flag to GIM installers")
-
+    print("  ➜ Adding execution flag to GIM installers")
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     client.connect(
@@ -514,21 +513,9 @@ def t_getting_gim_files():
         allow_agent=False
     )
     stdin, stdout, stderr = client.exec_command('chmod 755 /root/gn-trainings/gim_installers/*.sh')
-    exit_status = stdout.channel.recv_exit_status()
-    if exit_status != 0:
-        error = stderr.read().decode()
-        print(f"  ✗ Failed to change files permisions: {error}")
-        exit(1)
-
-    print("\nCopying gim modules to central manager")
+    print("  ➜ Copying GIN modules to central manager")
     patch_files = glob.glob('/root/gn-trainings/*.gim')
-    
-    if not patch_files:
-        print("  ✗ gim files found in /root/gn-trainings/")
-        exit(1)    
-    print(f"  Found {len(patch_files)} patch files to copy")
     all_success = True
-
     for patch_file in patch_files:
         success = scp_file_as_root(
             host='10.10.9.219',
@@ -539,26 +526,16 @@ def t_getting_gim_files():
         )
         if not success:
             all_success = False
-            break
+            exit(1)
     if all_success:
-        print(f"  ✓ All {len(patch_files)} patches copied successfully")
+        print(f"  ℹ All {len(patch_files)} patches copied successfully")
 
-    print("\nRemoving zip files")
+    print("  ➜ Removing zip anf gim files from raptor")
     stdin, stdout, stderr = client.exec_command('rm -f /root/gn-trainings/*.zip')
     exit_status = stdout.channel.recv_exit_status()
-    if exit_status != 0:
-        error = stderr.read().decode()
-        print(f"  ✗ Failed to remove zip archives: {error}")
-        exit(1)
-    print("\nRemoving gim files")
     stdin, stdout, stderr = client.exec_command('rm -f /root/gn-trainings/*.gim')
     exit_status = stdout.channel.recv_exit_status()
-    if exit_status != 0:
-        error = stderr.read().decode()
-        print(f"  ✗ Failed to remove gim files: {error}")
-        exit(1) 
     client.close()
-    return None
 
 def t_import_gim_modules(api):
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
@@ -1792,13 +1769,7 @@ def lab4_atap(state):
 
 def lab2_gim(state):
     """
-    LAB 2 - Konfiguracja GIM (Group Identity Management).
-    
-    Args:
-        appliance: Opcjonalny połączony obiekt ApplianceCommand
-    
-    Returns:
-        appliance: Połączony obiekt ApplianceCommand lub None w przypadku błędu
+    LAB 2 - GIM
     """
 
     api = GuardiumRestAPI(
@@ -1806,9 +1777,9 @@ def lab2_gim(state):
         client_id='BOOTCAMP'
     )
     run_task('Set collector resolving on raptor', lambda: t_set_collector_resolving_on_raptor(), state, STATE_FILE)
-    exit(0)
+    
     run_task('Getting GIM files', lambda: t_getting_gim_files(), state, STATE_FILE)
-
+    exit(0)
     run_task('Import GIM files on CM', lambda: t_import_gim_modules(api), state, STATE_FILE)
 
 def lab1_appliance_setup(state):
