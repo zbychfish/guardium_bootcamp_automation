@@ -542,13 +542,13 @@ def t_import_gim_modules(api):
 
 def t_postgres_installation():
     print("  ➜ Postgres 16 installation")
-    subprocess.run(["dnf", "-y", "install", "@postgresql:16"], check=True)
+    subprocess.run(["dnf", "-qy", "install", "@postgresql:16"], check=True, capture_output=True)
     print("  ➜ Postgres database initialization")
     subprocess.run(["postgresql-setup", "--initdb", '--unit', 'postgresql'], check=True)
     print("  ➜ Set postgres user password")
     subprocess.run(["chpasswd"], input=f"postgres:{get_env_value('DEFAULT_SERVICE_PASSWORD')}", text=True, check=True)
     print("  ➜ Create certificate for postgres")
-    subprocess.run(["openssl", "req", "-new", "-x509", "-days", "365", "-nodes", "-text", "-out", "/var/lib/pgsql/data/pgsql.crt", "-keyout", "/var/lib/pgsql/data/pgsql.key", "-subj", "/CN=raptor.demo.com"], check=True)
+    subprocess.run(["openssl", "req", "-new", "-x509", "-days", "365", "-nodes", "-text", "-out", "/var/lib/pgsql/data/pgsql.crt", "-keyout", "/var/lib/pgsql/data/pgsql.key", "-subj", "/CN=raptor.demo.com"], check=True, capture_output=True)
     files = glob.glob("/var/lib/pgsql/data/pgsql.*")
     subprocess.run(["chown", "postgres:postgres"] + files, check=True)
     print("  ➜ Change postgres configuration")
@@ -583,11 +583,10 @@ def t_postgres_installation():
     print("  ➜ Start postgres service")
     subprocess.run(["systemctl", "start", 'postgresql.service'], check=True)
     print("  ➜ Enable postgres service")
-    subprocess.run(["systemctl", "enable", 'postgresql.service'], check=True)
-
+    subprocess.run(["systemctl", "enable", 'postgresql.service'], check=True, capture_output=True)
     print("  ➜ Set postgres user password in database")
     sql = "ALTER USER postgres WITH PASSWORD '{}';".format(get_env_value("DEFAULT_SERVICE_PASSWORD"))
-    subprocess.run(["sudo", "-u", "postgres", "psql", "-d", "postgres", "-U", "postgres", "-c",  sql], check=True)
+    subprocess.run(["sudo", "-u", "postgres", "psql", "-d", "postgres", "-U", "postgres", "-c",  sql], check=True, capture_output=True)
 
 def t_create_postgres_admin_users():
     print("\n Create postgres admin users")
