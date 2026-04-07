@@ -880,7 +880,7 @@ def t_import_etap_ca_cert():
         user="cli",
         password=get_env_value("COLLECTOR_PASSWORD"),
         prompt_regex=r">",
-        debug=True
+        debug=False
     )
     if appliance.connect():
         # Wczytaj certyfikat CA
@@ -900,7 +900,7 @@ def t_import_etap_cert():
     user="cli",
     password=get_env_value("COLLECTOR_PASSWORD"),
     prompt_regex=r">",
-    debug=True
+    debug=False
     )   
     if appliance.connect():
     # Wczytaj certyfikat External S-TAP
@@ -928,10 +928,10 @@ def t_start_etap():
         "run",
         "--restart",
         "unless-stopped",
-        "--hostname",
-        "localhost-gext0-044eb2cb-0b29-4d0f-852b-b4c347831f41",
+        # "--hostname",
+        # "localhost-gext0-044eb2cb-0b29-4d0f-852b-b4c347831f41",
         "--name",
-        "gext0-044eb2cb-0b29-4d0f-852b-b4c347831f41",
+        "mysql-etap",
         "-d",
         "--shm-size",
         "800M",
