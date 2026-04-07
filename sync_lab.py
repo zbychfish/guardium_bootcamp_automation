@@ -1027,7 +1027,7 @@ def t_setup_vascanner():
         exit(1)
     api_key = match.group(1)
     print("  ➜ Pull vascanner image on hana")
-    result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"), print_output=True, commands=["mkdir -p /root/gn-trainings/vascanner/certs", f"podman login cp.icr.io -u cp -p {get_env_value('IBM_REGISTRY_KEY')} && podman pull cp.icr.io/cp/ibm-guardium-data-security-center/guardium/{get_env_value('VASCANNER_IMAGE_TAG')}", "podman images --format '{{.ID}}'"])
+    result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"), print_output=True, commands=["mkdir -p /root/gn-trainings/vascanner/certs", f"podman login cp.icr.io -u cp -p {get_env_value('IBM_REGISTRY_KEY')} && podman pull -q cp.icr.io/cp/ibm-guardium-data-security-center/guardium/{get_env_value('VASCANNER_IMAGE_TAG')}", "podman images --format '{{.ID}}'"])
     va_image_id = result[2]['stdout'].strip()
     print("  ➜ Prepare vascanner config file")
     subprocess.run(["cp", "guardium_configuration_files/vascanner_config", "guardium_configuration_files/config"], check=True)
@@ -1664,7 +1664,6 @@ def lab8_va(state):
         base_url='https://10.10.9.219:8443/',
         client_id='BOOTCAMP'
     )
-    
     run_task('Configure raptor for VA', lambda: t_configure_raptor_for_va(), state, STATE_FILE)
     run_task('Configure VA scanner', lambda: t_setup_vascanner(), state, STATE_FILE)
     exit(0)
