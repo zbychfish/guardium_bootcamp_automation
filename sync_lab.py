@@ -37,7 +37,6 @@ from utils import (
     wait_for_appliance as utils_wait_for_appliance
 )
 
-
 # Check .env file existence
 env_file_path = os.path.join(os.path.dirname(__file__), '.env')
 if not os.path.exists(env_file_path):
@@ -818,6 +817,7 @@ def t_deploy_ca_on_raptor():
 def t_create_mysql_csr_for_etap():
     appliance = ApplianceCommand(
         host="10.10.9.239",
+        strip_ansi=True,
         user="cli",
         password=get_env_value("COLLECTOR_PASSWORD"),
         prompt_regex=r">",
@@ -842,6 +842,7 @@ def t_create_mysql_csr_for_etap():
 def t_import_etap_ca_cert():
     appliance = ApplianceCommand(
         host="10.10.9.239",
+        strip_ansi=True,
         user="cli",
         password=get_env_value("COLLECTOR_PASSWORD"),
         prompt_regex=r">",
@@ -863,7 +864,8 @@ def t_import_etap_ca_cert():
 
 def t_import_etap_cert():
     appliance = ApplianceCommand(
-    host="10.10.9.239",
+        host="10.10.9.239",
+        strip_ansi=True,
     user="cli",
     password=get_env_value("COLLECTOR_PASSWORD"),
     prompt_regex=r">",
@@ -1254,6 +1256,7 @@ def t_deploy_oracle_in_container_on_hana():
 def t_create_oracle_csr_for_etap():
     appliance = ApplianceCommand(
         host="10.10.9.239",
+        strip_ansi=True,
         user="cli",
         password=get_env_value("COLLECTOR_PASSWORD"),
         prompt_regex=r">",
@@ -1277,7 +1280,8 @@ def t_create_oracle_csr_for_etap():
 
 def t_import_oracle_etap_cert():
     appliance = ApplianceCommand(
-    host="10.10.9.239",
+        host="10.10.9.239",
+        strip_ansi=True,
     user="cli",
     password=get_env_value("COLLECTOR_PASSWORD"),
     prompt_regex=r">",

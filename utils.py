@@ -556,7 +556,8 @@ def create_appliance(appliance_name: str, appliances: dict, common_config: dict)
         password=appliance_config['password'],
         prompt_regex=appliance_config['prompt_regex'],
         initial_pattern=initial_pattern,
-        timeout=common_config['timeout']
+        timeout=common_config['timeout'],
+        strip_ansi=True
     )
 
 
