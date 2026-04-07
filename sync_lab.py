@@ -989,7 +989,7 @@ def t_start_etap():
         "-q",
         f"icr.io/guardium/guardium_external_s-tap:v{etap_release}"
     ]
-    subprocess.run(etap_command, check=True)
+    subprocess.run(etap_command, check=True, capture_output=True)
 
 def t_configure_raptor_for_va():
     print("\n postgres package installation to enable some features")
