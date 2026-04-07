@@ -1598,13 +1598,10 @@ def lab11_oracle(state):
     run_task('Configure SSL support for oracle on raptor', lambda: t_setup_SSL_for_oracle(), state, STATE_FILE)
     run_task('Configure ATAP for oracle on raptor', lambda: t_setup_ATAP_for_oracle(), state, STATE_FILE)
     run_task('Deploy Oracle in container on hana', lambda: t_deploy_oracle_in_container_on_hana(), state, STATE_FILE)
-    exit(0)
     run_task('Create CSR for ETAP for oracle in container', lambda: t_create_oracle_csr_for_etap(), state, STATE_FILE)
-
     run_task('Import ETAP for oracle in container certificate', lambda: t_import_oracle_etap_cert(), state, STATE_FILE)
-
     run_task('Start oracle ETAP', lambda: t_start_oracle_etap(), state, STATE_FILE)
-
+    exit(0)
     run_task('Traffic generator for Oracle', lambda: t_setup_oracle_traffic_generator(), state, STATE_FILE)
 
     run_task('Confgure OUA to monitor application', lambda: t_setup_OUA_on_oracle_on_hana(), state, STATE_FILE)
