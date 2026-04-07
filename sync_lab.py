@@ -427,7 +427,7 @@ def t_registering_patches_installation(appliance_name, appliance_ip, password):
     appliance = create_appliance(appliance_name)
     if not appliance.connect():
         print(f"  ✗ Failed to connect to {appliance_name}")
-        return None
+        exit(1)
     appliance.execute_command("show system patch available")
     
     output = install_patch(
@@ -438,9 +438,7 @@ def t_registering_patches_installation(appliance_name, appliance_ip, password):
         reinstall_answer="y",
         live_log=False
     )
-
     appliance.disconnect()
-    return None
 
 def t_monitoring_patch_installation(appliance_name):
     appliance = create_appliance(appliance_name)
@@ -1833,14 +1831,13 @@ def lab1_appliance_setup(state):
     run_task('Initial CM settings', lambda: t_initial_cm_settings(), state, STATE_FILE)
     run_task('Create demo user', lambda: t_create_demo_user(api), state, STATE_FILE)
     run_task('Register collector', lambda: t_register_collector(api), state, STATE_FILE)
-    
     run_task('Prepare appliances for patching', lambda: t_preparing_appliances_for_patching(api), state, STATE_FILE)
-    exit(0)
-    print(f"\nRegister patches on appliances and start patching process")
-    for appliance_name, appliance_ip, password, task_number in [('cm', '10.10.9.219', get_env_value('CM_PASSWORD'), 'register_patches_on_cm'), ('collector', '10.10.9.239', get_env_value('COLLECTOR_PASSWORD'), 'register_patches_on_collector')]:
-        run_task(task_number, lambda: t_registering_patches_installation(appliance_name, appliance_ip, password), state, STATE_FILE)
 
-    print("\nMonitoring patch installation on appliances")
+    for appliance_name, appliance_ip, password, task_number in [('cm', '10.10.9.219', get_env_value('CM_PASSWORD'), 'register_patches_on_cm'), ('collector', '10.10.9.239', get_env_value('COLLECTOR_PASSWORD'), 'register_patches_on_collector')]:
+        print(f"  ➜ Schedulling patch installation on {appliance_name}")
+        run_task(task_number, lambda: t_registering_patches_installation(appliance_name, appliance_ip, password), state, STATE_FILE)
+    exit(0)
+    
     for appliance_name, task_number in [('cm', 'monitor_patch_installation_on_cm'), ('collector', 'monitor_patch_installation_on_collector')]:
         run_task(task_number, lambda: t_monitoring_patch_installation(appliance_name), state, STATE_FILE)
 
