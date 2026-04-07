@@ -1260,7 +1260,7 @@ def t_deploy_oracle_in_container_on_hana():
         except ValueError:
             count = 0
         if count >= 1:
-            print("  ✔ Found readiness marker in logs. Exiting loop.")
+            print("  ✔ Found readiness marker in logs. Oracle deployed.")
             break
         time.sleep(interval_sec)
     else:
@@ -1413,7 +1413,7 @@ def t_setup_oracle_traffic_generator():
         )
 
 def t_setup_OUA_on_oracle_on_hana():
-    print("\n Create secadmin and guardium users")
+    print("  ➜ Create secadmin and guardium users")
     conn =  get_oracle_conn(user="system", password=get_env_value('DEFAULT_SERVICE_PASSWORD'), host="10.10.9.60", port=1521, service_name="ORCLPDB1")
     run_sql_oracle(conn, 'CREATE USER secadmin IDENTIFIED BY "{}"'.format(get_env_value('DEFAULT_SERVICE_PASSWORD')))
     run_sql_oracle(conn, 'CREATE USER guardium IDENTIFIED BY "{}"'.format(get_env_value('DEFAULT_SERVICE_PASSWORD')))
@@ -1424,42 +1424,37 @@ def t_setup_OUA_on_oracle_on_hana():
     run_sql_oracle(conn, r"BEGIN DBMS_NETWORK_ACL_ADMIN.APPEND_HOST_ACE(host => 'localhost', ace => xs$ace_type(privilege_list => xs$name_list('connect', 'resolve'), principal_name => 'guardium', principal_type => xs_acl.ptype_db)); END;")
     conn.commit()
     conn.close()
-
-    print("\n Setup access to OUA records")
+    print("  ➜ Setup access to OUA records")
     conn =  get_oracle_conn(user="secadmin", password=f"{get_env_value('DEFAULT_SERVICE_PASSWORD')}", host="10.10.9.60", port=1521, service_name="ORCLPDB1")
     run_sql_oracle(conn, r"BEGIN DECLARE v_cnt NUMBER; BEGIN SELECT COUNT(*) INTO v_cnt FROM audit_unified_policies WHERE policy_name='GAME_APP'; IF v_cnt=0 THEN EXECUTE IMMEDIATE 'CREATE AUDIT POLICY GAME_APP ACTIONS ALL ON game.customers, ALL ON game.credit_cards, ALL ON game.transactions, ALL ON game.extras, ALL ON game.features'; END IF; EXECUTE IMMEDIATE 'AUDIT POLICY GAME_APP'; END; END;")
     run_sql_oracle(conn, r"BEGIN DBMS_SCHEDULER.create_job(job_name=>'ENSURE_GAME_APP_AUDIT', job_type=>'STORED_PROCEDURE', job_action=>'ENSURE_GAME_APP_AUDIT', repeat_interval=>'FREQ=MINUTELY;INTERVAL=45', enabled=>TRUE); END;")
     conn.commit()
-
-    policies = run_sql_oracle(conn, "SELECT POLICY_NAME FROM AUDIT_UNIFIED_ENABLED_POLICIES", fetch=True)
-    if policies:
-        for policy in policies:
-            print(policy)
-    else:
-        pass
+    # policies = run_sql_oracle(conn, "SELECT POLICY_NAME FROM AUDIT_UNIFIED_ENABLED_POLICIES", fetch=True)
+    # if policies:
+    #     for policy in policies:
+    #         print(policy)
+    # else:
+    #     pass
     conn.close()
 
 def t_install_stap_on_hana(api):
-    print("\n Installing oracle instant client on hana")
-    result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"), commands=[
-        "wget -O oracle-instantclient-basic-21.12.0.0.0-1.el9.x86_64.rpm https://ibm.box.com/shared/static/6kyb3ivksqvv26bfnz2ckrojw2b34bhg.rpm",
-        "dnf -y install ./oracle-instantclient-basic-21.12.0.0.0-1.el9.x86_64.rpm",
-        "rm -f ./oracle-instantclient-basic-21.12.0.0.0-1.el9.x86_64.rpm"
-    ])
-
-    print("\n Copy files from raptor to hana")
+    print("  ➜ Installing oracle instant client on hana")
+    run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"), print_output=False,
+        commands=[
+            "wget -O oracle-instantclient-basic-21.12.0.0.0-1.el9.x86_64.rpm https://ibm.box.com/shared/static/6kyb3ivksqvv26bfnz2ckrojw2b34bhg.rpm",
+            "dnf -y install ./oracle-instantclient-basic-21.12.0.0.0-1.el9.x86_64.rpm",
+            "rm -f ./oracle-instantclient-basic-21.12.0.0.0-1.el9.x86_64.rpm"
+        ])
+    print("  ➜ Copy files from raptor to hana")
     scp_file_as_root(host='10.10.9.60', root_password=get_env_value("HANA_PASSWORD"),  local_path="/root/gn-trainings/gim_installers/guard-bundle-GIM-12.2.0.0_r121306_v12_2_1-rhel-9-linux-x86_64.gim.sh", remote_path=".")
     scp_file_as_root(host='10.10.9.60', root_password=get_env_value("HANA_PASSWORD"),  local_path="guardium_configuration_files/tnsnames_hana.ora", remote_path="/usr/lib/oracle/21/client64/lib/network/admin/tnsnames.ora")
-
-    print("\n Install gim client on hana")
-    run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"), commands=[
+    print("  ➜ Install gim client on hana")
+    run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"), print_output=False, commands=[
         "./guard-bundle-GIM-12.2.0.0_r121306_v12_2_1-rhel-9-linux-x86_64.gim.sh -- --dir /opt/guardium --tapip 10.10.9.60 --sqlguardip 10.10.9.219 -q"
     ])
-
     time.sleep(60)
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
-
-    print("\n Install STAP on hana")
+    print("  ➜ Install STAP on hana")
     api.gim_client_assign(
         client_ip="10.10.9.60",
         module="BUNDLE-STAP",
@@ -1479,22 +1474,18 @@ def t_install_stap_on_hana(api):
         client_ip="10.10.9.60",
         date="now",
     )
-
-    print("\n STAP installation monitoring")
+    print("  ➜ STAP installation monitoring")
     monitor_gim_module_installation(api, "10.10.9.60")
-
-    print("\n Configure STAP to support OUA monitoring")
-    run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"), commands=[
+    print("  ➜ Configure STAP to support OUA monitoring")
+    run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"), print_output=False, commands=[
         "sed -i 's|^sqlc_properties_dir=.*|sqlc_properties_dir=/usr/lib/oracle/21/client64/lib/network/admin|' /opt/guardium/modules/STAP/current/guard_tap.ini",
         "sed -i 's|^ld_library_paths=.*|ld_library_paths=/usr/lib/oracle/21/client64/lib|' /opt/guardium/modules/STAP/current/guard_tap.ini",
         "/opt/guardium/modules/STAP/current/guard-config-update --restart STAP"
     ])
-    
-    print("\n Add oracle user credentials to get access to OUA records")
-    print(api.store_sql_credentials(password=get_env_value("DEFAULT_SERVICE_PASSWORD"), username="guardium", stap_host='10.10.9.60', api_target_host='10.10.9.239'))
-
-    print("\n Adding OUA configuration")
-    print(api.create_sql_configuration(db_type="Oracle", instance="ORCLPDB1", stap_host='10.10.9.60', username='guardium', api_target_host='10.10.9.239'))
+    print("  ➜ Add oracle user credentials to get access to OUA records")
+    result = api.store_sql_credentials(password=get_env_value("DEFAULT_SERVICE_PASSWORD"), username="guardium", stap_host='10.10.9.60', api_target_host='10.10.9.239')
+    print("  ➜ Adding OUA configuration")
+    result = api.create_sql_configuration(db_type="Oracle", instance="ORCLPDB1", stap_host='10.10.9.60', username='guardium', api_target_host='10.10.9.239')
 
 def t_policy_report_1(api):
     print("\n Create sensitive table for lab")
@@ -1579,6 +1570,7 @@ def lab12_policy_report1(state):
     LAB 12 - Policies and Reports I
 
     """
+    exit(0)    
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443/',
         client_id='BOOTCAMP'
@@ -1590,6 +1582,7 @@ def lab11_oracle(state):
     """
     LAB 11 - Oracle
     """
+    
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443/',
         client_id='BOOTCAMP'
@@ -1601,11 +1594,8 @@ def lab11_oracle(state):
     run_task('Create CSR for ETAP for oracle in container', lambda: t_create_oracle_csr_for_etap(), state, STATE_FILE)
     run_task('Import ETAP for oracle in container certificate', lambda: t_import_oracle_etap_cert(), state, STATE_FILE)
     run_task('Start oracle ETAP', lambda: t_start_oracle_etap(), state, STATE_FILE)
-    exit(0)
     run_task('Traffic generator for Oracle', lambda: t_setup_oracle_traffic_generator(), state, STATE_FILE)
-
     run_task('Confgure OUA to monitor application', lambda: t_setup_OUA_on_oracle_on_hana(), state, STATE_FILE)
-
     run_task('Install STAP on hana', lambda: t_install_stap_on_hana(api), state, STATE_FILE)
 
 def lab10_fam(state):
