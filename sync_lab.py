@@ -1817,15 +1817,16 @@ def lab1_appliance_setup(state):
     """
     LAB 1 - Appliance configuration (collector).
     """
-    api = GuardiumRestAPI(
-        base_url='https://10.10.9.219:8443',
-        client_id='BOOTCAMP'
-    )
+
     run_task('Password change for cli users on appliances', lambda: t_password_change_on_appliances(), state, STATE_FILE)
     run_task('Initial collector setup', lambda: t_initial_collector_settings(), state, STATE_FILE)
     run_task('Collector restart', lambda: t_restart_system(), state, STATE_FILE)
     run_task('Other collector settings', lambda: t_other_collector_settings(), state, STATE_FILE)
     run_task('Initial CM settings', lambda: t_initial_cm_settings(), state, STATE_FILE)
+    api = GuardiumRestAPI(
+        base_url='https://10.10.9.219:8443',
+        client_id='BOOTCAMP'
+    )
     run_task('Create demo user', lambda: t_create_demo_user(api), state, STATE_FILE)
     run_task('Register collector', lambda: t_register_collector(api), state, STATE_FILE)
     run_task('Prepare appliances for patching', lambda: t_preparing_appliances_for_patching(api), state, STATE_FILE)
