@@ -1567,11 +1567,11 @@ def lab13_va_api(state):
     LAB 13 - VA API
 
     """
+    exit(0)
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443/',
         client_id='BOOTCAMP'
     )
-    
     run_task('Setup environment for VA API lab', lambda: t_va_api(api), state, STATE_FILE)
 
 def lab12_policy_report1(state):
@@ -1579,7 +1579,7 @@ def lab12_policy_report1(state):
     LAB 12 - Policies and Reports I
 
     """
-    exit(0)    
+    
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443/',
         client_id='BOOTCAMP'
