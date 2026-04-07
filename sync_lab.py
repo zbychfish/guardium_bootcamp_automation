@@ -1540,13 +1540,11 @@ def t_policy_report_1(api):
 
 def t_va_api(api):
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
-    print("\n Setup new dashboard - VA")
+    print("  ➜ Setup new dashboard - VA")
     result = api.import_definitions('guardium_definition_files/exp_dashboard_va.sql')
-    print(result)
-    print("\n Import oracle VA definition")
+    print("  ➜ Import oracle VA definition")
     result = api.import_definitions('guardium_definition_files/exp_security_assessment_va_oracle.sql')
-    print(result)
-
+    print("  ➜ Setup VA REST API python project")
     commands = [
         {"cmd": ["mkdir", "-p", "/root/gn-trainings/va-api"]},
         {"cmd": ["/usr/bin/python3.12", "-m", "venv", ".venv"], "cwd" : "/root/gn-trainings/va-api"},
@@ -1559,7 +1557,7 @@ def t_va_api(api):
         subprocess.run(
             c["cmd"],
             cwd=c.get("cwd"),
-            check=True
+            check=True, capture_output=True,
         )
 
 def lab13_va_api(state):
@@ -1567,7 +1565,7 @@ def lab13_va_api(state):
     LAB 13 - VA API
 
     """
-    exit(0)
+
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443/',
         client_id='BOOTCAMP'
