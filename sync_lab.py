@@ -541,17 +541,17 @@ def t_import_gim_modules(api):
     api.get_gim_package(filename="*.gim")
 
 def t_postgres_installation():
-    print("\n Postgres 16 installation")
+    print("  ➜ Postgres 16 installation")
     subprocess.run(["dnf", "-y", "install", "@postgresql:16"], check=True)
-    print("\n Postgres database initialization")
+    print("  ➜ Postgres database initialization")
     subprocess.run(["postgresql-setup", "--initdb", '--unit', 'postgresql'], check=True)
-    print("\n Set postgres user password")
+    print("  ➜ Set postgres user password")
     subprocess.run(["chpasswd"], input=f"postgres:{get_env_value('DEFAULT_SERVICE_PASSWORD')}", text=True, check=True)
-    print("\n Create certificate for postgres")
+    print("  ➜ Create certificate for postgres")
     subprocess.run(["openssl", "req", "-new", "-x509", "-days", "365", "-nodes", "-text", "-out", "/var/lib/pgsql/data/pgsql.crt", "-keyout", "/var/lib/pgsql/data/pgsql.key", "-subj", "/CN=raptor.demo.com"], check=True)
     files = glob.glob("/var/lib/pgsql/data/pgsql.*")
     subprocess.run(["chown", "postgres:postgres"] + files, check=True)
-    print("\n Change postgres configuration")
+    print("  ➜ Change postgres configuration")
     conf = Path("/var/lib/pgsql/data/postgresql.conf")
     lines = []
     with conf.open() as f:
@@ -580,12 +580,12 @@ def t_postgres_installation():
                 line = "listen_addresses = '*'\n"
             lines.append(line)
     conf.write_text("".join(lines))
-    print("\n Start postgres service")
+    print("  ➜ Start postgres service")
     subprocess.run(["systemctl", "start", 'postgresql.service'], check=True)
-    print("\n Enable postgres service")
+    print("  ➜ Enable postgres service")
     subprocess.run(["systemctl", "enable", 'postgresql.service'], check=True)
 
-    print("\n Set postgres user password in database")
+    print("  ➜ Set postgres user password in database")
     sql = "ALTER USER postgres WITH PASSWORD '{}';".format(get_env_value("DEFAULT_SERVICE_PASSWORD"))
     subprocess.run(["sudo", "-u", "postgres", "psql", "-d", "postgres", "-U", "postgres", "-c",  sql], check=True)
 
@@ -1744,12 +1744,12 @@ def lab4_atap(state):
     """
     LAB 4 - ATAP
     """
+    
+    run_task('Installing psql on raptor', lambda: t_postgres_installation(), state, STATE_FILE)
     exit(0)
-    run_task('installing psql on raptor', lambda: t_postgres_installation(), state, STATE_FILE)
+    run_task('Create postgres admin users', lambda: t_create_postgres_admin_users(), state, STATE_FILE)
 
-    run_task('create postgres admin users', lambda: t_create_postgres_admin_users(), state, STATE_FILE)
-
-    run_task('install gim client on raptor', lambda: t_install_gim_on_raptor(), state, STATE_FILE)
+    run_task('Install GIM client on raptor', lambda: t_install_gim_on_raptor(), state, STATE_FILE)
 
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443',
@@ -1838,21 +1838,21 @@ def sync_lab(state, skip_below: int = 0, stop_at: int = 999):
                 # Execute LAB
                 lab_func(state)
                 print("\n" + "=" * 60)
-                print(f"LAB {lab_num} completed!")
+                print(f"LAB {lab_num} - completed!")
                 print("=" * 60)
             else:
                 # LAB skipped (None)
-                print(f"\n[LAB {lab_num}] SKIPPED")
+                print(f"\nLAB {lab_num} - skipped")
                 print(lab_desc)
             
             # Check if should stop after this LAB
             if stop_at == lab_num:
-                print(f"\n[INFO] Stopped after LAB {lab_num} (--stop-at={lab_num})")
+                print(f"Stopped after LAB {lab_num} (--stop-at={lab_num})")
                 return
         elif skip_below >= lab_num:
-            print(f"\n[LAB {lab_num}] SKIPPED - {lab_name} (--skip-below)")
+            print(f"\n[LAB {lab_num}] - skipped - {lab_name} (--skip-below)")
         else:
-            print(f"\n[LAB {lab_num}] SKIPPED - {lab_name} (--stop-at)")
+            print(f"\n[LAB {lab_num}] - skipped - {lab_name} (--stop-at)")
 
 if __name__ == "__main__":
     import argparse
