@@ -1026,7 +1026,7 @@ def t_setup_vascanner():
         exit(1)
     api_key = match.group(1)
     print("  ➜ Pull vascanner image on hana")
-    result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"), print_output=True, commands=["mkdir -p /root/gn-trainings/vascanner/certs", f"podman login cp.icr.io -u cp -p {get_env_value('IBM_REGISTRY_KEY')} > /dev/null && podman pull -q cp.icr.io/cp/ibm-guardium-data-security-center/guardium/{get_env_value('VASCANNER_IMAGE_TAG')}", "podman images --format '{{.ID}}'"])
+    result=run_many_commands_remotely(host='10.10.9.60', password=get_env_value("HANA_PASSWORD"), print_output=False, commands=["mkdir -p /root/gn-trainings/vascanner/certs", f"podman login cp.icr.io -u cp -p {get_env_value('IBM_REGISTRY_KEY')} > /dev/null && podman pull -q cp.icr.io/cp/ibm-guardium-data-security-center/guardium/{get_env_value('VASCANNER_IMAGE_TAG')}", "podman images --format '{{.ID}}'"])
     va_image_id = result[2]['stdout'].strip()
     print("  ➜ Prepare vascanner config file")
     subprocess.run(["cp", "guardium_configuration_files/vascanner_config", "guardium_configuration_files/config"], check=True)
@@ -1091,7 +1091,7 @@ def t_install_stap_on_winsql(api):
     monitor_gim_module_installation(api, "10.10.9.59")
 
 def t_enable_fam_on_raptor(api):
-    print("\n Set FAM settings")
+    print("  ➜ Set FAM settings")
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
     api.gim_client_params(
         client_ip="10.10.9.70",
@@ -1103,12 +1103,12 @@ def t_enable_fam_on_raptor(api):
         param_name="STAP_FAM_INSTALLED",
         param_value="1"
     )
+    print("  ➜ Schedule STAP reconfiguration")
     api.gim_schedule_install(
         client_ip="10.10.9.70",
         date="now",
     )
-    # time.sleep(10)
-    print("\n Monitoring is a FAM enabled")
+    print("  ➜ Monitoring is a FAM enabled")
     monitor_gim_module_installation(api, "10.10.9.70")
     
     print("\nEnable root account monitoring")
@@ -1116,7 +1116,7 @@ def t_enable_fam_on_raptor(api):
     subprocess.run(["/opt/guardium/modules/STAP/current/guard-config-update", "--restart", "stap"], check=True)
 
 def t_install_enable_fam_on_winsql(api):
-    print("\n Set FAM settings")
+    print("  ➜ Set FAMMONITOR installation and settings")
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
     api.gim_client_assign(
         client_ip="10.10.9.59",
@@ -1133,28 +1133,24 @@ def t_install_enable_fam_on_winsql(api):
         param_name="FAMMONITOR_FAM_PROTECT_PRIVILEGED",
         param_value="1"
     )
+    print("  ➜ Schedule FAMMONITOR installation")
     api.gim_schedule_install(
         client_ip="10.10.9.59",
         date="now",
     )
-    time.sleep(10)
-
-    print("\n Monitoring is a FAM enabled")
+    print("  ➜ Monitoring is a FAM enabled")
     monitor_gim_module_installation(api, "10.10.9.59")
 
 def t_import_fam_definitions(api):
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
-    print("\n Import FAM policy")
+    print("  ➜ Import FAM policy")
     result = api.import_definitions('guardium_definition_files/exp_raptor_fam_policy.sql')
-    print("\n Import FAM dashboard")
+    print("  ➜ Import FAM dashboard")
     result = api.import_definitions('guardium_definition_files/exp_dashboard_fam.sql')
-    print(f"  ✓ Definitions imported")
     
 def t_install_fam_policy(api):
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
-    print("\n Install FAM policy")
     result = api.install_policy("Log Everything|raptor FAM policy", api_target_host="10.10.9.239")
-    print(f"  ✓ FAM policy installed")
 
 def t_configure_env_for_oracle(api):
     token = api.get_token(username='demo', password=get_env_value('DEMOUSER_PASSWORD'))
@@ -1600,7 +1596,7 @@ def lab11_oracle(state):
         base_url='https://10.10.9.219:8443/',
         client_id='BOOTCAMP'
     )
-    
+    exit(0)
     run_task('Configure system for oracle lab', lambda: t_configure_env_for_oracle(api), state, STATE_FILE)
 
     run_task('Configure SSL support for oracle on raptor', lambda: t_setup_SSL_for_oracle(), state, STATE_FILE)
@@ -1625,18 +1621,14 @@ def lab10_fam(state):
     """
     LAB 10 - FAM
     """
-    exit(0)
+    
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443/',
         client_id='BOOTCAMP'
     )
-    
     run_task('Enable FAM on raptor', lambda: t_enable_fam_on_raptor(api), state, STATE_FILE)
-
     run_task('Enable FAM on winsql', lambda: t_install_enable_fam_on_winsql(api), state, STATE_FILE)
-
     run_task('Import FAM definitions', lambda: t_import_fam_definitions(api), state, STATE_FILE)
-
     run_task('Install FAM policy on collector', lambda: t_install_fam_policy(api), state, STATE_FILE)
 
 def lab9_winstap(state):
