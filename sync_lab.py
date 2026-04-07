@@ -513,7 +513,7 @@ def t_getting_gim_files():
         allow_agent=False
     )
     stdin, stdout, stderr = client.exec_command('chmod 755 /root/gn-trainings/gim_installers/*.sh')
-    print("  ➜ Copying GIN modules to central manager")
+    print("  ➜ Copying GIM modules to central manager")
     patch_files = glob.glob('/root/gn-trainings/*.gim')
     all_success = True
     for patch_file in patch_files:
@@ -528,7 +528,7 @@ def t_getting_gim_files():
             all_success = False
             exit(1)
     if all_success:
-        print(f"  ℹ All {len(patch_files)} patches copied successfully")
+        print(f"  ℹ All {len(patch_files)} modules copied successfully")
 
     print("  ➜ Removing zip anf gim files from raptor")
     stdin, stdout, stderr = client.exec_command('rm -f /root/gn-trainings/*.zip')
@@ -1740,7 +1740,7 @@ def lab4_atap(state):
     """
     LAB 4 - ATAP
     """
-
+    exit(0)
     run_task('installing psql on raptor', lambda: t_postgres_installation(), state, STATE_FILE)
 
     run_task('create postgres admin users', lambda: t_create_postgres_admin_users(), state, STATE_FILE)
@@ -1777,9 +1777,7 @@ def lab2_gim(state):
         client_id='BOOTCAMP'
     )
     run_task('Set collector resolving on raptor', lambda: t_set_collector_resolving_on_raptor(), state, STATE_FILE)
-    
     run_task('Getting GIM files', lambda: t_getting_gim_files(), state, STATE_FILE)
-    exit(0)
     run_task('Import GIM files on CM', lambda: t_import_gim_modules(api), state, STATE_FILE)
 
 def lab1_appliance_setup(state):
