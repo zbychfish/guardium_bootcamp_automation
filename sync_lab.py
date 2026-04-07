@@ -3,7 +3,7 @@
 
 
 from subprocess import SubprocessError
-import psycopg2
+# import psycopg2
 import os
 import re
 import time
@@ -992,31 +992,27 @@ def t_start_etap():
     subprocess.run(etap_command, check=True, capture_output=True)
 
 def t_configure_raptor_for_va():
-    print("\n postgres package installation to enable some features")
-    subprocess.run(["dnf", "-y", "install", "postgresql-contrib"], check=True)
-
-    print("\n Create sqlguard user")
-    conn = psycopg2.connect(dbname="postgres", user= "postgres", password="guardium", host="localhost", port=5432)
+    print("  ➜ postgres package installation to enable some features")
+    subprocess.run(["dnf", "-y", "install", "postgresql-contrib"], check=True, capture_output=True)
+    print("  ➜ Create sqlguard user")
+    conn = get_postgres_conn(host="localhost", user="postgres", password='guardium', port=5432, dbname="postgres")
     cur = conn.cursor()
-    cur.execute(f"CREATE USER sqlguard WITH ENCRYPTED PASSWORD '{get_env_value('DEFAULT_SERVICE_PASSWORD')}';")
-    cur.execute(f"CREATE GROUP gdmmonitor;")
+    cur.execute("CREATE USER sqlguard WITH ENCRYPTED PASSWORD 'guardium';")
+    cur.execute("CREATE GROUP gdmmonitor;")
     conn.commit()
-    cur.execute(f"ALTER GROUP gdmmonitor ADD USER sqlguard;")
-    cur.execute(f"GRANT pg_read_all_settings TO gdmmonitor;")
-    cur.execute(f"GRANT SELECT ON pg_authid TO gdmmonitor;")
-    cur.execute(f"CREATE EXTENSION IF NOT EXISTS pgcrypto;")
+    cur.execute("ALTER GROUP gdmmonitor ADD USER sqlguard;")
+    cur.execute("GRANT pg_read_all_settings TO gdmmonitor;")
+    cur.execute("GRANT SELECT ON pg_authid TO gdmmonitor;")
     cur.close()
     conn.close()
-
-    print("\nDownload DPS archive")
+    print("  ➜ Download DPS archive")
     target_dir = "/root/gn-trainings"
     os.makedirs(target_dir, exist_ok=True)
     filename = os.path.join(target_dir, os.path.basename("dps.zip"))
     urllib.request.urlretrieve(get_env_value("DPS_ZIP_ARCHIVE"), filename)
-    print("\nExtract DPS file")
+    print("  ➜ Extract DPS file")
     with zipfile.ZipFile(filename, "r") as zipf:
             zipf.extractall(path=target_dir)
-            print(f"  ✓ DPS downloaded and unpacked")
 
 def t_import_DPS():
     print("\nConfigure playwright browsers")
@@ -1665,15 +1661,15 @@ def lab8_va(state):
     """
     LAB 8 - VA
     """
-    exit(0)
-    run_task('Configure raptor for VA', lambda: t_configure_raptor_for_va(), state, STATE_FILE)
-
-    run_task('Configure VA scanner', lambda: t_setup_vascanner(), state, STATE_FILE)
-
+    
     api = GuardiumRestAPI(
         base_url='https://10.10.9.219:8443/',
         client_id='BOOTCAMP'
     )
+    
+    run_task('Configure raptor for VA', lambda: t_configure_raptor_for_va(), state, STATE_FILE)
+    exit(0)
+    run_task('Configure VA scanner', lambda: t_setup_vascanner(), state, STATE_FILE)
     
     run_task('Import VA process for postgres', lambda: t_import_va_process_for_postgres(api), state, STATE_FILE)
 
