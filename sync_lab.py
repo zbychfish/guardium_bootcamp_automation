@@ -1484,8 +1484,10 @@ def t_install_stap_on_hana(api):
     ])
     print("  ➜ Add oracle user credentials to get access to OUA records")
     result = api.store_sql_credentials(password=get_env_value("DEFAULT_SERVICE_PASSWORD"), username="guardium", stap_host='10.10.9.60', api_target_host='10.10.9.239')
+    time.sleep(60)
     print("  ➜ Adding OUA configuration")
     result = api.create_sql_configuration(db_type="Oracle", instance="ORCLPDB1", stap_host='10.10.9.60', username='guardium', api_target_host='10.10.9.239')
+    time.sleep(60)
     print("  ➜ Stopping STAP on HANA")
     api.gim_client_params(
         client_ip="10.10.9.60",
