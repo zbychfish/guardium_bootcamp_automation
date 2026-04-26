@@ -1210,7 +1210,7 @@ def t_setup_ATAP_for_oracle():
     subprocess.run(["/opt/guardium/modules/ATAP/current/files/bin/guardctl", "--db-type=oracle --db-instance=ORCLDB", "activate"], check=True, capture_output=True)
     print("  ➜ Start oracle instance")
     run_as_user(["bash","-lc", r"$ORACLE_HOME/bin/dbstart $ORACLE_HOME"], user="oracle", text=True, capture_output=True)
-    run_as_user(["bash","-lc", "/opt/oracle/product/19c/dbhome_1/bin/lsnrctl start"], user="oracle", text=True, capture_output=True)
+    # run_as_user(["bash","-lc", "/opt/oracle/product/19c/dbhome_1/bin/lsnrctl start"], user="oracle", text=True, capture_output=True)
 
 def t_deploy_oracle_in_container_on_hana():
     print("  ➜ Download and setup Oracle 21c container on hana")
